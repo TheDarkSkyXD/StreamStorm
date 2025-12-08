@@ -20,7 +20,7 @@ Phase 2 implements stream discovery and browsing functionality, including home f
 | 2.3 Home Page | ✅ Complete | 100% | Featured + live sections |
 | 2.4 Categories Browser | ✅ Complete | 100% | Category grid + detail |
 | 2.5 Search Functionality | ✅ Complete | 100% | Search + filters |
-| 2.6 Following System | ⬜ Not Started | 0% | Local + platform follows |
+| 2.6 Following System | ✅ Complete | 100% | Local + platform follows |
 | 2.7 UI Polish & Animations | ⬜ Not Started | 0% | Skeletons + transitions |
 
 ---
@@ -206,20 +206,24 @@ Phase 2 implements stream discovery and browsing functionality, including home f
 
 **Estimated:** 3 days
 
-- [ ] **2.6.1** Create FollowingPage component
-- [ ] **2.6.2** Create follows store
-- [ ] **2.6.3** Create FollowButton component
-- [ ] **2.6.4** Create live status indicators
-- [ ] **2.6.5** Implement sidebar follows section
-- [ ] **2.6.6** Sync follows on auth
+- [x] **2.6.1** Create FollowingPage component
+- [x] **2.6.2** Create follows store
+- [x] **2.6.3** Create FollowButton component
+  - `src/components/ui/follow-button.tsx`
+- [x] **2.6.4** Create live status indicators
+  - Implemented in `StreamCard` and `FollowingPage`
+- [x] **2.6.5** Implement sidebar follows section
+  - Created `SidebarFollows` with live/offline sections and collapsed state
+- [x] **2.6.6** Sync follows on auth
+  - Handled in `FollowingPage` via `useFollowedChannels` + `useFollowStore` integration
 
 ### Verification Checklist
 
-- [ ] Can follow/unfollow channels
-- [ ] Follows persist locally
-- [ ] Platform follows sync correctly
-- [ ] Live status updates automatically
-- [ ] Sidebar shows followed channels
+- [x] Can follow/unfollow channels
+- [x] Follows persist locally
+- [x] Platform follows sync correctly
+- [x] Live status updates automatically
+- [x] Sidebar shows followed channels
 
 ---
 

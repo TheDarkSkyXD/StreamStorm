@@ -9,6 +9,6 @@ export {
     SelectLabel,
     SelectItem,
     SelectSeparator,
-    SelectScrollUpButton,
     SelectScrollDownButton,
 } from './select';
+export { ScrollArea, ScrollBar } from './scroll-area';

@@ -8,6 +8,7 @@ import { useAppStore } from '@/store/app-store';
 
 import { TitleBar } from './TitleBar';
 import { TopNavBar } from '../TopNavBar';
+import { SidebarFollows } from './SidebarFollows';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -45,7 +46,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           )}
         >
           {/* Navigation */}
-          <nav className="flex-1 py-4 overflow-y-auto">
+          <nav className="shrink-0 py-4">
             <ul className="space-y-1 px-2">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
@@ -59,7 +60,8 @@ export function AppLayout({ children }: AppLayoutProps) {
                         'flex items-center gap-3 px-3 py-2 rounded-md transition-colors',
                         isActive
                           ? 'bg-zinc-700 text-white'
-                          : 'text-white hover:bg-[var(--color-background-tertiary)] hover:text-white'
+                          : 'text-white hover:bg-[var(--color-background-tertiary)] hover:text-white',
+                        sidebarCollapsed && 'justify-center px-2'
                       )}
                     >
                       <Icon size={20} />
@@ -70,6 +72,11 @@ export function AppLayout({ children }: AppLayoutProps) {
               })}
             </ul>
           </nav>
+
+          <div className="mx-3 my-1 h-px bg-[var(--color-border)] opacity-50" />
+
+          {/* Followed Channels */}
+          <SidebarFollows collapsed={sidebarCollapsed} />
         </aside>
 
         {/* Main Content */}
