@@ -132,6 +132,12 @@ export interface StorageSchema {
         kick?: EncryptedToken;
     };
 
+    // App tokens (encrypted, for client credentials flow)
+    appTokens?: {
+        twitch?: EncryptedToken;
+        kick?: EncryptedToken;
+    };
+
     // User data
     twitchUser: TwitchUser | null;
     kickUser: KickUser | null;

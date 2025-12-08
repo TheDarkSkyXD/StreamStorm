@@ -193,7 +193,9 @@ export function transformTwitchVideo(video: TwitchApiVideo): UnifiedVideo {
         id: video.id,
         platform: 'twitch',
         channelId: video.user_id,
-        channelName: video.user_name,
+        channelName: video.user_login, // Use login for channel URL
+        channelDisplayName: video.user_name,
+        channelAvatar: '', // Not available in video object
         title: video.title,
         description: video.description || undefined,
         thumbnailUrl,
@@ -213,7 +215,9 @@ export function transformTwitchClip(clip: TwitchApiClip): UnifiedClip {
         id: clip.id,
         platform: 'twitch',
         channelId: clip.broadcaster_id,
-        channelName: clip.broadcaster_name,
+        channelName: clip.broadcaster_name, // Fallback as login is not available in clip object
+        channelDisplayName: clip.broadcaster_name,
+        channelAvatar: '', // Not available in clip object
         title: clip.title,
         thumbnailUrl: clip.thumbnail_url,
         clipUrl: clip.url,

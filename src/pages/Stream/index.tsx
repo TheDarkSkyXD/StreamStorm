@@ -3,13 +3,20 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Play, Clapperboard, Heart, HeartCrack } from 'lucide-react';
+import { Play, Clapperboard } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { useChannelByUsername } from '@/hooks/queries/useChannels'; // Updated import
+import { useStreamByChannel } from '@/hooks/queries/useStreams';
+import { FollowButton } from '@/components/ui/follow-button';
+import { PlatformAvatar } from '@/components/ui/platform-avatar';
+import { Platform } from '@/shared/auth-types';
+import { formatViewerCount } from '@/lib/utils';
+import { UnifiedChannel } from '@/backend/api/unified/platform-types';
 
 const MOCK_VIDEOS = Array.from({ length: 6 }).map((_, i) => ({
   id: `vod-${i}`,
@@ -31,29 +38,86 @@ const MOCK_CLIPS = Array.from({ length: 6 }).map((_, i) => ({
 }));
 
 export function StreamPage() {
-  const { platform, channel } = useParams({ from: '/stream/$platform/$channel' });
+  const { platform, channel: channelName } = useParams({ from: '/stream/$platform/$channel' });
   const { tab: activeTab } = useSearch({ from: '/stream/$platform/$channel' });
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [isHoveringFollow, setIsHoveringFollow] = useState(false);
+
+  // Real data fetching
+  const { data: channelData, isLoading: isChannelLoading } = useChannelByUsername(channelName, platform as Platform);
+  const { data: streamData, isLoading: isStreamLoading } = useStreamByChannel(channelName, platform as Platform);
+
   const [isLoading, setIsLoading] = useState(true);
   const [selectedClip, setSelectedClip] = useState<typeof MOCK_CLIPS[0] | null>(null);
 
+  // Fallback Loading logic for tabs content (still mocked)
   useEffect(() => {
-    // Simulate data fetching
     setIsLoading(true);
     const timer = setTimeout(() => {
       setIsLoading(false);
     }, 1000);
     return () => clearTimeout(timer);
-  }, [activeTab, platform, channel]);
+  }, [activeTab, platform, channelName]);
 
-  const getFollowButtonStyles = () => {
-    if (isFollowing) {
-      return 'bg-neutral-800 hover:bg-neutral-700 border-transparent border';
+  // Use real data if available, otherwise construct minimal object for FollowButton if we have at least params
+  // But FollowButton needs ID for persistence. 
+  // If channelData is missing (loading or error), we can't show a working FollowButton easily unless we fake an ID.
+  // We'll show Skeleton for header if loading.
+
+  const renderHeader = () => {
+    if (isChannelLoading || !channelData) {
+      return (
+        <div className="flex justify-between items-start gap-4">
+          <Skeleton className="w-16 h-16 rounded-full shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <Skeleton className="w-32 h-10 rounded-full" />
+        </div>
+      );
     }
-    if (platform === 'twitch') return 'bg-[#9146FF] hover:bg-[#9146FF]/90 text-white border-transparent';
-    if (platform === 'kick') return 'bg-[#53FC18] hover:bg-[#53FC18]/90 text-black border-transparent';
-    return 'bg-primary text-primary-foreground';
+
+    const channel = channelData;
+    const stream = streamData;
+
+    return (
+      <div className="flex justify-between items-start gap-4">
+        <PlatformAvatar
+          src={channel.avatarUrl}
+          alt={channel.displayName}
+          platform={channel.platform}
+          size="w-16 h-16"
+          className="shrink-0 text-xl font-bold shadow-lg ring-2 ring-offset-2 ring-offset-[var(--color-background)]"
+        />
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            {channel.displayName}
+            {channel.isVerified && (
+              <span className={`text-xs px-2 py-0.5 h-auto rounded font-bold ${channel.platform === 'twitch'
+                ? 'bg-[#9146FF]/20 text-[#9146FF]'
+                : 'bg-[#53FC18]/20 text-[#53FC18]'
+                }`}>
+                Verified
+              </span>
+            )}
+          </h1>
+          <p className="text-white font-bold">{stream?.title || channel.bio || "No title set"}</p>
+          <p className="text-[var(--color-foreground-muted)] text-sm capitalize flex items-center gap-1.5 mt-1">
+            <span className={channel.platform === 'twitch' ? 'text-[#9146FF]' : 'text-[#53FC18]'}>
+              {stream?.categoryName || "Variety"}
+            </span>
+            {stream?.viewerCount !== undefined && (
+              <>
+                <span className="w-1 h-1 rounded-full bg-[var(--color-foreground-muted)]" />
+                <span>{formatViewerCount(stream.viewerCount)} viewers</span>
+              </>
+            )}
+          </p>
+        </div>
+
+        <FollowButton channel={channel} size="default" />
+      </div>
+    );
   };
 
   return (
@@ -66,45 +130,8 @@ export function StreamPage() {
 
         <div className="p-6 space-y-6">
 
-          <div className="flex justify-between items-start gap-4">
-            <div className={`w-16 h-16 rounded-full shrink-0 flex items-center justify-center text-xl font-bold text-white shadow-lg ${platform === 'twitch' ? 'bg-[#9146FF]' : 'bg-[#53FC18] text-black'
-              } ring-2 ring-offset-2 ring-offset-[var(--color-background)] ${platform === 'twitch' ? 'ring-[#9146FF]' : 'ring-[#53FC18]'
-              }`}>
-              {channel?.slice(0, 1).toUpperCase()}
-            </div>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold flex items-center gap-2">
-                {channel}
-                {platform === 'twitch' && <span className="badge-twitch text-xs px-2 py-0.5 h-auto">Twitch Partner</span>}
-                {platform === 'kick' && <span className="badge-kick text-xs px-2 py-0.5 h-auto">Kick Verified</span>}
-              </h1>
-              <p className="text-white font-bold">Stream Title Goes Here</p>
-              <p className="text-[var(--color-foreground-muted)] text-sm capitalize flex items-center gap-1.5 mt-1">
-                <span className={platform === 'twitch' ? 'text-[#9146FF]' : platform === 'kick' ? 'text-[#53FC18]' : ''}>Just Chatting</span>
-                <span className="w-1 h-1 rounded-full bg-[var(--color-foreground-muted)]" />
-                <span>12.5K viewers</span>
-              </p>
-            </div>
-            <Button
-              className={`rounded-full font-bold transition-all gap-2 ${isFollowing ? 'w-10 h-10 p-0' : 'min-w-[100px]'} ${getFollowButtonStyles()}`}
-              size="sm"
-              onClick={() => setIsFollowing(!isFollowing)}
-              onMouseEnter={() => setIsHoveringFollow(true)}
-              onMouseLeave={() => setIsHoveringFollow(false)}
-            >
-              {isFollowing ? (
-                isHoveringFollow ? (
-                  <HeartCrack className="w-5 h-5 text-red-500" strokeWidth={3} />
-                ) : (
-                  <Heart className="w-5 h-5 fill-current text-white" strokeWidth={3} />
-                )
-              ) : (
-                <>
-                  <Heart className={`w-4 h-4 ${isHoveringFollow ? 'fill-current' : ''}`} strokeWidth={3} /> Follow
-                </>
-              )}
-            </Button>
-          </div>
+          {renderHeader()}
+
 
           {/* Tabs Navigation */}
           <div className="flex items-center gap-4 border-b border-[var(--color-border)]">
@@ -271,37 +298,32 @@ export function StreamPage() {
                   {/* Channel Identity */}
                   <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-3">
-                      <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold text-white shadow-lg ${platform === 'twitch' ? 'bg-[#9146FF]' : 'bg-[#53FC18] text-black'} ring-2 ring-offset-2 ring-offset-[var(--color-background)] ${platform === 'twitch' ? 'ring-[#9146FF]' : 'ring-[#53FC18]'}`}>
-                        {channel?.slice(0, 1).toUpperCase()}
-                      </div>
+                      <PlatformAvatar
+                        src={channelData?.avatarUrl || ''}
+                        alt={channelData?.displayName || channelName || ''}
+                        platform={(platform as Platform) || 'twitch'}
+                        size="w-12 h-12"
+                        className="bg-neutral-800"
+                      />
                       <div className="flex flex-col">
                         <span className="font-bold text-lg hover:underline decoration-2 underline-offset-4 decoration-[var(--color-primary)] cursor-pointer">
-                          {channel}
+                          {channelData?.displayName || channelName}
                         </span>
-                        <span className="text-[var(--color-foreground-muted)] text-sm">1.2M Followers</span>
+                        <span className="text-[var(--color-foreground-muted)] text-sm">
+                          {/* Placeholder for follower count since our API might not return it directly/consistently here yet */}
+                          Followers hidden
+                        </span>
                       </div>
                     </div>
 
                     {/* Actions Row */}
                     <div className="flex gap-2 w-full">
-                      <Button
-                        className={`font-bold transition-all gap-2 rounded-full ${isFollowing ? 'w-10 h-10 p-0 flex-none' : 'flex-1'} ${getFollowButtonStyles()}`}
-                        onClick={() => setIsFollowing(!isFollowing)}
-                        onMouseEnter={() => setIsHoveringFollow(true)}
-                        onMouseLeave={() => setIsHoveringFollow(false)}
-                      >
-                        {isFollowing ? (
-                          isHoveringFollow ? (
-                            <HeartCrack className="w-5 h-5 text-red-500" strokeWidth={3} />
-                          ) : (
-                            <Heart className="w-5 h-5 fill-current text-white" strokeWidth={3} />
-                          )
-                        ) : (
-                          <>
-                            <Heart className={`w-4 h-4 ${isHoveringFollow ? 'fill-current' : ''}`} strokeWidth={3} /> Follow
-                          </>
-                        )}
-                      </Button>
+                      {channelData ? (
+                        <FollowButton channel={channelData} className="flex-1" />
+                      ) : (
+                        <Button disabled className="flex-1 rounded-full">Follow</Button>
+                      )}
+
                       <Button variant="secondary" className="px-4 rounded-full font-bold">
                         Share
                       </Button>

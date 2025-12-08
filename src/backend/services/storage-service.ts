@@ -2,13 +2,14 @@
  * Storage Service
  *
  * Provides secure, persistent storage for authentication tokens,
- * user preferences, and local follows using electron-store.
+ * user preferences using electron-store, and local follows using SQLite.
  *
  * Uses Electron's safeStorage API to encrypt sensitive data like tokens.
  */
 
 import { safeStorage } from 'electron';
 import Store from 'electron-store';
+import { dbService } from './database-service';
 
 import {
     StorageSchema,
@@ -27,6 +28,7 @@ import {
 
 const defaults: StorageSchema = {
     authTokens: {},
+    appTokens: {},
     twitchUser: null,
     kickUser: null,
     localFollows: [],
@@ -54,7 +56,7 @@ class StorageService {
         );
     }
 
-    // ========== Token Management ==========
+    // ========== Token Management (Electron Store) ==========
 
     /**
      * Encrypt a token string using Electron's safeStorage
@@ -136,7 +138,6 @@ class StorageService {
             return true;
         }
         // If there's no expiresAt, assume the token is still valid
-        // (it will fail when used if actually expired, and we'll refresh then)
         if (!token.expiresAt) {
             return false;
         }
@@ -159,10 +160,64 @@ class StorageService {
      */
     clearAllTokens(): void {
         this.store.set('authTokens', {});
+        this.store.set('appTokens', {});
         console.log('🗑️ All tokens cleared');
     }
 
-    // ========== User Management ==========
+    // ========== App Token Management (Electron Store) ==========
+
+    /**
+     * Save an app token for a platform
+     */
+    saveAppToken(platform: Platform, token: AuthToken): void {
+        const tokenString = JSON.stringify(token);
+        const encrypted = this.encryptToken(tokenString);
+
+        const tokens = this.store.get('appTokens') || {};
+        tokens[platform] = encrypted;
+        this.store.set('appTokens', tokens);
+
+        console.log(`✅ App Token saved for ${platform}`);
+    }
+
+    /**
+     * Get an app token for a platform
+     */
+    getAppToken(platform: Platform): AuthToken | null {
+        const tokens = this.store.get('appTokens') || {};
+        const encrypted = tokens[platform];
+
+        if (!encrypted) {
+            return null;
+        }
+
+        try {
+            const tokenString = this.decryptToken(encrypted);
+            return JSON.parse(tokenString) as AuthToken;
+        } catch (error) {
+            console.error(`Failed to decrypt app token for ${platform}:`, error);
+            return null;
+        }
+    }
+
+    /**
+     * Check if an app token is expired
+     */
+    isAppTokenExpired(platform: Platform): boolean {
+        const token = this.getAppToken(platform);
+        // If there's no token, consider it expired
+        if (!token) {
+            return true;
+        }
+        // If there's no expiresAt, assume the token is still valid
+        if (!token.expiresAt) {
+            return false;
+        }
+        // Consider expired if less than 5 minutes remaining
+        return Date.now() > token.expiresAt - 5 * 60 * 1000;
+    }
+
+    // ========== User Management (Electron Store) ==========
 
     /**
      * Save Twitch user data
@@ -206,45 +261,28 @@ class StorageService {
         this.store.set('kickUser', null);
     }
 
-    // ========== Local Follows Management ==========
+    // ========== Local Follows Management (SQLite) ==========
 
     /**
      * Get all local follows
      */
     getLocalFollows(): LocalFollow[] {
-        return this.store.get('localFollows') || [];
+        return dbService.getAllFollows();
     }
 
     /**
      * Get local follows for a specific platform
      */
     getLocalFollowsByPlatform(platform: Platform): LocalFollow[] {
-        return this.getLocalFollows().filter((f) => f.platform === platform);
+        return dbService.getFollowsByPlatform(platform);
     }
 
     /**
      * Add a local follow
      */
     addLocalFollow(follow: Omit<LocalFollow, 'id' | 'followedAt'>): LocalFollow {
-        const newFollow: LocalFollow = {
-            ...follow,
-            id: `${follow.platform}-${follow.channelId}-${Date.now()}`,
-            followedAt: new Date().toISOString(),
-        };
-
-        const follows = this.getLocalFollows();
-
-        // Check if already following
-        const exists = follows.some(
-            (f) => f.platform === follow.platform && f.channelId === follow.channelId
-        );
-
-        if (!exists) {
-            follows.push(newFollow);
-            this.store.set('localFollows', follows);
-            console.log(`➕ Added local follow: ${follow.displayName}`);
-        }
-
+        const newFollow = dbService.addFollow(follow);
+        console.log(`➕ Added local follow: ${follow.displayName}`);
         return newFollow;
     }
 
@@ -252,76 +290,62 @@ class StorageService {
      * Remove a local follow
      */
     removeLocalFollow(id: string): boolean {
-        const follows = this.getLocalFollows();
-        const filtered = follows.filter((f) => f.id !== id);
-
-        if (filtered.length < follows.length) {
-            this.store.set('localFollows', filtered);
+        const success = dbService.removeFollow(id);
+        if (success) {
             console.log(`➖ Removed local follow: ${id}`);
-            return true;
         }
-        return false;
+        return success;
     }
 
     /**
      * Update a local follow
      */
     updateLocalFollow(id: string, updates: Partial<LocalFollow>): LocalFollow | null {
-        const follows = this.getLocalFollows();
-        const index = follows.findIndex((f) => f.id === id);
+        // Since we didn't implement 'update' in dbService yet, we use a fetch-modify-save workflow
+        const current = this.getLocalFollows().find(f => f.id === id);
+        if (!current) return null;
 
-        if (index === -1) {
-            return null;
-        }
-
-        follows[index] = { ...follows[index], ...updates };
-        this.store.set('localFollows', follows);
-        return follows[index];
+        const updated = { ...current, ...updates };
+        return dbService.addFollow(updated); // addFollow handles replace
     }
 
     /**
      * Check if following a channel
      */
     isFollowing(platform: Platform, channelId: string): boolean {
-        return this.getLocalFollows().some(
-            (f) => f.platform === platform && f.channelId === channelId
-        );
+        return dbService.isFollowing(platform, channelId);
     }
 
     /**
      * Import follows (merge with existing)
      */
     importLocalFollows(follows: LocalFollow[]): number {
-        const existing = this.getLocalFollows();
-        const existingIds = new Set(existing.map((f) => `${f.platform}-${f.channelId}`));
-
-        const newFollows = follows.filter(
-            (f) => !existingIds.has(`${f.platform}-${f.channelId}`)
-        );
-
-        if (newFollows.length > 0) {
-            this.store.set('localFollows', [...existing, ...newFollows]);
+        let count = 0;
+        for (const f of follows) {
+            if (!this.isFollowing(f.platform, f.channelId)) {
+                this.addLocalFollow(f);
+                count++;
+            }
         }
-
-        console.log(`📥 Imported ${newFollows.length} new follows`);
-        return newFollows.length;
+        console.log(`📥 Imported ${count} new follows`);
+        return count;
     }
 
     /**
      * Clear all local follows
      */
     clearLocalFollows(): void {
-        this.store.set('localFollows', []);
+        dbService.clearFollows();
         console.log('🗑️ All local follows cleared');
     }
 
-    // ========== Preferences Management ==========
+    // ========== Preferences Management (Electron Store) ==========
 
     /**
      * Get all preferences
      */
     getPreferences(): UserPreferences {
-        return this.store.get('preferences') || DEFAULT_USER_PREFERENCES;
+        return this.store.get('preferences') || defaults.preferences;
     }
 
     /**
@@ -341,7 +365,7 @@ class StorageService {
         this.store.set('preferences', DEFAULT_USER_PREFERENCES);
     }
 
-    // ========== Window State Management ==========
+    // ========== Window State Management (Electron Store) ==========
 
     /**
      * Get window bounds
@@ -357,7 +381,7 @@ class StorageService {
         this.store.set('windowBounds', bounds);
     }
 
-    // ========== Generic Storage ==========
+    // ========== Generic Storage (Electron Store) ==========
 
     /**
      * Get a value from storage
@@ -385,6 +409,9 @@ class StorageService {
      */
     clearAll(): void {
         this.store.clear();
+        // Also clear DB
+        dbService.clearKeyValue(); // Though we aren't using this part anymore, good to be safe
+        dbService.clearFollows();
         console.log('🗑️ All storage cleared');
     }
 

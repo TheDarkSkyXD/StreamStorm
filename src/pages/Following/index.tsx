@@ -1,88 +1,126 @@
 import { Link } from '@tanstack/react-router';
-import { Search } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { Search, Heart } from 'lucide-react';
+import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-
-type Platform = 'all' | 'twitch' | 'kick';
-
-interface Channel {
-  id: number;
-  name: string;
-  game: string;
-  isLive: boolean;
-  platform: 'twitch' | 'kick';
-  thumbnailColor: string;
-  title?: string;
-  viewerCount?: number;
-}
-
-const MOCK_CHANNELS: Channel[] = [
-  { id: 1, name: 'Ninja', game: 'Fortnite', isLive: true, platform: 'twitch', thumbnailColor: 'bg-indigo-500', title: 'CRANKING 90s! !drops', viewerCount: 15432 },
-  { id: 2, name: 'xQc', game: 'Just Chatting', isLive: true, platform: 'kick', thumbnailColor: 'bg-green-500', title: 'GAMBA GAMBA GAMBA', viewerCount: 32109 },
-  { id: 3, name: 'Shroud', game: 'Valorant', isLive: false, platform: 'twitch', thumbnailColor: 'bg-cyan-600', title: 'Pro Valo Gameplay' },
-  { id: 4, name: 'AdinRoss', game: 'Slots', isLive: false, platform: 'kick', thumbnailColor: 'bg-emerald-600', title: 'HUGE WINS TONIGHT' },
-  { id: 5, name: 'Pokimane', game: 'LoL', isLive: true, platform: 'twitch', thumbnailColor: 'bg-purple-500', title: 'Ranked Climb to Diamond', viewerCount: 8500 },
-  { id: 6, name: 'Trainwreck', game: 'Gambling', isLive: false, platform: 'kick', thumbnailColor: 'bg-lime-600', title: 'GIVEAWAYS !kick' },
-  { id: 7, name: 'KaiCenat', game: 'Just Chatting', isLive: true, platform: 'twitch', thumbnailColor: 'bg-orange-500', title: 'MAFIATHON START!', viewerCount: 85420 },
-  { id: 8, name: 'Amouranth', game: 'ASMR', isLive: true, platform: 'kick', thumbnailColor: 'bg-pink-500', title: 'ASMR Ear Licking', viewerCount: 12300 },
-  { id: 9, name: 'HasanAbi', game: 'Just Chatting', isLive: true, platform: 'twitch', thumbnailColor: 'bg-red-500', title: 'NEWS DAY! REACTING TO...', viewerCount: 25600 },
-  { id: 10, name: 'Summit1g', game: 'CS2', isLive: false, platform: 'twitch', thumbnailColor: 'bg-blue-600', title: '1G' },
-  { id: 11, name: 'Asmongold', game: 'WoW', isLive: true, platform: 'twitch', thumbnailColor: 'bg-yellow-600', title: 'ICC RAID TONIGHT', viewerCount: 45200 },
-  { id: 12, name: 'Roshtein', game: 'Slots', isLive: true, platform: 'kick', thumbnailColor: 'bg-emerald-500', title: 'MAX WIN HUNTING', viewerCount: 18900 },
-  { id: 13, name: 'MoistCr1TiKaL', game: 'Just Chatting', isLive: false, platform: 'twitch', thumbnailColor: 'bg-sky-500', title: 'Big Announcement' },
-  { id: 14, name: 'Ludwig', game: 'YouTube', isLive: false, platform: 'twitch', thumbnailColor: 'bg-rose-400', title: 'Mogul Move' },
-  { id: 15, name: 'TimTheTatman', game: 'Call of Duty', isLive: true, platform: 'twitch', thumbnailColor: 'bg-amber-500', title: 'SPECTATING SOLOS', viewerCount: 28400 },
-  { id: 16, name: 'DrDisrespect', game: 'Warzone', isLive: false, platform: 'kick', thumbnailColor: 'bg-red-600', title: 'V SM COMMAND' },
-  { id: 17, name: 'GMHikaru', game: 'Chess', isLive: true, platform: 'kick', thumbnailColor: 'bg-slate-500', title: 'Speed Chess Championship', viewerCount: 10500 },
-  { id: 18, name: 'Tfue', game: 'Fortnite', isLive: false, platform: 'twitch', thumbnailColor: 'bg-teal-500', title: 'Scoped in' },
-  { id: 19, name: 'Kyedae', game: 'Valorant', isLive: true, platform: 'twitch', thumbnailColor: 'bg-violet-500', title: 'Ranked with TenZ', viewerCount: 15600 },
-  { id: 20, name: 'TenZ', game: 'Valorant', isLive: false, platform: 'twitch', thumbnailColor: 'bg-indigo-400', title: 'Radiant Gameplay' },
-  { id: 21, name: 'Clix', game: 'Fortnite', isLive: true, platform: 'twitch', thumbnailColor: 'bg-fuchsia-500', title: 'FNCS FINALS', viewerCount: 22100 },
-  { id: 22, name: 'Ice Poseidon', game: 'IRL', isLive: true, platform: 'kick', thumbnailColor: 'bg-purple-600', title: 'Travel Stream !locations', viewerCount: 8900 },
-  { id: 23, name: 'Destiny', game: 'Just Chatting', isLive: false, platform: 'kick', thumbnailColor: 'bg-blue-500', title: 'Debate Review' },
-  { id: 24, name: 'Sodapoppin', game: 'WoW', isLive: false, platform: 'twitch', thumbnailColor: 'bg-green-600', title: 'Hardcore Leveling' },
-  { id: 25, name: 'LIRIK', game: 'Variety', isLive: true, platform: 'twitch', thumbnailColor: 'bg-stone-500', title: 'Sub Sunday', viewerCount: 21000 },
-];
-
-// Helper to format viewer counts (e.g. 1200 -> 1.2K)
-function formatViewers(count: number): string {
-  if (count >= 1000000) {
-    return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
-  }
-  if (count >= 1000) {
-    return (count / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
-  }
-  return count.toString();
-}
+import { useFollowStore } from '@/store/follow-store';
+import { useAuthStore } from '@/store/auth-store';
+import { useFollowedChannels } from '@/hooks/queries/useChannels';
+import { useFollowedStreams } from '@/hooks/queries/useStreams';
+import type { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
+import type { Platform } from '@/shared/auth-types';
+import { StreamCard } from '@/components/stream/stream-card';
+import { PlatformAvatar } from '@/components/ui/platform-avatar';
+import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
+import { cn } from '@/lib/utils';
+import type { LocalFollow } from '@/shared/auth-types';
 
 export function FollowingPage() {
-  const [filter, setFilter] = useState<Platform>('all');
+  const [filter, setFilter] = useState<Platform | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
+  // Auth status
+  const { twitchConnected, kickConnected } = useAuthStore();
 
-  const filteredChannels = MOCK_CHANNELS.filter((channel) => {
-    const matchesPlatform = filter === 'all' || channel.platform === filter;
-    const matchesSearch = channel.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesPlatform && matchesSearch;
-  });
+  // 1. Local follows
+  const { localFollows } = useFollowStore();
 
-  const liveChannels = filteredChannels.filter((c) => c.isLive);
-  const offlineChannels = filteredChannels.filter((c) => !c.isLive);
+  // 2. Remote follows
+  // Only fetch if connected to respective platform
+  const { data: twitchFollows, isLoading: isLoadingTwitch } = useFollowedChannels('twitch', { enabled: twitchConnected });
+  const { data: kickFollows, isLoading: isLoadingKick } = useFollowedChannels('kick', { enabled: kickConnected });
+
+  // 3. Live streams (All platforms)
+  // Backend now handles fetching streams for local follows even if disconnected
+  const { data: liveStreams, isLoading: isLoadingStreams } = useFollowedStreams();
+
+  // Combine channels logic
+  const { liveChannels, offlineChannels, isLoading } = useMemo(() => {
+    // Collect all channels from local and remote sources
+    // Key by Channel ID (not Follow ID) to deduplicate
+    const channelMap = new Map<string, UnifiedChannel>();
+
+    // Add local follows (Map LocalFollow to UnifiedChannel)
+    // Add local follows
+    localFollows.forEach((channel) => {
+      // LocalFollows store now returns UnifiedChannel[] (hydrated from backend)
+      channelMap.set(channel.id, channel);
+    });
+
+    // Add remote follows (Twitch) - overwrites local if exists (fresh data)
+    if (twitchFollows) {
+      twitchFollows.forEach((c) => channelMap.set(c.id, c));
+    }
+
+    // Add remote follows (Kick)
+    if (kickFollows) {
+      kickFollows.forEach((c) => channelMap.set(c.id, c));
+    }
+
+    const allChannels = Array.from(channelMap.values());
+
+    // Map of live streams by channelId
+    const streamMap = new Map<string, UnifiedStream>();
+    if (liveStreams) {
+      liveStreams.forEach((s) => streamMap.set(s.channelId, s));
+    }
+
+    const live: UnifiedStream[] = [];
+    const offline: UnifiedChannel[] = [];
+
+    // Sort and filter
+    allChannels.forEach((c) => {
+      // Filter by Platform
+      if (filter !== 'all' && c.platform !== filter) return;
+
+      // Filter by Search
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchesName = c.displayName.toLowerCase().includes(q) || c.username.toLowerCase().includes(q);
+        const stream = streamMap.get(c.id);
+        const matchesGame = stream?.categoryName?.toLowerCase().includes(q) || stream?.title.toLowerCase().includes(q);
+        if (!matchesName && !matchesGame) return;
+      }
+
+      const stream = streamMap.get(c.id);
+      if (stream) {
+        // Channel is live
+        // Ensure stream has avatar if missing (fallback to channel avatar)
+        if (!stream.channelAvatar && c.avatarUrl) {
+          stream.channelAvatar = c.avatarUrl;
+        }
+        live.push(stream);
+      } else {
+        // Channel is offline
+        offline.push(c);
+      }
+    });
+
+    // Sort live by viewer count
+    live.sort((a, b) => b.viewerCount - a.viewerCount);
+
+    // Sort offline by name
+    offline.sort((a, b) => a.displayName.localeCompare(b.displayName));
+
+    // Determine loading state
+    const loadingTwitch = twitchConnected && isLoadingTwitch && !twitchFollows;
+    const loadingKick = kickConnected && isLoadingKick && !kickFollows;
+
+    return {
+      liveChannels: live,
+      offlineChannels: offline,
+      isLoading: isLoadingStreams || loadingTwitch || loadingKick,
+    };
+  }, [localFollows, twitchFollows, kickFollows, liveStreams, filter, searchQuery, isLoadingStreams, isLoadingTwitch, isLoadingKick, twitchConnected, kickConnected]);
 
   return (
     <div className="p-6 h-full flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <h1 className="text-3xl font-bold">❤️ Following</h1>
+        <h1 className="text-3xl font-bold flex items-center gap-3">
+          <Heart className="fill-red-500 text-red-500" />
+          Following
+        </h1>
         <p className="text-[var(--color-foreground-secondary)]">
           Channels you follow across Twitch and Kick
         </p>
@@ -105,6 +143,7 @@ export function FollowingPage() {
             className={filter === 'twitch' ? 'bg-[#9146FF] hover:bg-[#9146FF]/90 text-white' : ''}
             size="sm"
           >
+            <TwitchIcon className="mr-2 h-4 w-4" />
             Twitch
           </Button>
           <Button
@@ -113,6 +152,7 @@ export function FollowingPage() {
             className={filter === 'kick' ? 'bg-[#53FC18] hover:bg-[#53FC18]/90 text-black' : ''}
             size="sm"
           >
+            <KickIcon className="mr-2 h-4 w-4" />
             Kick
           </Button>
         </div>
@@ -129,37 +169,25 @@ export function FollowingPage() {
         </div>
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-8 flex-1 overflow-y-auto pr-2 pb-10">
         {isLoading ? (
           <div className="space-y-8">
-            {/* Live Section Skeleton */}
             <div className="space-y-4">
               <Skeleton className="h-7 w-32" />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className="rounded-xl border border-[var(--color-border)] overflow-hidden">
-                    <Skeleton className="aspect-video w-full" />
-                    <div className="p-4 flex items-center gap-3">
-                      <Skeleton className="w-10 h-10 rounded-full shrink-0" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-5 w-2/3" />
-                        <Skeleton className="h-4 w-1/3" />
-                      </div>
-                    </div>
-                  </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {[...Array(4)].map((_, i) => (
+                  <Skeleton key={i} className="aspect-video w-full rounded-xl" />
                 ))}
               </div>
             </div>
 
-            {/* Offline Section Skeleton */}
             <div className="space-y-4">
               <Skeleton className="h-7 w-24" />
-              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-4">
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="flex flex-col items-center gap-2">
                     <Skeleton className="w-16 h-16 rounded-full" />
                     <Skeleton className="h-4 w-20" />
-                    <Skeleton className="h-3 w-12" />
                   </div>
                 ))}
               </div>
@@ -173,49 +201,14 @@ export function FollowingPage() {
                 <h2 className="text-xl font-semibold flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                   Live Now
+                  <span className="text-sm font-normal text-[var(--color-foreground-muted)] ml-2">
+                    ({liveChannels.length})
+                  </span>
                 </h2>
-                <div className="max-h-[45vh] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20">
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {liveChannels.map((channel) => (
-                      <Link
-                        key={channel.id}
-                        to="/stream/$platform/$channel"
-                        params={{ platform: channel.platform, channel: channel.name }}
-                        search={{ tab: 'videos' }}
-                        className="block group"
-                      >
-                        <Card className="overflow-hidden hover:border-white transition-colors cursor-pointer h-full">
-                          <div className={`aspect-video ${channel.thumbnailColor} relative`}>
-                            <span className="absolute top-2 left-2 badge-live z-10">LIVE</span>
-                            <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-white font-medium capitalize flex items-center gap-1">
-                              <div className={`w-1.5 h-1.5 rounded-full ${channel.platform === 'twitch' ? 'bg-[#9146FF]' : 'bg-[#53FC18]'}`} />
-                              {channel.platform}
-                            </div>
-                            {channel.viewerCount && (
-                              <div className="absolute bottom-2 left-2 bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-white font-medium flex items-center gap-1.5">
-                                {formatViewers(channel.viewerCount)} viewers
-                              </div>
-                            )}
-                            <div className="absolute bottom-2 right-2 bg-black/50 backdrop-blur-sm px-2 py-0.5 rounded text-xs text-white font-medium">
-                              4:20:00
-                            </div>
-                          </div>
-                          <CardContent className="pt-4">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-full ${channel.thumbnailColor} shrink-0 ring-2 ring-transparent group-hover:ring-[var(--color-primary)] transition-all`} />
-                              <div className="min-w-0">
-                                <h3 className="font-semibold truncate group-hover:text-[var(--color-primary)] transition-colors">{channel.name}</h3>
-                                {channel.title && (
-                                  <p className="text-sm text-white font-bold truncate">{channel.title}</p>
-                                )}
-                                <p className="text-xs text-[var(--color-foreground-secondary)] mt-0.5">{channel.game}</p>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    ))}
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {liveChannels.map((stream) => (
+                    <StreamCard key={stream.id} stream={stream} />
+                  ))}
                 </div>
               </div>
             )}
@@ -223,33 +216,64 @@ export function FollowingPage() {
             {/* Offline Section */}
             {offlineChannels.length > 0 && (
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold text-white">Offline</h2>
-                <div className="max-h-[35vh] overflow-y-auto pr-2 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20">
-                  <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4 pt-2">
-                    {offlineChannels.map((channel) => (
+                <h2 className="text-xl font-semibold text-white">
+                  Offline
+                  <span className="text-sm font-normal text-[var(--color-foreground-muted)] ml-2">
+                    ({offlineChannels.length})
+                  </span>
+                </h2>
+                <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4 pt-2">
+                  {offlineChannels.map((channel) => (
+                    <div key={channel.id} className="relative group">
                       <Link
-                        key={channel.id}
                         to="/stream/$platform/$channel"
-                        params={{ platform: channel.platform, channel: channel.name }}
+                        params={{ platform: channel.platform, channel: channel.username }}
                         search={{ tab: 'videos' }}
-                        className="text-center group cursor-pointer block"
+                        className="flex flex-col items-center text-center p-3 rounded-xl hover:bg-[var(--color-background-secondary)] transition-all"
                       >
-                        <div className="relative inline-block">
-                          <div className={`w-16 h-16 mx-auto rounded-full ${channel.thumbnailColor} mb-2 ring-2 ring-transparent group-hover:ring-[var(--color-primary)] transition-all`} />
-                          <div className={`absolute bottom-2 right-0 w-4 h-4 rounded-full border-2 border-[var(--color-background)] ${channel.platform === 'twitch' ? 'bg-[#9146FF]' : 'bg-[#53FC18]'}`} />
+                        <div className="relative mb-2">
+                          <PlatformAvatar
+                            src={channel.avatarUrl}
+                            alt={channel.displayName}
+                            platform={channel.platform}
+                            size="w-20 h-20"
+                            className="ring-2 ring-transparent group-hover:ring-[var(--color-primary)] transition-all"
+                          />
+                          <div
+                            className={cn(
+                              "absolute bottom-0 right-0 p-1 rounded-full bg-[var(--color-background)] border-2 border-[var(--color-background)]",
+                              channel.platform === 'twitch' ? "text-[#9146FF]" : "text-[#53FC18]"
+                            )}
+                          >
+                            {channel.platform === 'twitch' ? <TwitchIcon size={12} /> : <KickIcon size={12} />}
+                          </div>
                         </div>
-                        <p className="text-sm font-medium group-hover:text-[var(--color-primary)] transition-colors">{channel.name}</p>
-                        <p className="text-xs text-[var(--color-foreground-muted)]">Offline</p>
+                        <h3 className="font-medium text-sm truncate w-full group-hover:text-[var(--color-primary)] transition-colors">
+                          {channel.displayName}
+                        </h3>
                       </Link>
-                    ))}
-                  </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
             {liveChannels.length === 0 && offlineChannels.length === 0 && (
-              <div className="text-center py-12 text-[var(--color-foreground-muted)]">
-                <p>No channels found matching your filters.</p>
+              <div className="text-center py-24 flex flex-col items-center gap-4 text-[var(--color-foreground-muted)] animate-in fade-in zoom-in duration-300">
+                <div className="w-16 h-16 rounded-full bg-[var(--color-background-secondary)] flex items-center justify-center mb-2">
+                  <Heart className="w-8 h-8 text-[var(--color-foreground-muted)]" />
+                </div>
+                <h3 className="text-xl font-semibold text-[var(--color-foreground)]">No followed channels found</h3>
+                <p>
+                  {searchQuery
+                    ? `No matches for "${searchQuery}"`
+                    : "Follow channels to see them here!"}
+                </p>
+                {!searchQuery && (
+                  <Link to="/" className="mt-4">
+                    <Button variant="default">Browse Channels</Button>
+                  </Link>
+                )}
               </div>
             )}
           </>

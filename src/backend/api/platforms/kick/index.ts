@@ -4,34 +4,39 @@
  * Exports all Kick-specific API types, transformers, and client.
  */
 
-// Kick API Types
+// === Official Kick API Types (https://docs.kick.com/) ===
 export type {
+    KickApiResponse,
     KickApiUser,
+    KickApiTokenIntrospect,
     KickApiChannel,
-    KickApiChannelUser,
+    KickApiChannelCategory,
+    KickApiChannelStream,
     KickApiLivestream,
+    KickApiLivestreamStats,
     KickApiCategory,
-    KickApiVideo,
-    KickApiClip,
-    KickApiSearchResult,
-    KickApiChatMessage,
-    KickChatBadge,
-    KickSubscriberBadge,
-    KickImage,
+    KickApiChannelReward,
+    KickApiCreateRewardRequest,
+    KickApiChatMessageRequest,
+    KickApiChatMessageResponse,
+    KickApiModerationBanRequest,
+    KickApiLeaderboardEntry,
+    KickApiKicksLeaderboard,
+    KickApiPublicKey,
+    KickApiScope,
 } from './kick-types';
 
-export { KICK_API_BASE, KICK_API_V1_BASE } from './kick-types';
-
-// Transformers
 export {
-    transformKickUser,
-    transformKickChannel,
-    transformKickStream,
-    transformKickCategory,
-    transformKickFollow,
-    transformKickVideo,
-    transformKickClip,
-} from './kick-transformers';
+    KICK_API_BASE,
+    KICK_API_SCOPES,
+    KICK_LEGACY_API_V1_BASE,
+    KICK_LEGACY_API_V2_BASE,
+} from './kick-types';
 
-// Client will be exported here once created in Phase 1.4
-// export { KickClient } from './kick-client';
+// === Legacy Types (undocumented API) ===
+export type {
+    KickLegacyApiClip,
+} from './kick-types';
+
+// Client
+export { kickClient } from './kick-client';

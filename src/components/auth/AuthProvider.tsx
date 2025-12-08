@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { useAuthInitialize } from '@/hooks/useAuth';
+import { useFollowStore } from '@/store/follow-store';
 
 interface AuthProviderProps {
     children: React.ReactNode;
@@ -15,6 +16,13 @@ interface AuthProviderProps {
  */
 export function AuthProvider({ children, fallback }: AuthProviderProps) {
     const initialized = useAuthInitialize();
+    const hydrateFollows = useFollowStore(state => state.hydrate);
+
+    React.useEffect(() => {
+        if (initialized && hydrateFollows) {
+            hydrateFollows();
+        }
+    }, [initialized, hydrateFollows]);
 
     if (!initialized) {
         if (fallback) {

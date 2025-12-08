@@ -193,6 +193,100 @@ const electronAPI = {
   // ========== Image Proxy (CORS bypass) ==========
   proxyImage: (url: string): Promise<string | null> =>
     ipcRenderer.invoke(IPC_CHANNELS.IMAGE_PROXY, { url }),
+
+  // ========== Discovery: Streams ==========
+  streams: {
+    getTop: (params?: {
+      platform?: Platform;
+      categoryId?: string;
+      language?: string;
+      limit?: number;
+      cursor?: string;
+    }): Promise<{ success: boolean; data?: any[]; cursor?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.STREAMS_GET_TOP, params || {}),
+
+    getByCategory: (params: {
+      categoryId: string;
+      platform?: Platform;
+      limit?: number;
+      cursor?: string;
+    }): Promise<{ success: boolean; data?: any[]; cursor?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.STREAMS_GET_BY_CATEGORY, params),
+
+    getFollowed: (params?: {
+      platform?: Platform;
+      limit?: number;
+      cursor?: string;
+    }): Promise<{ success: boolean; data?: any[]; cursor?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.STREAMS_GET_FOLLOWED, params || {}),
+
+    getByChannel: (params: {
+      platform: Platform;
+      username: string;
+    }): Promise<{ success: boolean; data?: any; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.STREAMS_GET_BY_CHANNEL, params),
+  },
+
+  // ========== Discovery: Categories ==========
+  categories: {
+    getTop: (params?: {
+      platform?: Platform;
+      limit?: number;
+      cursor?: string;
+    }): Promise<{ success: boolean; data?: any[]; cursor?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CATEGORIES_GET_TOP, params || {}),
+
+    getById: (params: {
+      platform: Platform;
+      categoryId: string;
+    }): Promise<{ success: boolean; data?: any; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CATEGORIES_GET_BY_ID, params),
+
+    search: (params: {
+      query: string;
+      platform?: Platform;
+      limit?: number;
+    }): Promise<{ success: boolean; data?: any[]; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CATEGORIES_SEARCH, params),
+  },
+
+  // ========== Discovery: Search ==========
+  search: {
+    channels: (params: {
+      query: string;
+      platform?: Platform;
+      liveOnly?: boolean;
+      limit?: number;
+    }): Promise<{ success: boolean; data?: any[]; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SEARCH_CHANNELS, params),
+
+    all: (params: {
+      query: string;
+      platform?: Platform;
+      limit?: number;
+    }): Promise<{ success: boolean; data?: { channels: any[]; categories: any[]; streams: any[] }; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SEARCH_ALL, params),
+  },
+
+  // ========== Discovery: Channels ==========
+  channels: {
+    getById: (params: {
+      platform: Platform;
+      channelId: string;
+    }): Promise<{ success: boolean; data?: any; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CHANNELS_GET_BY_ID, params),
+
+    getByUsername: (params: {
+      platform: Platform;
+      username: string;
+    }): Promise<{ success: boolean; data?: any; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CHANNELS_GET_BY_USERNAME, params),
+
+    getFollowed: (params: {
+      platform: Platform;
+    }): Promise<{ success: boolean; data?: any[]; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CHANNELS_GET_FOLLOWED, params),
+  },
 };
 
 // Expose the API to the renderer

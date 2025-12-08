@@ -165,3 +165,23 @@ export interface TwitchTokenValidation {
 
 export const TWITCH_API_BASE = 'https://api.twitch.tv/helix';
 export const TWITCH_AUTH_BASE = 'https://id.twitch.tv/oauth2';
+
+// ========== Client Types ==========
+
+export interface PaginationOptions {
+    first?: number; // Number of results (max 100)
+    after?: string; // Cursor for next page
+    before?: string; // Cursor for previous page
+}
+
+export interface PaginatedResult<T> {
+    data: T[];
+    cursor?: string;
+    total?: number;
+}
+
+export interface TwitchClientError {
+    status: number;
+    message: string;
+    retryAfter?: number;
+}

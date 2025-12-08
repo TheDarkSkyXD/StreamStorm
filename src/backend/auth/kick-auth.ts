@@ -5,13 +5,14 @@
  * - Token refresh
  * - Token revocation (logout)
  * - User info fetching
+ * 
+ * Uses the official Kick Public API v1: https://docs.kick.com/
  */
 
 import type { Platform, AuthToken, KickUser } from '../../shared/auth-types';
-import { getOAuthConfig } from './oauth-config';
 import { tokenExchangeService } from './token-exchange';
 import { storageService } from '../services/storage-service';
-import { KICK_API_BASE, type KickApiUser } from '../api/platforms/kick/kick-types';
+import { KICK_API_BASE } from '../api/platforms/kick/kick-types';
 
 // ========== Kick Auth Service Class ==========
 
@@ -75,7 +76,6 @@ class KickAuthService {
         // Kick might not have a formal revoke endpoint, so we just clear local data
         storageService.clearToken(this.platform);
         storageService.clearKickUser();
-
 
         return true;
     }
@@ -167,7 +167,7 @@ class KickAuthService {
             verified: !!apiUser.email, // If email is present, user is likely verified
             email: apiUser.email,
             profilePic: apiUser.profile_picture || '',
-            // These fields might not be available from official API
+            // These fields are not available from official API
             bio: undefined,
             twitter: undefined,
             discord: undefined,
@@ -175,27 +175,6 @@ class KickAuthService {
             youtube: undefined,
             tiktok: undefined,
             facebook: undefined,
-        };
-    }
-
-    /**
-     * Transform Kick API user to our KickUser format
-     */
-    private transformUser(apiUser: KickApiUser): KickUser {
-        return {
-            id: apiUser.id,
-            username: apiUser.username,
-            slug: apiUser.id.toString(), // Kick doesn't always provide slug in user me endpoint, use id as fallback or it might be in 'slug' field if available. Let's assume we map it from somewhere or default. Actually, looking at types, apiUser usually has slug or username is slug. Let's use username as slug fallback.
-            verified: apiUser.email_verified_at !== null,
-            email: apiUser.email_verified_at ? 'verified@hidden.com' : undefined, // Kick API often hides email
-            profilePic: apiUser.profile_pic || '',
-            bio: apiUser.bio || undefined,
-            twitter: apiUser.twitter || undefined,
-            discord: apiUser.discord || undefined,
-            instagram: apiUser.instagram || undefined,
-            youtube: apiUser.youtube || undefined,
-            tiktok: apiUser.tiktok || undefined,
-            facebook: apiUser.facebook || undefined
         };
     }
 
@@ -228,6 +207,44 @@ class KickAuthService {
         }
 
         return token.accessToken;
+    }
+
+    /**
+     * Get the current app access token (if valid)
+     */
+    getAppAccessToken(): string | null {
+        const token = storageService.getAppToken(this.platform);
+        if (!token) return null;
+
+        // Check if expired
+        if (token.expiresAt && Date.now() >= token.expiresAt) {
+            return null;
+        }
+
+        return token.accessToken;
+    }
+
+    /**
+     * Check if app token needs refresh and refresh if necessary
+     */
+    async ensureValidAppToken(): Promise<boolean> {
+        const token = storageService.getAppToken(this.platform);
+
+        // If no token or expired, get a new one
+        if (!token || storageService.isAppTokenExpired(this.platform)) {
+            console.log('🔄 Kick App token missing or expired, fetching new one...');
+            try {
+                // We use tokenExchangeService which handles client_credentials grant
+                const newToken = await tokenExchangeService.getAppAccessToken(this.platform);
+                storageService.saveAppToken(this.platform, newToken);
+                return true;
+            } catch (error) {
+                console.error('❌ Failed to get Kick App Token:', error);
+                return false;
+            }
+        }
+
+        return true;
     }
 }
 

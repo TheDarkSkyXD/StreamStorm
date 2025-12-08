@@ -92,6 +92,27 @@ class TwitchAuthService {
     }
 
     /**
+     * Ensure we have a valid App Access Token (Client Credentials)
+     */
+    async ensureAppToken(): Promise<boolean> {
+        // Check if we already have a valid app token
+        if (!storageService.isAppTokenExpired(this.platform)) {
+            return true;
+        }
+
+        console.log('🔄 Twitch app token missing or expired, fetching new one...');
+
+        try {
+            const token = await tokenExchangeService.getAppAccessToken(this.platform);
+            storageService.saveAppToken(this.platform, token);
+            return true;
+        } catch (error) {
+            console.error('❌ Failed to get Twitch app token:', error);
+            return false;
+        }
+    }
+
+    /**
      * Revoke the current token and logout
      */
     async logout(): Promise<boolean> {

@@ -51,7 +51,7 @@ const categoriesRoute = createRoute({
 // Category detail page
 const categoryDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/categories/$categoryId',
+  path: '/categories/$platform/$categoryId',
   component: CategoryDetailPage,
 });
 

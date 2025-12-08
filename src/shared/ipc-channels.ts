@@ -94,6 +94,26 @@ export const IPC_CHANNELS = {
 
   // Image Proxy (bypass CORS for external images)
   IMAGE_PROXY: 'image:proxy',
+
+  // ========== Discovery: Streams ==========
+  STREAMS_GET_TOP: 'streams:get-top',
+  STREAMS_GET_BY_CATEGORY: 'streams:get-by-category',
+  STREAMS_GET_FOLLOWED: 'streams:get-followed',
+  STREAMS_GET_BY_CHANNEL: 'streams:get-by-channel',
+
+  // ========== Discovery: Categories ==========
+  CATEGORIES_GET_TOP: 'categories:get-top',
+  CATEGORIES_GET_BY_ID: 'categories:get-by-id',
+  CATEGORIES_SEARCH: 'categories:search',
+
+  // ========== Discovery: Search ==========
+  SEARCH_CHANNELS: 'search:channels',
+  SEARCH_ALL: 'search:all',
+
+  // ========== Discovery: Channels ==========
+  CHANNELS_GET_BY_ID: 'channels:get-by-id',
+  CHANNELS_GET_BY_USERNAME: 'channels:get-by-username',
+  CHANNELS_GET_FOLLOWED: 'channels:get-followed',
 } as const;
 
 // Type for channel names

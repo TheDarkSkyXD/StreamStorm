@@ -60,6 +60,7 @@ export interface UnifiedCategory {
     name: string;
     boxArtUrl: string;
     igdbId?: string;
+    viewerCount?: number; // Total viewers for the category (if available)
 }
 
 // ========== User Types ==========
@@ -127,6 +128,8 @@ export interface UnifiedVideo {
     platform: Platform;
     channelId: string;
     channelName: string;
+    channelDisplayName: string;
+    channelAvatar: string;
     title: string;
     description?: string;
     thumbnailUrl: string;
@@ -144,6 +147,8 @@ export interface UnifiedClip {
     platform: Platform;
     channelId: string;
     channelName: string;
+    channelDisplayName: string;
+    channelAvatar: string;
     title: string;
     thumbnailUrl: string;
     clipUrl: string;

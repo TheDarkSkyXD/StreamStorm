@@ -89,4 +89,4 @@ Available Exa MCP tools:
 ## Notes
 - The detailed per-area rules (TypeScript migration patterns, Vue component conventions, Electron IPC patterns, database schemas) will live in subfolder AGENTS.md files as they are created.
 - For discovery and precedence behavior, see the "closest-wins" approach above.
-
+- DO NOT curl urls. Use the web_search_exa tool instead.

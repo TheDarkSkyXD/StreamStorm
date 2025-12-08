@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useSearch } from '@tanstack/react-router';
 import React from 'react';
 
-import type { UnifiedCategory, UnifiedChannel, UnifiedStream } from '@/backend/api/unified';
+import type { UnifiedCategory, UnifiedChannel, UnifiedStream, UnifiedVideo, UnifiedClip } from '@/backend/api/unified/platform-types';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
@@ -10,207 +10,77 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Play, Clapperboard } from "lucide-react";
-import { cn } from '@/lib/utils';
+import { Play, Clapperboard, Sparkles } from "lucide-react";
+import { cn, formatDuration } from '@/lib/utils';
+import { useSearchAll } from '@/hooks/queries/useSearch';
 
+// Define SearchTab type
 type SearchTab = 'all' | 'channels' | 'streams' | 'videos' | 'clips' | 'categories';
 
-interface UnifiedVideo {
-  id: string;
-  platform: 'twitch' | 'kick';
-  channelId: string;
-  channelName: string;
-  channelDisplayName: string;
-  channelAvatar: string;
-  title: string;
-  viewCount: number;
-  thumbnailUrl: string;
-  duration: string;
-  createdAt: string;
-}
-
-interface UnifiedClip {
-  id: string;
-  platform: 'twitch' | 'kick';
-  channelId: string;
-  channelName: string;
-  channelDisplayName: string;
-  channelAvatar: string;
-  title: string;
-  viewCount: number;
-  thumbnailUrl: string;
-  duration: string;
-  createdAt: string;
-  embedUrl: string;
-}
-
-// Mock Data Generators
-const mockChannels: UnifiedChannel[] = [
-  {
-    id: '1',
-    platform: 'twitch',
-    username: 'ninja',
-    displayName: 'Ninja',
-    avatarUrl: 'https://static-cdn.jtvnw.net/jtv_user_pictures/3f6ed82a-3029-4379-8928-199a9110d700-profile_image-70x70.png',
-    isLive: true,
-    isVerified: true,
-    isPartner: true,
-    followerCount: 19000000,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '2',
-    platform: 'kick',
-    username: 'xqc',
-    displayName: 'xQc',
-    avatarUrl: 'https://files.kick.com/images/user/285994/profile_image/3295842/webp',
-    isLive: false,
-    isVerified: true,
-    isPartner: true,
-    followerCount: 500000,
-    createdAt: new Date().toISOString()
-  },
-  {
-    id: '3',
-    platform: 'twitch',
-    username: 'shroud',
-    displayName: 'shroud',
-    avatarUrl: 'https://static-cdn.jtvnw.net/jtv_user_pictures/7ed5e0c6-0191-4eef-8328-481ecaa05232-profile_image-70x70.png',
-    isLive: true,
-    isVerified: true,
-    isPartner: true,
-    followerCount: 10000000,
-    createdAt: new Date().toISOString()
-  }
-];
-
-const mockStreams: UnifiedStream[] = [
-  {
-    id: '101',
-    platform: 'twitch',
-    channelId: '1',
-    channelName: 'ninja',
-    channelDisplayName: 'Ninja',
-    channelAvatar: 'https://static-cdn.jtvnw.net/jtv_user_pictures/3f6ed82a-3029-4379-8928-199a9110d700-profile_image-70x70.png',
-    title: 'Fortnite Customs! !prime',
-    viewerCount: 15432,
-    thumbnailUrl: 'https://static-cdn.jtvnw.net/previews-ttv/live_user_ninja-440x248.jpg',
-    isLive: true,
-    startedAt: new Date().toISOString(),
-    language: 'en',
-    tags: ['Fortnite', 'Battle Royale'],
-    categoryName: 'Fortnite'
-  }
-];
-
-const mockCategories: UnifiedCategory[] = [
-  {
-    id: 'c1',
-    platform: 'twitch',
-    name: 'Just Chatting',
-    boxArtUrl: 'https://static-cdn.jtvnw.net/ttv-boxart/509658-188x250.jpg'
-  },
-  {
-    id: 'c2',
-    platform: 'kick',
-    name: 'Slots & Casino',
-    boxArtUrl: 'https://files.kick.com/images/subcategories/20/banner/webp'
-  },
-  {
-    id: 'c3',
-    platform: 'twitch',
-    name: 'Valorant',
-    boxArtUrl: 'https://static-cdn.jtvnw.net/ttv-boxart/516575-188x250.jpg'
-  }
-];
-
-const mockVideos: UnifiedVideo[] = [
-  {
-    id: 'v1',
-    platform: 'twitch',
-    channelId: '1',
-    channelName: 'ninja',
-    channelDisplayName: 'Ninja',
-    channelAvatar: 'https://static-cdn.jtvnw.net/jtv_user_pictures/3f6ed82a-3029-4379-8928-199a9110d700-profile_image-70x70.png',
-    title: 'Previous Broadcast: Fortnite Customs',
-    viewCount: 120000,
-    thumbnailUrl: 'https://static-cdn.jtvnw.net/cf_vods/d3vd9lfkzbru3h/44ce842426027aeb07be_ninja_41876310151_1677242835//thumb/thumb0-320x180.jpg',
-    duration: '4:20:30',
-    createdAt: new Date(Date.now() - 86400000).toISOString()
-  },
-  {
-    id: 'v2',
-    platform: 'kick',
-    channelId: '2',
-    channelName: 'xqc',
-    channelDisplayName: 'xQc',
-    channelAvatar: 'https://files.kick.com/images/user/285994/profile_image/3295842/webp',
-    title: 'Reacting to Tik Toks',
-    viewCount: 50000,
-    thumbnailUrl: 'https://files.kick.com/images/livestream/12345/banner.webp', // Placeholder
-    duration: '6:10:15',
-    createdAt: new Date(Date.now() - 172800000).toISOString()
-  }
-];
-
-const mockClips: UnifiedClip[] = [
-  {
-    id: 'cl1',
-    platform: 'twitch',
-    channelId: '3',
-    channelName: 'shroud',
-    channelDisplayName: 'shroud',
-    channelAvatar: 'https://static-cdn.jtvnw.net/jtv_user_pictures/7ed5e0c6-0191-4eef-8328-481ecaa05232-profile_image-70x70.png',
-    title: 'Insane 1v5 Clutch!',
-    viewCount: 5432,
-    thumbnailUrl: 'https://static-cdn.jtvnw.net/cf_vods/d3vd9lfkzbru3h/44ce842426027aeb07be_shroud_41876310151_1677242835//thumb/thumb0-320x180.jpg',
-    duration: '0:30',
-    createdAt: new Date(Date.now() - 3600000).toISOString(),
-    embedUrl: 'https://clips.twitch.tv/embed?clip=AwkwardHelplessSalamanderSwiftRage&parent=localhost'
-  },
-  {
-    id: 'cl2',
-    platform: 'kick',
-    channelId: '2',
-    channelName: 'xqc',
-    channelDisplayName: 'xQc',
-    channelAvatar: 'https://files.kick.com/images/user/285994/profile_image/3295842/webp',
-    title: 'FUNNY FAIL',
-    viewCount: 1200,
-    thumbnailUrl: 'https://files.kick.com/images/livestream/12345/banner.webp',
-    duration: '0:15',
-    createdAt: new Date(Date.now() - 7200000).toISOString(),
-    embedUrl: 'https://player.kick.com/xqc' // Mock embed
-  }
-];
-
+// Platform-agnostic unified search
 export function SearchPage() {
   const search: any = useSearch({ from: '/search' });
   const q = search.q as string;
   const [activeTab, setActiveTab] = React.useState<SearchTab>('all');
+  const [platformFilter, setPlatformFilter] = React.useState<'all' | 'twitch' | 'kick'>('all');
+  const [liveOnly, setLiveOnly] = React.useState(false);
   const [selectedClip, setSelectedClip] = React.useState<UnifiedClip | null>(null);
 
-  // Simulated search query
-  const { data, isLoading } = useQuery({
-    queryKey: ['search', q],
-    queryFn: async () => {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 600));
+  // Pass platform filter to the query. Pass undefined if 'all'.
+  const { data, isLoading } = useSearchAll(
+    q,
+    platformFilter === 'all' ? undefined : platformFilter,
+    20
+  );
 
-      if (!q) return { channels: [], streams: [], videos: [], clips: [], categories: [] };
+  const results = data;
 
-      const queryLower = q.toLowerCase();
+  // Apply Client-Side Filtering (Live Only)
+  // Note: Platform filtering is handled by the API via useSearchAll
+  const filteredChannels = React.useMemo(() => {
+    const channels = results?.channels || [];
+    if (liveOnly) {
+      return channels.filter(c => c.isLive);
+    }
+    return channels;
+  }, [results?.channels, liveOnly]);
 
-      return {
-        channels: mockChannels.filter(c => c.username.includes(queryLower) || c.displayName.toLowerCase().includes(queryLower)),
-        streams: mockStreams.filter(s => s.title.toLowerCase().includes(queryLower) || s.channelName.includes(queryLower)),
-        videos: mockVideos.filter(v => v.title.toLowerCase().includes(queryLower) || v.channelName.includes(queryLower)),
-        clips: mockClips.filter(c => c.title.toLowerCase().includes(queryLower) || c.channelName.includes(queryLower)),
-        categories: mockCategories.filter(c => c.name.toLowerCase().includes(queryLower))
-      };
-    },
-    enabled: !!q
-  });
+  const filteredStreams = results?.streams || []; // Streams are inherently live
+
+  const filteredCategories = results?.categories || []; // Categories don't have a live state
+
+  const filteredVideos = React.useMemo(() => {
+    const videos = results?.videos || [];
+    if (liveOnly) return []; // Hide videos when looking for live content
+    return videos;
+  }, [results?.videos, liveOnly]);
+
+  const filteredClips = React.useMemo(() => {
+    const clips = results?.clips || [];
+    if (liveOnly) return []; // Hide clips when looking for live content
+    return clips;
+  }, [results?.clips, liveOnly]);
+
+  // Identify Best Matches from Filtered Results
+  const { topMatches, otherMatches } = React.useMemo(() => {
+    if (!filteredChannels || !q) return { topMatches: [], otherMatches: filteredChannels || [] };
+
+    const normalizedQuery = q.toLowerCase().trim();
+    const top: UnifiedChannel[] = [];
+    const others: UnifiedChannel[] = [];
+
+    filteredChannels.forEach(channel => {
+      const isExact = channel.username.toLowerCase() === normalizedQuery ||
+        channel.displayName.toLowerCase() === normalizedQuery;
+      if (isExact) {
+        top.push(channel);
+      } else {
+        others.push(channel);
+      }
+    });
+
+    return { topMatches: top, otherMatches: others };
+  }, [filteredChannels, q]);
 
   if (!q) {
     return (
@@ -226,41 +96,99 @@ export function SearchPage() {
     )
   }
 
-  const showChannels = (activeTab === 'all' || activeTab === 'channels') && data?.channels && data.channels.length > 0;
-  const showCategories = (activeTab === 'all' || activeTab === 'categories') && data?.categories && data.categories.length > 0;
-  const showStreams = (activeTab === 'all' || activeTab === 'streams') && data?.streams && data.streams.length > 0;
-  const showVideos = (activeTab === 'all' || activeTab === 'videos') && data?.videos && data.videos.length > 0;
-  const showClips = (activeTab === 'all' || activeTab === 'clips') && data?.clips && data.clips.length > 0;
+  const showTopMatches = (activeTab === 'all' || activeTab === 'channels') && topMatches.length > 0;
+  const showChannels = (activeTab === 'all' || activeTab === 'channels') && otherMatches.length > 0;
+  const showCategories = (activeTab === 'all' || activeTab === 'categories') && filteredCategories.length > 0;
+  const showStreams = (activeTab === 'all' || activeTab === 'streams') && filteredStreams.length > 0;
+  const showVideos = (activeTab === 'all' || activeTab === 'videos') && filteredVideos.length > 0;
+  const showClips = (activeTab === 'all' || activeTab === 'clips') && filteredClips.length > 0;
+
+  // Calculate total count based on filtered results
+  const totalResults = (filteredChannels.length) + filteredStreams.length + filteredVideos.length + filteredClips.length + filteredCategories.length;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-300">
-      <div>
-        <h1 className="text-3xl font-bold text-white mb-2">
-          Search Results for "<span className="text-[var(--color-storm-primary)]">{q}</span>"
-        </h1>
-        <p className="text-[var(--color-foreground-muted)]">
-          Found {data ? (data.channels.length + data.streams.length + data.videos.length + data.clips.length + data.categories.length) : 0} results
-        </p>
-      </div>
+    <div className="p-6 max-w-7xl mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
 
-      <div className="flex items-center gap-2 border-b border-[var(--color-border)] pb-1">
-        {(['all', 'channels', 'streams', 'videos', 'clips', 'categories'] as const).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={cn(
-              "px-4 py-2 text-sm font-medium transition-colors relative whitespace-nowrap",
-              activeTab === tab
-                ? "text-white"
-                : "text-[var(--color-foreground-secondary)] hover:text-white"
-            )}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            {activeTab === tab && (
-              <div className="absolute bottom-[-5px] left-0 right-0 h-0.5 bg-[var(--color-storm-primary)] rounded-full" />
-            )}
-          </button>
-        ))}
+      {/* HEADER & FILTERS */}
+      <div className="space-y-4">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-2">
+            Search Results for "<span className="text-[var(--color-storm-primary)]">{q}</span>"
+          </h1>
+          <p className="text-[var(--color-foreground-muted)]">
+            Found {totalResults} results
+          </p>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center bg-[var(--color-background-secondary)]/30 p-4 rounded-xl border border-[var(--color-border)]">
+          {/* TABS */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar max-w-full pb-1 sm:pb-0">
+            {(['all', 'channels', 'streams', 'videos', 'clips', 'categories'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  "px-3 py-1.5 text-sm font-medium transition-all rounded-lg whitespace-nowrap",
+                  activeTab === tab
+                    ? "bg-[var(--color-storm-primary)] text-black font-bold shadow-lg shadow-[var(--color-storm-primary)]/20"
+                    : "text-[var(--color-foreground-secondary)] hover:bg-white/5 hover:text-white"
+                )}
+              >
+                {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              </button>
+            ))}
+          </div>
+
+          {/* FILTERS control group */}
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <div className="h-6 w-px bg-[var(--color-border)] mx-1 hidden sm:block" />
+
+            {/* Platform Filter */}
+            <div className="flex items-center gap-1 bg-black/20 p-1 rounded-lg border border-[var(--color-border)]">
+              <button
+                onClick={() => setPlatformFilter('all')}
+                className={cn(
+                  "px-3 py-1 text-xs font-bold rounded-md transition-all",
+                  platformFilter === 'all' ? "bg-[var(--color-foreground-secondary)] text-black" : "text-[var(--color-foreground-muted)] hover:text-white"
+                )}
+              >
+                ALL
+              </button>
+              <button
+                onClick={() => setPlatformFilter('twitch')}
+                className={cn(
+                  "px-3 py-1 text-xs font-bold rounded-md transition-all",
+                  platformFilter === 'twitch' ? "bg-[#9146FF] text-white" : "text-[var(--color-foreground-muted)] hover:text-[#9146FF]"
+                )}
+              >
+                TWITCH
+              </button>
+              <button
+                onClick={() => setPlatformFilter('kick')}
+                className={cn(
+                  "px-3 py-1 text-xs font-bold rounded-md transition-all",
+                  platformFilter === 'kick' ? "bg-[#53FC18] text-black" : "text-[var(--color-foreground-muted)] hover:text-[#53FC18]"
+                )}
+              >
+                KICK
+              </button>
+            </div>
+
+            {/* Live Only Toggle */}
+            <button
+              onClick={() => setLiveOnly(!liveOnly)}
+              className={cn(
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-bold transition-all",
+                liveOnly
+                  ? "bg-red-500/10 border-red-500 text-red-500"
+                  : "bg-transparent border-[var(--color-border)] text-[var(--color-foreground-muted)] hover:border-red-500/50 hover:text-red-500/80"
+              )}
+            >
+              <div className={cn("w-2 h-2 rounded-full bg-current", liveOnly && "animate-pulse")} />
+              LIVE ONLY
+            </button>
+          </div>
+        </div>
       </div>
 
       {isLoading ? (
@@ -350,6 +278,46 @@ export function SearchPage() {
         </div>
       ) : (
         <div className="space-y-10">
+          {/* BEST MATCHES SECTION */}
+          {showTopMatches && (
+            <section>
+              <h2 className="text-xl font-bold text-[var(--color-storm-primary)] mb-4 flex items-center gap-2">
+                <Sparkles className="w-5 h-5" /> Best Match
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {topMatches.map((channel: UnifiedChannel) => (
+                  <Link
+                    to="/stream/$platform/$channel"
+                    params={{ platform: channel.platform, channel: channel.username }}
+                    search={{ tab: 'videos' }}
+                    key={channel.id}
+                    className="group flex items-center gap-4 p-4 rounded-xl bg-[var(--color-background-secondary)]/50 hover:bg-[var(--color-background-elevated)] transition-all border border-[var(--color-storm-primary)] hover:shadow-lg hover:shadow-[var(--color-storm-primary)]/10"
+                  >
+                    <div className="relative">
+                      <img src={channel.avatarUrl} alt={channel.displayName} className="w-20 h-20 rounded-full object-cover ring-4 ring-[var(--color-storm-primary)]/20 group-hover:ring-[var(--color-storm-primary)] transition-all" />
+                      {channel.platform === 'kick' && <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#53FC18] rounded-full border-4 border-[var(--color-background)] flex items-center justify-center text-[10px] font-bold text-black">K</div>}
+                      {channel.platform === 'twitch' && <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#9146FF] rounded-full border-4 border-[var(--color-background)] flex items-center justify-center text-[10px] font-bold text-white">T</div>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-bold text-lg text-white truncate">{channel.displayName}</h3>
+                      </div>
+                      <p className="text-sm text-[var(--color-foreground-secondary)] truncate">
+                        {channel.followerCount?.toLocaleString()} followers
+                      </p>
+                      {channel.isLive && (
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 text-xs font-bold mt-1 w-fit">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                          LIVE
+                        </div>
+                      )}
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
           {/* CHANNELS SECTION */}
           {showChannels && (
             <section>
@@ -357,7 +325,7 @@ export function SearchPage() {
                 Channels
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {data.channels.map(channel => (
+                {otherMatches.map((channel: UnifiedChannel) => (
                   <Link
                     to="/stream/$platform/$channel"
                     params={{ platform: channel.platform, channel: channel.username }}
@@ -378,7 +346,7 @@ export function SearchPage() {
                         {channel.followerCount?.toLocaleString()} followers
                       </p>
                       {channel.isLive && (
-                        <div className="mt-1 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 text-xs font-bold">
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 text-xs font-bold">
                           <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
                           LIVE
                         </div>
@@ -397,10 +365,10 @@ export function SearchPage() {
                 Categories
               </h2>
               <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-                {data.categories.map(category => (
+                {filteredCategories.map((category: UnifiedCategory) => (
                   <Link
-                    to="/categories/$categoryId"
-                    params={{ categoryId: category.id }}
+                    to="/categories/$platform/$categoryId"
+                    params={{ platform: category.platform, categoryId: category.id }}
                     key={category.id}
                     className="group block relative aspect-[3/4] rounded-lg overflow-hidden bg-[var(--color-background-secondary)]"
                   >
@@ -424,7 +392,7 @@ export function SearchPage() {
                 Streams
               </h2>
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {data.streams.map(stream => (
+                {filteredStreams.map((stream: UnifiedStream) => (
                   <Link
                     to="/stream/$platform/$channel"
                     params={{ platform: stream.platform, channel: stream.channelName }}
@@ -438,7 +406,7 @@ export function SearchPage() {
                         LIVE
                       </div>
                       <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs backdrop-blur-sm">
-                        {stream.viewerCount.toLocaleString()} viewers
+                        {(stream.viewerCount || 0).toLocaleString()} viewers
                       </div>
                     </div>
                     <div className="p-3">
@@ -452,6 +420,7 @@ export function SearchPage() {
                       </div>
                       <div className="mt-2 flex gap-1">
                         {stream.platform === 'twitch' && <span className="text-[10px] bg-[#9146FF]/20 text-[#9146FF] px-1.5 py-0.5 rounded uppercase font-bold">Twitch</span>}
+                        {stream.platform === 'kick' && <span className="text-[10px] bg-[#53FC18]/20 text-[#53FC18] px-1.5 py-0.5 rounded uppercase font-bold">Kick</span>}
                       </div>
                     </div>
                   </Link>
@@ -460,7 +429,6 @@ export function SearchPage() {
             </section>
           )}
 
-
           {/* VIDEOS SECTION */}
           {showVideos && (
             <section>
@@ -468,7 +436,7 @@ export function SearchPage() {
                 <Play className="w-5 h-5 text-[var(--color-storm-primary)]" /> Videos
               </h2>
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {data.videos.map(video => (
+                {filteredVideos.map((video: UnifiedVideo) => (
                   <Link
                     to="/video/$platform/$videoId"
                     params={{ platform: video.platform, videoId: video.id }}
@@ -478,7 +446,7 @@ export function SearchPage() {
                     <div className="relative aspect-video">
                       <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
                       <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs backdrop-blur-sm">
-                        {video.duration}
+                        {formatDuration(video.duration)}
                       </div>
                     </div>
                     <div className="p-3">
@@ -487,7 +455,7 @@ export function SearchPage() {
                         <div className="min-w-0">
                           <h3 className="font-bold text-white truncate group-hover:text-[var(--color-storm-primary)] transition-colors">{video.title}</h3>
                           <p className="text-sm text-[var(--color-foreground-secondary)]">{video.channelDisplayName}</p>
-                          <p className="text-xs text-[var(--color-foreground-muted)] mt-1">{video.viewCount.toLocaleString()} views • {new Date(video.createdAt).toLocaleDateString()}</p>
+                          <p className="text-xs text-[var(--color-foreground-muted)] mt-1">{(video.viewCount || 0).toLocaleString()} views • {new Date(video.publishedAt).toLocaleDateString()}</p>
                         </div>
                       </div>
                     </div>
@@ -504,7 +472,7 @@ export function SearchPage() {
                 <Clapperboard className="w-5 h-5 text-white" /> Clips
               </h2>
               <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-                {data.clips.map(clip => (
+                {filteredClips.map((clip: UnifiedClip) => (
                   <div
                     onClick={() => setSelectedClip(clip)}
                     key={clip.id}
@@ -519,7 +487,7 @@ export function SearchPage() {
                       </div>
 
                       <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs backdrop-blur-sm">
-                        {clip.duration}
+                        {formatDuration(clip.duration)}
                       </div>
                     </div>
                     <div className="p-3">
@@ -528,7 +496,7 @@ export function SearchPage() {
                         <div className="min-w-0">
                           <h3 className="font-bold text-sm text-white truncate group-hover:text-[var(--color-storm-primary)] transition-colors">{clip.title}</h3>
                           <p className="text-xs text-[var(--color-foreground-secondary)]">{clip.channelDisplayName}</p>
-                          <p className="text-[10px] text-[var(--color-foreground-muted)] mt-0.5">{clip.viewCount.toLocaleString()} views</p>
+                          <p className="text-xs text-[var(--color-foreground-muted)] mt-0.5">{(clip.viewCount || 0).toLocaleString()} views</p>
                         </div>
                       </div>
                     </div>
@@ -539,10 +507,10 @@ export function SearchPage() {
           )}
 
           {/* EMPTY STATE */}
-          {data && data.channels.length === 0 && data.streams.length === 0 && data.categories.length === 0 && data.videos.length === 0 && data.clips.length === 0 && (
+          {results && filteredChannels.length === 0 && filteredStreams.length === 0 && filteredCategories.length === 0 && filteredVideos.length === 0 && filteredClips.length === 0 && (
             <div className="text-center py-20 bg-[var(--color-background-secondary)]/30 rounded-2xl border border-[var(--color-border)] border-dashed">
               <p className="text-xl text-[var(--color-foreground-secondary)] font-medium">No results found for "{q}"</p>
-              <p className="text-[var(--color-foreground-muted)] mt-2">Try checking your spelling or searching for something else.</p>
+              <p className="text-[var(--color-foreground-muted)] mt-2">Try adjusting your filters or checking your spelling.</p>
             </div>
           )}
         </div>

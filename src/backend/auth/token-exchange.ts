@@ -110,6 +110,56 @@ class TokenExchangeService {
     }
 
     /**
+     * Get an App Access Token (Client Credentials Flow)
+     */
+    async getAppAccessToken(platform: Platform): Promise<AuthToken> {
+        const config = getOAuthConfig(platform);
+
+        console.log(`🔄 Getting App Access Token for ${platform}`);
+
+        const body = new URLSearchParams({
+            grant_type: 'client_credentials',
+            client_id: config.clientId,
+            client_secret: config.clientSecret,
+        });
+
+        try {
+            const response = await fetch(config.tokenEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    Accept: 'application/json',
+                },
+                body: body.toString(),
+            });
+
+            if (!response.ok) {
+                const errorData = (await response.json().catch(() => ({}))) as TokenError;
+                const errorMessage =
+                    errorData.error_description ||
+                    errorData.message ||
+                    errorData.error ||
+                    'App token exchange failed';
+                console.error(
+                    `❌ App token exchange failed for ${platform}:`,
+                    response.status,
+                    errorMessage
+                );
+                throw new Error(errorMessage);
+            }
+
+            const data = (await response.json()) as TokenResponse;
+            const token = this.parseTokenResponse(data);
+
+            console.log(`✅ App Token obtained for ${platform}`);
+            return token;
+        } catch (error) {
+            console.error(`❌ App token exchange error for ${platform}:`, error);
+            throw error;
+        }
+    }
+
+    /**
      * Refresh an access token using a refresh token
      */
     async refreshToken(params: TokenRefreshParams): Promise<AuthToken> {

@@ -1,174 +1,258 @@
 /**
  * Kick API Types
  *
- * Type definitions for Kick API responses.
+ * Type definitions for the official Kick Public API v1.
+ * API Documentation: https://docs.kick.com/
+ * 
  * These are the raw types from the API before transformation to unified types.
  */
 
-// ========== Kick User ==========
+// ========== Standard API Response Wrapper ==========
+
+export interface KickApiResponse<T> {
+    data: T;
+    message?: string;
+}
+
+// ========== Official API: Users ==========
+// Endpoint: GET /public/v1/users
+// Scope: user:read
 
 export interface KickApiUser {
-    id: number;
-    username: string;
-    agreed_to_terms: boolean;
-    email_verified_at: string | null;
-    bio: string | null;
-    country: string | null;
-    state: string | null;
-    city: string | null;
-    instagram: string | null;
-    twitter: string | null;
-    youtube: string | null;
-    discord: string | null;
-    tiktok: string | null;
-    facebook: string | null;
-    profile_pic: string | null;
+    user_id: number;
+    name: string;
+    email?: string;
+    profile_picture: string | null;
 }
 
-// ========== Kick Channel ==========
+// ========== Official API: Token Introspect ==========
+// Endpoint: POST /public/v1/token/introspect
+
+export interface KickApiTokenIntrospect {
+    active: boolean;
+    client_id?: string;
+    exp?: number;
+    scope?: string;
+    token_type?: 'user' | 'bot';
+}
+
+// ========== Official API: Channels ==========
+// Endpoint: GET /public/v1/channels
+// Scope: channel:read
 
 export interface KickApiChannel {
-    id: number;
-    user_id: number;
+    broadcaster_user_id: number;
     slug: string;
-    is_banned: boolean;
-    playback_url: string | null;
-    vod_enabled: boolean;
-    subscription_enabled: boolean;
-    followers_count: number;
-    subscriber_badges: KickSubscriberBadge[];
-    banner_image: KickImage | null;
-    recent_categories: KickApiCategory[];
-    livestream: KickApiLivestream | null;
-    role: string | null;
-    muted: boolean;
-    follower_badges: any[];
-    offline_banner_image: KickImage | null;
-    verified: boolean;
-    can_host: boolean;
-    user: KickApiChannelUser;
+    channel_description: string;
+    banner_picture: string | null;
+    stream_title: string;
+    category: KickApiChannelCategory | null;
+    stream: KickApiChannelStream | null;
 }
 
-export interface KickApiChannelUser {
+export interface KickApiChannelCategory {
     id: number;
-    username: string;
-    agreed_to_terms: boolean;
-    email_verified_at: string | null;
-    bio: string | null;
-    country: string | null;
-    state: string | null;
-    city: string | null;
-    instagram: string | null;
-    twitter: string | null;
-    youtube: string | null;
-    discord: string | null;
-    tiktok: string | null;
-    facebook: string | null;
-    profile_pic: string | null;
+    name: string;
+    thumbnail: string;
 }
 
-export interface KickSubscriberBadge {
-    id: number;
-    channel_id: number;
-    months: number;
-    badge_image: KickImage;
+export interface KickApiChannelStream {
+    is_live: boolean;
+    is_mature: boolean;
+    key?: string;
+    language: string;
+    start_time: string;
+    thumbnail: string | null;
+    url?: string;
+    viewer_count: number;
+    custom_tags: string[];
 }
 
-export interface KickImage {
-    src: string;
-    srcset?: string;
-}
-
-// ========== Kick Livestream ==========
+// ========== Official API: Livestreams ==========
+// Endpoint: GET /public/v1/livestreams
+// Scope: channel:read
 
 export interface KickApiLivestream {
-    id: number;
-    slug: string;
+    broadcaster_user_id: number;
     channel_id: number;
-    created_at: string;
-    session_title: string;
-    is_live: boolean;
-    risk_level_id: number | null;
-    start_time: string;
-    source: string | null;
-    twitch_channel: string | null;
-    duration: number;
+    slug: string;
+    stream_title: string;
     language: string;
-    is_mature: boolean;
+    has_mature_content: boolean;
     viewer_count: number;
-    thumbnail: KickImage | null;
-    categories: KickApiCategory[];
-    tags: string[];
+    thumbnail: string | null;
+    started_at: string;
+    custom_tags: string[];
+    category: KickApiChannelCategory;
 }
 
-// ========== Kick Category ==========
+// Endpoint: GET /public/v1/livestreams/stats
+export interface KickApiLivestreamStats {
+    total_count: number;
+}
+
+// ========== Official API: Categories ==========
+// Endpoint: GET /public/v1/categories?q=:query
+// Endpoint: GET /public/v1/categories/:category_id
+// Scope: channel:read
 
 export interface KickApiCategory {
     id: number;
-    category_id: number;
     name: string;
-    slug: string;
-    tags: string[];
-    description: string | null;
-    deleted_at: string | null;
-    viewers: number;
-    banner: KickImage | null;
-    category: {
-        id: number;
-        name: string;
-        slug: string;
-        icon: string;
-    };
+    thumbnail: string;
+    tags?: string[];
+    viewer_count?: number;
 }
 
-// ========== Kick Video/VOD ==========
+// ========== Official API: Channel Rewards ==========
+// Endpoint: GET /public/v1/channels/rewards
+// Scope: channel:rewards:read, channel:rewards:write
 
-export interface KickApiVideo {
-    id: number;
-    live_stream_id: number;
-    slug: string | null;
-    thumb: string | null;
-    s3: string | null;
-    trading_platform_id: number | null;
-    created_at: string;
-    updated_at: string;
-    uuid: string;
-    views: number;
-    deleted_at: string | null;
-    source: string;
-    livestream: {
-        id: number;
-        slug: string;
-        channel_id: number;
-        created_at: string;
-        session_title: string;
-        is_live: boolean;
-        risk_level_id: number | null;
-        start_time: string;
-        source: string | null;
-        twitch_channel: string | null;
-        duration: number;
-        language: string;
-        is_mature: boolean;
-        viewer_count: number;
-        thumbnail: KickImage | null;
-        channel: {
-            id: number;
-            user_id: number;
-            slug: string;
-            user: {
-                id: number;
-                username: string;
-                profile_pic: string | null;
-            };
-        };
-        categories: KickApiCategory[];
-    };
+export interface KickApiChannelReward {
+    id: string;
+    broadcaster_user_id: number;
+    title: string;
+    description: string;
+    cost: number;
+    enabled: boolean;
+    is_paused: boolean;
+    requires_user_input: boolean;
+    background_color_start: string;
+    background_color_end: string;
 }
 
-// ========== Kick Clip ==========
+// Endpoint: POST /public/v1/channels/rewards
+export interface KickApiCreateRewardRequest {
+    background_color_start: string;
+    background_color_end: string;
+    cost: number;
+    description: string;
+    enabled: boolean;
+    is_paused: boolean;
+    requires_user_input: boolean;
+    title: string;
+}
 
-export interface KickApiClip {
+// ========== Official API: Chat ==========
+// Endpoint: POST /public/v1/chat
+// Scope: chat:write
+
+export interface KickApiChatMessageRequest {
+    broadcaster_user_id?: number;
+    content: string;
+    reply_to_message_id?: string;
+    type: 'user' | 'bot';
+}
+
+export interface KickApiChatMessageResponse {
+    is_sent: boolean;
+    message_id: string;
+}
+
+// ========== Official API: Moderation ==========
+// Endpoint: POST /public/v1/moderation/bans
+// Endpoint: DELETE /public/v1/moderation/bans
+// Scope: moderation:ban
+
+export interface KickApiModerationBanRequest {
+    broadcaster_user_id: number;
+    user_id: number;
+    duration?: number; // minutes, omit for permanent ban
+    reason?: string;
+}
+
+// ========== Official API: KICKs Leaderboard ==========
+// Endpoint: GET /public/v1/kicks/leaderboard
+// Scope: kicks:read
+
+export interface KickApiLeaderboardEntry {
+    rank: number;
+    user_id: number;
+    username: string;
+    gifted_amount: number;
+}
+
+export interface KickApiKicksLeaderboard {
+    lifetime: KickApiLeaderboardEntry[];
+    month: KickApiLeaderboardEntry[];
+    week: KickApiLeaderboardEntry[];
+}
+
+// ========== Official API: Public Key ==========
+// Endpoint: GET /public/v1/public-key -  For webhook signature verification
+
+export interface KickApiPublicKey {
+    public_key: string;
+}
+
+// ========== Official API Scopes ==========
+// Reference: https://docs.kick.com/getting-started/scopes
+
+export const KICK_API_SCOPES = {
+    CHANNEL_READ: 'channel:read',
+    CHANNEL_WRITE: 'channel:write',
+    CHANNEL_REWARDS_READ: 'channel:rewards:read',
+    CHANNEL_REWARDS_WRITE: 'channel:rewards:write',
+    CHAT_WRITE: 'chat:write',
+    EVENTS_SUBSCRIBE: 'events:subscribe',
+    KICKS_READ: 'kicks:read',
+    MODERATION_BAN: 'moderation:ban',
+    MODERATION_CHAT_MESSAGE_MANAGE: 'moderation:chat_message:manage',
+    STREAMKEY_READ: 'streamkey:read',
+    USER_READ: 'user:read',
+} as const;
+
+export type KickApiScope = typeof KICK_API_SCOPES[keyof typeof KICK_API_SCOPES];
+
+// ========== API Base URL ==========
+// Official Kick Dev API: https://docs.kick.com/
+
+export const KICK_API_BASE = 'https://api.kick.com/public/v1';
+
+// ========== Official API Endpoints Reference ==========
+/**
+ * Categories:
+ *   GET  /public/v1/categories?q=:query&page=:page     - Search categories
+ *   GET  /public/v1/categories/:category_id           - Get category by ID
+ * 
+ * Users:
+ *   POST /public/v1/token/introspect                  - Token introspection
+ *   GET  /public/v1/users?id[]=:user_id               - Get users by ID
+ * 
+ * Channels:
+ *   GET   /public/v1/channels?broadcaster_user_id[]=:id  - Get channels by broadcaster ID
+ *   GET   /public/v1/channels?slug[]=:slug              - Get channels by slug
+ *   PATCH /public/v1/channels                           - Update channel metadata
+ * 
+ * Channel Rewards:
+ *   GET    /public/v1/channels/rewards                - Get channel rewards
+ *   POST   /public/v1/channels/rewards                - Create channel reward
+ *   PATCH  /public/v1/channels/rewards/:id            - Update channel reward
+ *   DELETE /public/v1/channels/rewards/:id            - Delete channel reward
+ * 
+ * Chat:
+ *   POST   /public/v1/chat                            - Send chat message
+ *   DELETE /public/v1/chat/:message_id                - Delete chat message
+ * 
+ * Moderation:
+ *   POST   /public/v1/moderation/bans                 - Ban/timeout user
+ *   DELETE /public/v1/moderation/bans                 - Unban user
+ * 
+ * Livestreams:
+ *   GET /public/v1/livestreams                        - Get livestreams
+ *   GET /public/v1/livestreams/stats                  - Get livestream stats
+ * 
+ * Public Key:
+ *   GET /public/v1/public-key                         - Get public key for webhooks
+ * 
+ * KICKs:
+ *   GET /public/v1/kicks/leaderboard                  - Get KICKs leaderboard
+ */
+
+// ========== Legacy Types (for undocumented/unofficial APIs) ==========
+// Note: These types are from the legacy undocumented API and may not work reliably
+
+export interface KickLegacyApiClip {
     id: string;
     livestream_id: string;
     category_id: string;
@@ -213,45 +297,22 @@ export interface KickApiClip {
     };
 }
 
-// ========== Kick Search Results ==========
+// Legacy API base URLs (undocumented, may not work)
+export const KICK_LEGACY_API_V2_BASE = 'https://kick.com/api/v2';
+export const KICK_LEGACY_API_V1_BASE = 'https://kick.com/api/v1';
 
-export interface KickApiSearchResult {
-    channels: KickApiChannel[];
-    categories: KickApiCategory[];
-    videos: KickApiVideo[];
+
+// ========== Common Types ==========
+
+export interface PaginationOptions {
+    limit?: number;
+    page?: number;
+    cursor?: string;
 }
 
-// ========== Kick Chat Message ==========
-
-export interface KickApiChatMessage {
-    id: string;
-    chatroom_id: number;
-    content: string;
-    type: string;
-    created_at: string;
-    sender: {
-        id: number;
-        username: string;
-        slug: string;
-        identity: {
-            color: string;
-            badges: KickChatBadge[];
-        };
-    };
+export interface PaginatedResult<T> {
+    data: T[];
+    cursor?: string;
+    nextPage?: number;
+    total?: number;
 }
-
-export interface KickChatBadge {
-    type: string;
-    text: string;
-    count?: number;
-}
-
-// ========== API Endpoints ==========
-// Official Kick Dev API: https://docs.kick.com/
-
-// Official public API for authenticated requests
-export const KICK_API_BASE = 'https://api.kick.com/public/v1';
-
-// Legacy undocumented API (for certain public endpoints that may still work)
-export const KICK_API_V2_BASE = 'https://kick.com/api/v2';
-export const KICK_API_V1_BASE = 'https://kick.com/api/v1';
