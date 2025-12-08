@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "commonjs",
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "noImplicitAny": true,
+    "sourceMap": true,
+    "strict": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "outDir": "dist",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "paths": {
+      "@backend/*": [
+        "src/backend/*"
+      ],
+      "@frontend/*": [
+        "src/frontend/*"
+      ],
+      "@shared/*": [
+        "src/shared/*"
+      ],
+      "@/*": [
+        "src/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "forge.config.ts",
+    "vite.*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    ".vite"
+  ]
+}

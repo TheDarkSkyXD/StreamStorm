@@ -54,3 +54,26 @@ A feature moves through three stages. Maintain structure and naming throughout.
 - Do not introduce new directories or naming schemes without approval
 - Keep edits minimal and reversible; prefer moving files and fixing links over rewriting content
 - When you complete a feature move, note the destination path in your status update
+
+## Development Roadmap
+
+The StreamStorm project follows a phased implementation approach. All phase specifications are located in `/documentation/features/planned/`:
+
+| Phase | Focus Area | Spec File |
+|-------|------------|-----------|
+| **0** | Project Setup & Initial Configuration | `phase-0-project-setup-spec.md` |
+| **1** | Authentication & User Management | `phase-1-authentication-spec.md` |
+| **2** | Stream Discovery & Browsing | `phase-2-discovery-spec.md` |
+| **3** | Stream Viewing & Multi-Stream | `phase-3-stream-viewing-spec.md` |
+| **4** | Chat Integration | `phase-4-chat-spec.md` |
+| **5** | Notifications & Alerts | `phase-5-notifications-spec.md` |
+| **6** | Settings & Preferences | `phase-6-settings-spec.md` |
+| **7** | Enhanced Features | `phase-7-enhanced-features-spec.md` |
+| **8** | Platform-Specific Features | `phase-8-platform-features-spec.md` |
+
+**Start with**: [roadmap-spec.md](./features/planned/roadmap-spec.md) for the master plan.
+
+When beginning work on a phase:
+1. Move the spec file from `planned/` to `active/`
+2. Create a progress tracker file: `[phase-name]-progress.md`
+3. Follow the AGENTS.md conventions for completion
