@@ -1,11 +1,13 @@
 /**
  * Custom Title Bar Component
  * 
- * A frameless window title bar with app branding, navigation, and window controls.
+ * A frameless window title bar with app branding and window controls.
+ * Keep this minimal - user info is in TopNavBar.
  */
 
-import React from 'react';
 import { Minus, Square, X, Copy } from 'lucide-react';
+import React from 'react';
+
 import { useWindowControls } from '@/hooks';
 import { cn } from '@/lib/utils';
 
@@ -20,7 +22,7 @@ export function TitleBar({ className }: TitleBarProps) {
   return (
     <div
       className={cn(
-        'h-10 flex items-center justify-between bg-[var(--color-background-secondary)] border-b border-[var(--color-border)] select-none',
+        'h-8 flex items-center justify-between bg-[var(--color-background-secondary)] border-b border-[var(--color-border)] select-none',
         className
       )}
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
@@ -29,7 +31,7 @@ export function TitleBar({ className }: TitleBarProps) {
       <div className="flex items-center gap-2 px-4">
         {/* Spacer for macOS traffic lights */}
         {isMac && <div className="w-16" />}
-        <span className="text-sm font-semibold bg-gradient-to-r from-[var(--color-storm-primary)] to-[var(--color-storm-secondary)] bg-clip-text text-transparent">
+        <span className="text-xs font-semibold text-[var(--color-foreground)]">
           🌩️ StreamStorm
         </span>
       </div>
@@ -41,13 +43,13 @@ export function TitleBar({ className }: TitleBarProps) {
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
           <WindowButton onClick={minimize} aria-label="Minimize">
-            <Minus size={14} />
+            <Minus size={20} />
           </WindowButton>
           <WindowButton onClick={maximize} aria-label={isMaximized ? 'Restore' : 'Maximize'}>
-            {isMaximized ? <Copy size={12} className="rotate-180" /> : <Square size={12} />}
+            {isMaximized ? <Copy size={18} className="rotate-180" /> : <Square size={18} />}
           </WindowButton>
           <WindowButton onClick={close} isClose aria-label="Close">
-            <X size={16} />
+            <X size={20} />
           </WindowButton>
         </div>
       )}
@@ -69,7 +71,7 @@ function WindowButton({ onClick, isClose, children, 'aria-label': ariaLabel }: W
       aria-label={ariaLabel}
       className={cn(
         'w-12 h-full flex items-center justify-center transition-colors',
-        'text-[var(--color-foreground-secondary)] hover:text-[var(--color-foreground)]',
+        'text-white',
         isClose
           ? 'hover:bg-red-500 hover:text-white'
           : 'hover:bg-[var(--color-background-tertiary)]'

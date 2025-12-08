@@ -16,8 +16,8 @@ This document provides a high-level roadmap for StreamStorm development, linking
 
 | Phase | Name | Timeline | Priority | Status |
 |-------|------|----------|----------|--------|
-| **0** | [Project Setup](./phase-0-project-setup-spec.md) | 1 week | Critical | 📋 Planned |
-| **1** | [Authentication](./phase-1-authentication-spec.md) | 2 weeks | High | 📋 Planned |
+| **0** | [Project Setup](./phase-0-project-setup-spec.md) | 1 week | Critical | ✅ Complete |
+| **1** | [Authentication](../active/phase-1-authentication-spec.md) | 2 weeks | High | 🔄 In Progress |
 | **2** | [Stream Discovery](./phase-2-discovery-spec.md) | 2 weeks | High | 📋 Planned |
 | **3** | [Stream Viewing](./phase-3-stream-viewing-spec.md) | 3 weeks | High | 📋 Planned |
 | **4** | [Chat Integration](./phase-4-chat-spec.md) | 2.5 weeks | High | 📋 Planned |
@@ -104,6 +104,6 @@ documentation/features/
 
 ## References
 
+- [Architecture Guide](../architecture.md) - Folder structure and conventions
 - [PRD.md](../../../PRD.md) - Full Product Requirements Document
 - [AGENTS.md](../AGENTS.md) - Documentation conventions for AI agents
-

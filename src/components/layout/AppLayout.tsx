@@ -1,9 +1,13 @@
-import React from 'react';
 import { Link, useLocation } from '@tanstack/react-router';
-import { Home, Heart, Grid3X3, Search, Settings, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Home, Heart, Grid3X3, Settings } from 'lucide-react';
+import React from 'react';
+
+import { useAuthInitialize } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
+
 import { TitleBar } from './TitleBar';
+import { TopNavBar } from '../TopNavBar';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -13,7 +17,6 @@ const navItems = [
   { path: '/', label: 'Home', icon: Home },
   { path: '/following', label: 'Following', icon: Heart },
   { path: '/categories', label: 'Categories', icon: Grid3X3 },
-  { path: '/search', label: 'Search', icon: Search },
   { path: '/settings', label: 'Settings', icon: Settings },
 ] as const;
 
@@ -21,11 +24,17 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { sidebarCollapsed, setSidebarCollapsed } = useAppStore();
   const location = useLocation();
 
+  // Initialize auth state once at the app root
+  useAuthInitialize();
+
   return (
     <div className="h-full flex flex-col bg-[var(--color-background)]">
-      {/* Custom Title Bar */}
+      {/* Custom Title Bar (window controls) */}
       <TitleBar />
-      
+
+      {/* Top Navigation Bar (search, user info) */}
+      <TopNavBar />
+
       {/* Main Layout */}
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar */}
@@ -36,12 +45,12 @@ export function AppLayout({ children }: AppLayoutProps) {
           )}
         >
           {/* Navigation */}
-          <nav className="flex-1 py-4">
+          <nav className="flex-1 py-4 overflow-y-auto">
             <ul className="space-y-1 px-2">
               {navItems.map((item) => {
                 const isActive = location.pathname === item.path;
                 const Icon = item.icon;
-                
+
                 return (
                   <li key={item.path}>
                     <Link
@@ -49,8 +58,8 @@ export function AppLayout({ children }: AppLayoutProps) {
                       className={cn(
                         'flex items-center gap-3 px-3 py-2 rounded-md transition-colors',
                         isActive
-                          ? 'bg-[var(--color-storm-primary)] text-white'
-                          : 'text-[var(--color-foreground-secondary)] hover:bg-[var(--color-background-tertiary)] hover:text-[var(--color-foreground)]'
+                          ? 'bg-zinc-700 text-white'
+                          : 'text-white hover:bg-[var(--color-background-tertiary)] hover:text-white'
                       )}
                     >
                       <Icon size={20} />
@@ -61,17 +70,6 @@ export function AppLayout({ children }: AppLayoutProps) {
               })}
             </ul>
           </nav>
-
-          {/* Collapse Toggle */}
-          <div className="p-2 border-t border-[var(--color-border)]">
-            <button
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-[var(--color-foreground-secondary)] hover:bg-[var(--color-background-tertiary)] transition-colors"
-            >
-              {sidebarCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-              {!sidebarCollapsed && <span className="text-sm">Collapse</span>}
-            </button>
-          </div>
         </aside>
 
         {/* Main Content */}

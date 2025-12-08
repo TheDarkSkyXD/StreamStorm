@@ -5,12 +5,16 @@
  * system integration, and IPC communication with the renderer.
  */
 
-/// <reference path="../forge.env.d.ts" />
+// Load environment variables from .env file FIRST (before other imports)
+import 'dotenv/config';
 
 import { app, BrowserWindow } from 'electron';
 import started from 'electron-squirrel-startup';
-import { windowManager } from './backend/window-manager';
+
 import { registerIpcHandlers } from './backend/ipc-handlers';
+import { windowManager } from './backend/window-manager';
+import { protocolHandler } from './backend/auth';
+
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -19,6 +23,9 @@ if (started) {
 
 // App lifecycle events
 app.on('ready', () => {
+  // Register custom protocol handler for OAuth callbacks (streamstorm://)
+  protocolHandler.registerProtocol();
+
   const mainWindow = windowManager.createMainWindow();
   registerIpcHandlers(mainWindow);
   console.log('🌩️ StreamStorm main process started');

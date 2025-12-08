@@ -45,8 +45,10 @@ This phase implements the stream discovery and browsing functionality for Stream
 
 ### Component Structure
 
+> **See [Architecture Guide](../../architecture.md)** for the complete folder structure.
+
 ```
-renderer/
+src/
 ├── pages/
 │   ├── Home/
 │   │   ├── HomePage.tsx
@@ -66,11 +68,23 @@ renderer/
 │       ├── LiveChannels.tsx
 │       └── OfflineChannels.tsx
 ├── components/
-│   └── stream/
+│   └── channel/                # Unified channel components
 │       ├── StreamCard.tsx
 │       ├── StreamGrid.tsx
 │       ├── ChannelCard.tsx
 │       └── CategoryCard.tsx
+├── backend/
+│   └── api/
+│       ├── unified/            # Platform-agnostic types
+│       │   ├── platform-types.ts   # UnifiedStream, UnifiedChannel
+│       │   └── platform-client.ts  # IPlatformClient interface
+│       └── platforms/
+│           ├── twitch/         # Twitch API implementation
+│           └── kick/           # Kick API implementation
+└── assets/
+    └── platforms/              # Platform branding
+        ├── twitch/             # Twitch colors (#9146FF)
+        └── kick/               # Kick colors (#53FC18)
 ```
 
 ---
@@ -92,82 +106,81 @@ renderer/
 
 #### Tasks
 
-- [ ] **2.1.1** Create unified stream interfaces
+- [ ] **2.1.1** Unified interfaces already created (Phase 1)
   ```typescript
-  // src/shared/types/stream.ts
+  // Already created in src/backend/api/unified/platform-types.ts
   export interface UnifiedStream {
     id: string;
     platform: 'twitch' | 'kick';
     channelId: string;
     channelName: string;
-    displayName: string;
+    channelDisplayName: string;
     title: string;
-    game: GameInfo;
     viewerCount: number;
     thumbnailUrl: string;
-    profileImageUrl: string;
+    isLive: boolean;
     startedAt: string;
     language: string;
     tags: string[];
-    isMature: boolean;
+    categoryId?: string;
+    categoryName?: string;
   }
   
+  // Already created in src/backend/api/unified/platform-types.ts
   export interface UnifiedCategory {
     id: string;
     platform: 'twitch' | 'kick';
     name: string;
     boxArtUrl: string;
-    viewerCount: number;
-    streamCount: number;
   }
   
+  // Already created in src/backend/api/unified/platform-types.ts  
   export interface UnifiedChannel {
     id: string;
     platform: 'twitch' | 'kick';
     username: string;
     displayName: string;
-    description: string;
-    profileImageUrl: string;
-    bannerUrl: string;
-    followerCount: number;
+    avatarUrl: string;
     isLive: boolean;
-    currentStream?: UnifiedStream;
+    isVerified: boolean;
+    isPartner: boolean;
   }
   ```
 
-- [ ] **2.1.2** Implement Twitch API endpoints
+- [ ] **2.1.2** Complete Twitch API client (extends Phase 1.3)
   ```typescript
-  // src/backend/api/twitch/streams.ts
-  export class TwitchStreamsApi {
-    async getTopStreams(options?: StreamsOptions): Promise<TwitchStream[]>;
-    async getStreamsByGame(gameId: string): Promise<TwitchStream[]>;
-    async getStreamsByUserIds(userIds: string[]): Promise<TwitchStream[]>;
-    async searchChannels(query: string): Promise<TwitchChannel[]>;
-    async searchCategories(query: string): Promise<TwitchCategory[]>;
-    async getTopGames(): Promise<TwitchGame[]>;
-    async getGameById(gameId: string): Promise<TwitchGame>;
+  // src/backend/api/platforms/twitch/twitch-client.ts
+  export class TwitchClient implements IPlatformClient {
+    readonly platform = 'twitch';
+    
+    async getTopStreams(params?: PaginationParams): Promise<ApiResponse<SearchResults<UnifiedStream>>>;
+    async getStreamsByCategory(categoryId: string, params?: PaginationParams): Promise<ApiResponse<SearchResults<UnifiedStream>>>;
+    async getFollowedStreams(params?: PaginationParams): Promise<ApiResponse<SearchResults<UnifiedStream>>>;
+    async searchChannels(query: string, params?: PaginationParams): Promise<ApiResponse<SearchResults<UnifiedChannel>>>;
+    async searchCategories(query: string, params?: PaginationParams): Promise<ApiResponse<SearchResults<UnifiedCategory>>>;
+    async getTopCategories(params?: PaginationParams): Promise<ApiResponse<SearchResults<UnifiedCategory>>>;
   }
   ```
 
-- [ ] **2.1.3** Implement Kick API endpoints
+- [ ] **2.1.3** Complete Kick API client (extends Phase 1.4)
   ```typescript
-  // src/backend/api/kick/streams.ts
-  export class KickStreamsApi {
-    async getLivestreams(options?: StreamsOptions): Promise<KickStream[]>;
-    async getCategories(): Promise<KickCategory[]>;
-    async getCategoryStreams(categoryId: string): Promise<KickStream[]>;
-    async getChannelBySlug(slug: string): Promise<KickChannel>;
-    async searchChannels(query: string): Promise<KickChannel[]>;
+  // src/backend/api/platforms/kick/kick-client.ts
+  export class KickClient implements IPlatformClient {
+    readonly platform = 'kick';
+    
+    async getTopStreams(params?: PaginationParams): Promise<ApiResponse<SearchResults<UnifiedStream>>>;
+    async getStreamsByCategory(categoryId: string, params?: PaginationParams): Promise<ApiResponse<SearchResults<UnifiedStream>>>;
+    async getFollowedStreams(params?: PaginationParams): Promise<ApiResponse<SearchResults<UnifiedStream>>>;
+    async searchChannels(query: string, params?: PaginationParams): Promise<ApiResponse<SearchResults<UnifiedChannel>>>;
+    // ... implements full IPlatformClient
   }
   ```
 
-- [ ] **2.1.4** Create data transformation layer
+- [ ] **2.1.4** Transformers already created (Phase 1)
   ```typescript
-  // src/backend/api/transformers.ts
-  export function transformTwitchStream(stream: TwitchStream): UnifiedStream;
-  export function transformKickStream(stream: KickStream): UnifiedStream;
-  export function transformTwitchCategory(category: TwitchCategory): UnifiedCategory;
-  export function transformKickCategory(category: KickCategory): UnifiedCategory;
+  // Already created:
+  // src/backend/api/platforms/twitch/twitch-transformers.ts
+  // src/backend/api/platforms/kick/kick-transformers.ts
   ```
 
 - [ ] **2.1.5** Set up IPC handlers for data fetching
@@ -318,7 +331,9 @@ renderer/
 
 - [ ] **2.3.4** Create StreamCard component
   ```typescript
-  // src/frontend/components/stream/StreamCard.tsx
+  // src/components/channel/StreamCard.tsx
+  import { getPlatformColor } from '@/assets/platforms';
+  
   interface StreamCardProps {
     stream: UnifiedStream;
     variant?: 'default' | 'compact' | 'featured';
@@ -327,8 +342,9 @@ renderer/
   }
   
   export function StreamCard({ stream, variant = 'default' }: StreamCardProps) {
+    const platformColor = getPlatformColor(stream.platform);
     // Thumbnail with hover preview
-    // Platform badge
+    // Platform badge with brand color
     // Viewer count
     // Stream title (truncated)
     // Streamer name
@@ -339,7 +355,7 @@ renderer/
 
 - [ ] **2.3.5** Create StreamGrid component
   ```typescript
-  // src/frontend/components/stream/StreamGrid.tsx
+  // src/components/channel/StreamGrid.tsx
   // Responsive grid layout
   // Skeleton loading states
   // Empty state handling
@@ -377,7 +393,9 @@ renderer/
 
 - [ ] **2.4.2** Create CategoryCard component
   ```typescript
-  // src/frontend/components/stream/CategoryCard.tsx
+  // src/components/channel/CategoryCard.tsx
+  import { getPlatformColor, getPlatformName } from '@/assets/platforms';
+  
   interface CategoryCardProps {
     category: UnifiedCategory;
     onClick?: () => void;
@@ -387,8 +405,7 @@ renderer/
     // Box art image
     // Category name
     // Viewer count
-    // Stream count
-    // Platform indicator (if platform-specific)
+    // Platform indicator with brand color
   }
   ```
 

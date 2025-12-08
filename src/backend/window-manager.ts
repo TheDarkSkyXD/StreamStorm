@@ -5,8 +5,9 @@
  * Handles window state persistence, bounds, and lifecycle.
  */
 
-import { app, BrowserWindow, screen } from 'electron';
 import path from 'node:path';
+
+import { app, BrowserWindow, screen } from 'electron';
 
 // Vite globals (provided by Electron Forge's Vite plugin)
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;

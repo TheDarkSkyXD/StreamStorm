@@ -1,9 +1,11 @@
 /**
  * IPC Channel Definitions
- * 
+ *
  * Type-safe IPC channel names shared between main and renderer processes.
  * All IPC communication should use these constants.
  */
+
+import type { Platform, AuthToken, LocalFollow, UserPreferences, TwitchUser, KickUser } from './auth-types';
 
 export const IPC_CHANNELS = {
   // App lifecycle
@@ -24,43 +26,133 @@ export const IPC_CHANNELS = {
   THEME_SET: 'theme:set',
   THEME_GET_SYSTEM: 'theme:get-system',
 
-  // Settings/Storage
+  // Generic Storage (deprecated in favor of specific handlers)
   STORE_GET: 'store:get',
   STORE_SET: 'store:set',
   STORE_DELETE: 'store:delete',
 
-  // Auth
+  // Auth - OAuth Flow
   AUTH_OPEN_TWITCH: 'auth:open-twitch',
   AUTH_OPEN_KICK: 'auth:open-kick',
-  AUTH_GET_TOKENS: 'auth:get-tokens',
-  AUTH_SAVE_TOKENS: 'auth:save-tokens',
-  AUTH_CLEAR_TOKENS: 'auth:clear-tokens',
   AUTH_ON_CALLBACK: 'auth:on-callback',
+
+  // Auth - Token Management
+  AUTH_GET_TOKEN: 'auth:get-token',
+  AUTH_SAVE_TOKEN: 'auth:save-token',
+  AUTH_CLEAR_TOKEN: 'auth:clear-token',
+  AUTH_HAS_TOKEN: 'auth:has-token',
+  AUTH_IS_TOKEN_EXPIRED: 'auth:is-token-expired',
+  AUTH_CLEAR_ALL_TOKENS: 'auth:clear-all-tokens',
+
+  // Auth - User Data
+  AUTH_GET_TWITCH_USER: 'auth:get-twitch-user',
+  AUTH_SAVE_TWITCH_USER: 'auth:save-twitch-user',
+  AUTH_CLEAR_TWITCH_USER: 'auth:clear-twitch-user',
+  AUTH_GET_KICK_USER: 'auth:get-kick-user',
+  AUTH_SAVE_KICK_USER: 'auth:save-kick-user',
+  AUTH_CLEAR_KICK_USER: 'auth:clear-kick-user',
+
+  // Auth - Logout and Refresh
+  AUTH_LOGOUT: 'auth:logout',
+  AUTH_LOGOUT_TWITCH: 'auth:logout-twitch',
+  AUTH_LOGOUT_KICK: 'auth:logout-kick',
+  AUTH_REFRESH_TWITCH: 'auth:refresh-twitch',
+  AUTH_REFRESH_KICK: 'auth:refresh-kick',
+  AUTH_FETCH_TWITCH_USER: 'auth:fetch-twitch-user',
+  AUTH_FETCH_KICK_USER: 'auth:fetch-kick-user',
+
+  // Auth - Device Code Flow (Twitch)
+  AUTH_DCF_START: 'auth:dcf-start',
+  AUTH_DCF_POLL: 'auth:dcf-poll',
+  AUTH_DCF_CANCEL: 'auth:dcf-cancel',
+  AUTH_DCF_STATUS: 'auth:dcf-status',
+
+  // Auth - Status
+  AUTH_GET_STATUS: 'auth:get-status',
+
+
+  // Local Follows
+  FOLLOWS_GET_ALL: 'follows:get-all',
+  FOLLOWS_GET_BY_PLATFORM: 'follows:get-by-platform',
+  FOLLOWS_ADD: 'follows:add',
+  FOLLOWS_REMOVE: 'follows:remove',
+  FOLLOWS_UPDATE: 'follows:update',
+  FOLLOWS_IS_FOLLOWING: 'follows:is-following',
+  FOLLOWS_IMPORT: 'follows:import',
+  FOLLOWS_CLEAR: 'follows:clear',
+
+  // User Preferences
+  PREFERENCES_GET: 'preferences:get',
+  PREFERENCES_UPDATE: 'preferences:update',
+  PREFERENCES_RESET: 'preferences:reset',
 
   // External links
   SHELL_OPEN_EXTERNAL: 'shell:open-external',
 
   // Notifications
   NOTIFICATION_SHOW: 'notification:show',
+
+  // Image Proxy (bypass CORS for external images)
+  IMAGE_PROXY: 'image:proxy',
 } as const;
 
 // Type for channel names
-export type IpcChannel = typeof IPC_CHANNELS[keyof typeof IPC_CHANNELS];
+export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS];
 
-// Payload types for IPC calls
+// ========== Payload Types for IPC Calls ==========
+
 export interface IpcPayloads {
+  // Generic storage
   [IPC_CHANNELS.STORE_GET]: { key: string };
   [IPC_CHANNELS.STORE_SET]: { key: string; value: unknown };
   [IPC_CHANNELS.STORE_DELETE]: { key: string };
+
+  // Theme
   [IPC_CHANNELS.THEME_SET]: { theme: 'light' | 'dark' | 'system' };
+
+  // Auth tokens
+  [IPC_CHANNELS.AUTH_GET_TOKEN]: { platform: Platform };
+  [IPC_CHANNELS.AUTH_SAVE_TOKEN]: { platform: Platform; token: AuthToken };
+  [IPC_CHANNELS.AUTH_CLEAR_TOKEN]: { platform: Platform };
+  [IPC_CHANNELS.AUTH_HAS_TOKEN]: { platform: Platform };
+  [IPC_CHANNELS.AUTH_IS_TOKEN_EXPIRED]: { platform: Platform };
+
+  // User data
+  [IPC_CHANNELS.AUTH_SAVE_TWITCH_USER]: { user: TwitchUser };
+  [IPC_CHANNELS.AUTH_SAVE_KICK_USER]: { user: KickUser };
+
+  // Local follows
+  [IPC_CHANNELS.FOLLOWS_GET_BY_PLATFORM]: { platform: Platform };
+  [IPC_CHANNELS.FOLLOWS_ADD]: { follow: Omit<LocalFollow, 'id' | 'followedAt'> };
+  [IPC_CHANNELS.FOLLOWS_REMOVE]: { id: string };
+  [IPC_CHANNELS.FOLLOWS_UPDATE]: { id: string; updates: Partial<LocalFollow> };
+  [IPC_CHANNELS.FOLLOWS_IS_FOLLOWING]: { platform: Platform; channelId: string };
+  [IPC_CHANNELS.FOLLOWS_IMPORT]: { follows: LocalFollow[] };
+
+  // Preferences
+  [IPC_CHANNELS.PREFERENCES_UPDATE]: { updates: Partial<UserPreferences> };
+
+  // External links
   [IPC_CHANNELS.SHELL_OPEN_EXTERNAL]: { url: string };
+
+  // Notifications
   [IPC_CHANNELS.NOTIFICATION_SHOW]: { title: string; body: string };
-  [IPC_CHANNELS.AUTH_SAVE_TOKENS]: { platform: 'twitch' | 'kick'; tokens: AuthTokens };
 }
 
-// Auth token structure
-export interface AuthTokens {
-  accessToken: string;
-  refreshToken?: string;
-  expiresAt?: number;
+// ========== Response Types for IPC Calls ==========
+
+export interface AuthStatus {
+  twitch: {
+    connected: boolean;
+    user: TwitchUser | null;
+    hasToken: boolean;
+    isExpired: boolean;
+  };
+  kick: {
+    connected: boolean;
+    user: KickUser | null;
+    hasToken: boolean;
+    isExpired: boolean;
+  };
+  isGuest: boolean;
 }

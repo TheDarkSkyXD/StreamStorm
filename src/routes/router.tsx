@@ -4,6 +4,7 @@ import {
   createRoute,
   Outlet,
 } from '@tanstack/react-router';
+
 import { AppLayout } from '@/components/layout/AppLayout';
 import {
   HomePage,
@@ -12,7 +13,9 @@ import {
   CategoryDetailPage,
   SearchPage,
   StreamPage,
+  VideoPage,
   SettingsPage,
+  ClipPage,
 } from '@/pages';
 
 // Root layout with AppLayout wrapper
@@ -56,6 +59,9 @@ const categoryDetailRoute = createRoute({
 const searchRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/search',
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: (search.q as string) || '',
+  }),
   component: SearchPage,
 });
 
@@ -63,7 +69,24 @@ const searchRoute = createRoute({
 const streamRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/stream/$platform/$channel',
+  validateSearch: (search: Record<string, unknown>): { tab: 'videos' | 'clips' } => ({
+    tab: (search.tab as 'videos' | 'clips') || 'videos',
+  }),
   component: StreamPage,
+});
+
+// Video viewing page (VOD)
+const videoRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/video/$platform/$videoId',
+  component: VideoPage,
+});
+
+// Clip viewing page
+const clipRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/clip/$platform/$clipId',
+  component: ClipPage,
 });
 
 // Settings page
@@ -81,6 +104,8 @@ const routeTree = rootRoute.addChildren([
   categoryDetailRoute,
   searchRoute,
   streamRoute,
+  videoRoute,
+  clipRoute,
   settingsRoute,
 ]);
 

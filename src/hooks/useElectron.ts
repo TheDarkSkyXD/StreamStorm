@@ -104,11 +104,11 @@ export function useNotification() {
  */
 export function useElectronStore<T>(key: string, defaultValue: T) {
   const [value, setValue] = useState<T>(defaultValue);
-  const [isLoading, setIsLoading] = useState(true);
+  // Initialize isLoading based on electronAPI availability to avoid sync setState in effect
+  const [isLoading, setIsLoading] = useState(() => !!window.electronAPI);
 
   useEffect(() => {
     if (!window.electronAPI) {
-      setIsLoading(false);
       return;
     }
 

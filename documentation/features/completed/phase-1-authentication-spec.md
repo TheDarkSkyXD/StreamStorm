@@ -17,14 +17,16 @@ This phase implements the authentication system for StreamStorm, enabling users 
 
 ## Architecture Overview
 
+> **See [Architecture Guide](../architecture.md)** for the complete folder structure and conventions.
+
 ### Authentication Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                        StreamStorm                               │
 │  ┌───────────────┐    ┌────────────────┐    ┌───────────────┐  │
-│  │ Guest Mode    │    │  Better-Auth   │    │ Authenticated │  │
-│  │ - Local Store │ ──▶│  OAuth Bridge  │──▶ │    Mode       │  │
+│  │ Guest Mode    │    │   Direct OAuth │    │ Authenticated │  │
+│  │ - Local Store │ ──▶│   (PKCE)       │──▶ │    Mode       │  │
 │  │ - Limited     │    │  - Twitch      │    │ - Full Access │  │
 │  │   Features    │    │  - Kick        │    │ - Synced Data │  │
 │  └───────────────┘    └────────────────┘    └───────────────┘  │
@@ -38,9 +40,20 @@ This phase implements the authentication system for StreamStorm, enabling users 
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Better-Auth Integration
+### Key File Locations
 
-Better-Auth provides a unified authentication layer that simplifies OAuth flows for both platforms while maintaining security best practices.
+| Module | Path |
+|--------|------|
+| OAuth Config | `src/backend/auth/oauth-config.ts` |
+| Protocol Handler | `src/backend/auth/protocol-handler.ts` |
+| Auth Window | `src/backend/auth/auth-window.ts` |
+| Token Exchange | `src/backend/auth/token-exchange.ts` |
+| Storage Service | `src/backend/services/storage-service.ts` |
+| Twitch Client | `src/backend/api/platforms/twitch/twitch-client.ts` |
+| Kick Client | `src/backend/api/platforms/kick/kick-client.ts` |
+| Auth Store | `src/store/auth-store.ts` |
+| Auth Hooks | `src/hooks/useAuth.ts` |
+| Auth UI | `src/components/auth/` |
 
 ---
 
@@ -137,35 +150,31 @@ Better-Auth provides a unified authentication layer that simplifies OAuth flows 
 
 - [ ] **1.2.1** Install Better-Auth
   ```bash
-  npm install better-auth
+  # Not using better-auth - using direct OAuth with PKCE instead
   ```
 
 - [ ] **1.2.2** Create OAuth configuration
   ```typescript
-  // src/backend/auth/auth-config.ts
-  export const twitchOAuthConfig = {
+  // src/backend/auth/oauth-config.ts
+  export const TWITCH_OAUTH_CONFIG: OAuthConfig = {
+    platform: 'twitch',
     clientId: process.env.TWITCH_CLIENT_ID,
     redirectUri: 'streamstorm://auth/twitch/callback',
-    scopes: [
-      'user:read:follows',
-      'user:read:subscriptions',
-      'channel:read:subscriptions',
-      'chat:read',
-      'chat:edit',
-      'moderator:read:chatters',
-      'moderator:manage:chat_messages',
-    ],
+    scopes: ['user:read:follows', 'user:read:email'],
+    usesPkce: true,
   };
   
-  export const kickOAuthConfig = {
+  export const KICK_OAUTH_CONFIG: OAuthConfig = {
+    platform: 'kick',
     clientId: process.env.KICK_CLIENT_ID,
     redirectUri: 'streamstorm://auth/kick/callback',
-    scopes: [
-      'user:read',
-      'chat:write',
-      'channels:read',
-    ],
+    scopes: ['user:read', 'channel:read'],
+    usesPkce: true,
   };
+  
+  // PKCE helpers
+  export function generatePkceChallenge(): PkceChallenge;
+  export function buildAuthorizationUrl(params: AuthUrlParams): string;
   ```
 
 - [ ] **1.2.3** Register custom protocol handler
@@ -226,14 +235,14 @@ Better-Auth provides a unified authentication layer that simplifies OAuth flows 
 
 - [ ] **1.3.2** Create Twitch API client
   ```typescript
-  // src/backend/api/twitch/twitch-client.ts
-  export class TwitchApiClient {
-    private accessToken: string;
-    private clientId: string;
+  // src/backend/api/platforms/twitch/twitch-client.ts
+  export class TwitchClient implements IPlatformClient {
+    readonly platform = 'twitch';
     
-    async getUser(): Promise<TwitchUser>;
-    async getFollowedChannels(userId: string): Promise<TwitchFollow[]>;
-    async getStreamStatus(userIds: string[]): Promise<TwitchStream[]>;
+    async getCurrentUser(): Promise<ApiResponse<UnifiedUser>>;
+    async getFollowedChannels(params?: PaginationParams): Promise<ApiResponse<SearchResults<UnifiedFollow>>>;
+    async getTopStreams(params?: PaginationParams): Promise<ApiResponse<SearchResults<UnifiedStream>>>;
+    // ... implements full IPlatformClient interface
   }
   ```
 
@@ -278,13 +287,14 @@ Better-Auth provides a unified authentication layer that simplifies OAuth flows 
 
 - [ ] **1.4.2** Create Kick API client
   ```typescript
-  // src/backend/api/kick/kick-client.ts
-  export class KickApiClient {
-    private accessToken: string;
+  // src/backend/api/platforms/kick/kick-client.ts
+  export class KickClient implements IPlatformClient {
+    readonly platform = 'kick';
     
-    async getUser(): Promise<KickUser>;
-    async getFollowedChannels(): Promise<KickFollow[]>;
-    async getChannelInfo(slug: string): Promise<KickChannel>;
+    async getCurrentUser(): Promise<ApiResponse<UnifiedUser>>;
+    async getFollowedChannels(params?: PaginationParams): Promise<ApiResponse<SearchResults<UnifiedFollow>>>;
+    async getChannelByName(slug: string): Promise<ApiResponse<UnifiedChannel>>;
+    // ... implements full IPlatformClient interface
   }
   ```
 
@@ -388,7 +398,7 @@ Better-Auth provides a unified authentication layer that simplifies OAuth flows 
 
 - [ ] **1.6.1** Create AuthProvider component
   ```typescript
-  // src/frontend/components/auth/AuthProvider.tsx
+  // src/components/auth/AuthProvider.tsx
   export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Initialize auth state on mount
     // Provide auth context
@@ -397,9 +407,9 @@ Better-Auth provides a unified authentication layer that simplifies OAuth flows 
 
 - [ ] **1.6.2** Create account connection UI
   ```typescript
-  // src/frontend/components/auth/AccountConnect.tsx
+  // src/components/auth/AccountConnect.tsx
   export function AccountConnect() {
-    // Platform connection cards
+    // Platform connection cards with brand colors
     // Connect/Disconnect buttons
     // Account status display
   }
@@ -407,7 +417,7 @@ Better-Auth provides a unified authentication layer that simplifies OAuth flows 
 
 - [ ] **1.6.3** Create user profile dropdown
   ```typescript
-  // src/frontend/components/auth/ProfileDropdown.tsx
+  // src/components/auth/ProfileDropdown.tsx
   export function ProfileDropdown() {
     // User avatar and name
     // Connected accounts
@@ -418,17 +428,17 @@ Better-Auth provides a unified authentication layer that simplifies OAuth flows 
 
 - [ ] **1.6.4** Create login modal/dialog
   ```typescript
-  // src/frontend/components/auth/LoginDialog.tsx
+  // src/components/auth/LoginDialog.tsx
   export function LoginDialog() {
-    // Platform selection
-    // Login buttons with branding
+    // Platform selection with brand colors
+    // Login buttons with platform branding
     // Guest mode option
   }
   ```
 
 - [ ] **1.6.5** Create account settings page
   ```typescript
-  // src/frontend/pages/Settings/AccountSettings.tsx
+  // src/pages/Settings/AccountSettings.tsx
   export function AccountSettings() {
     // Connected accounts list
     // Connection management
@@ -571,11 +581,12 @@ BrowserWindow.webPreferences = {
 ```json
 {
   "dependencies": {
-    "better-auth": "^1.x",
     "electron-store": "^8.x"
   }
 }
 ```
+
+> **Note:** No external auth libraries are used - we use direct OAuth with PKCE for better control and simplicity in Electron apps.
 
 ---
 

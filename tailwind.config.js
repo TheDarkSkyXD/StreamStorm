@@ -10,9 +10,9 @@ export default {
       colors: {
         // StreamStorm Brand Colors
         storm: {
-          primary: '#6366f1',
-          secondary: '#8b5cf6',
-          accent: '#06b6d4',
+          primary: '#ffffff',
+          secondary: '#a3a3a3',
+          accent: '#dc143c',
         },
         // Platform Colors
         twitch: {
@@ -40,7 +40,7 @@ export default {
         },
         // UI Colors
         border: '#333333',
-        ring: '#6366f1',
+        ring: '#ffffff',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],

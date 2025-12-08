@@ -1,6 +1,6 @@
-import * as React from 'react';
 import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
+import * as React from 'react';
 
 import { cn } from '@/lib/utils';
 
@@ -9,7 +9,7 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-[var(--color-storm-primary)] text-white hover:bg-[var(--color-storm-primary)]/90',
+        default: 'bg-[var(--color-storm-primary)] text-black hover:bg-[var(--color-storm-primary)]/90',
         secondary: 'bg-[var(--color-background-tertiary)] text-[var(--color-foreground)] hover:bg-[var(--color-background-elevated)]',
         outline: 'border border-[var(--color-border)] bg-transparent hover:bg-[var(--color-background-secondary)]',
         ghost: 'hover:bg-[var(--color-background-secondary)]',
@@ -34,7 +34,7 @@ const buttonVariants = cva(
 
 export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
