@@ -156,11 +156,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 error: get().error,
             });
 
-            console.log('✅ Auth initialized', {
-                twitchConnected: status.twitch.connected,
-                kickConnected: status.kick.connected,
-                followsCount: follows.length,
-            });
+
         } catch (error) {
             console.error('Failed to initialize auth:', error);
             set({
@@ -247,7 +243,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 isGuest: !get().kickUser,
             });
 
-            console.log('✅ Logged out from Twitch');
+
         } catch (error) {
             console.error('Failed to logout from Twitch:', error);
             set({
@@ -329,7 +325,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 isGuest: !get().twitchUser,
             });
 
-            console.log('✅ Logged out from Kick');
+
         } catch (error) {
             console.error('Failed to logout from Kick:', error);
             set({

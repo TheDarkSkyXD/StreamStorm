@@ -35,11 +35,11 @@ export function ProxiedImage({
             setError(false);
             setImageSrc(null);
 
-            console.log('🖼️ ProxiedImage: Loading image:', src);
+
 
             // If no src provided, show fallback
             if (!src || src.trim() === '') {
-                console.log('🖼️ ProxiedImage: No src provided');
+
                 setLoading(false);
                 setError(true);
                 return;
@@ -47,7 +47,7 @@ export function ProxiedImage({
 
             // If it's already a data URL, use it directly
             if (src.startsWith('data:')) {
-                console.log('🖼️ ProxiedImage: Using data URL directly');
+
                 setImageSrc(src);
                 setLoading(false);
                 return;
@@ -55,31 +55,31 @@ export function ProxiedImage({
 
             // If it's not an http(s) URL, show fallback
             if (!src.startsWith('http')) {
-                console.log('🖼️ ProxiedImage: Invalid URL protocol');
+
                 setLoading(false);
                 setError(true);
                 return;
             }
 
             try {
-                console.log('🖼️ ProxiedImage: Fetching via proxy...');
+
                 // Fetch through main process proxy
                 const proxiedUrl = await window.electronAPI.proxyImage(src);
 
                 if (cancelled) return;
 
                 if (proxiedUrl) {
-                    console.log('🖼️ ProxiedImage: Got proxied image, length:', proxiedUrl.length);
+
                     setImageSrc(proxiedUrl);
                     setLoading(false);
                 } else {
-                    console.log('🖼️ ProxiedImage: Proxy returned null');
+
                     setError(true);
                     setLoading(false);
                 }
             } catch (err) {
                 if (cancelled) return;
-                console.error('🖼️ ProxiedImage error:', err);
+
                 setError(true);
                 setLoading(false);
             }

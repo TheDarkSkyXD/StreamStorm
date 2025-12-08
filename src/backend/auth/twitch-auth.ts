@@ -109,7 +109,7 @@ class TwitchAuthService {
         storageService.clearToken(this.platform);
         storageService.clearTwitchUser();
 
-        console.log('✅ Logged out from Twitch');
+
         return true;
     }
 

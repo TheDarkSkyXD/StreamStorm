@@ -76,7 +76,7 @@ class KickAuthService {
         storageService.clearToken(this.platform);
         storageService.clearKickUser();
 
-        console.log('✅ Logged out from Kick');
+
         return true;
     }
 
