@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Settings, PictureInPicture, Monitor, Check } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Settings, PictureInPicture, Check } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { QualityLevel } from './types';
 
 // Custom Settings Menu (replaces simple QualitySelector)
@@ -31,19 +32,42 @@ export function SettingsMenu({
         setActiveSubMenu('main');
     };
 
+    const sortedQualities = useMemo(() => {
+        return [...qualities].sort((a, b) => {
+            // Auto always at bottom
+            if (a.isAuto) return 1;
+            if (b.isAuto) return -1;
+
+            // Sort by height descending
+            if (a.height !== b.height) return b.height - a.height;
+
+            // Then by bitrate descending
+            return b.bitrate - a.bitrate;
+        });
+    }, [qualities]);
+
+    const currentQualityLabel = qualities.find(q => q.id === currentQualityId)?.label || 'Auto';
+
     return (
         <div className="relative">
-            <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:bg-white/20"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    toggleOpen();
-                }}
-            >
-                <Settings className={`w-5 h-5 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`} />
-            </Button>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-white hover:bg-white/20"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            toggleOpen();
+                        }}
+                    >
+                        <Settings className={`w-5 h-5 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`} />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>Settings</p>
+                </TooltipContent>
+            </Tooltip>
 
             {isOpen && (
                 <>
@@ -62,28 +86,13 @@ export function SettingsMenu({
                                     <span>Quality</span>
                                     <div className="flex items-center text-white/50">
                                         <span className="mr-2">
-                                            {qualities.find(q => q.id === currentQualityId)?.label || 'Auto'}
+                                            {currentQualityLabel}
                                         </span>
                                         <span className="rotate-[-90deg]">›</span>
                                     </div>
                                 </button>
 
-                                {/* Theater Toggle */}
-                                {onToggleTheater && (
-                                    <button
-                                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white"
-                                        onClick={() => {
-                                            onToggleTheater();
-                                            setIsOpen(false);
-                                        }}
-                                    >
-                                        <span className="flex items-center gap-2">
-                                            <Monitor className="w-4 h-4" />
-                                            Theater Mode
-                                        </span>
-                                        {isTheater && <Check className="w-4 h-4" />}
-                                    </button>
-                                )}
+
 
                                 {/* PiP Toggle */}
                                 {onTogglePip && (
@@ -113,7 +122,7 @@ export function SettingsMenu({
                                     <span className="font-semibold">Quality</span>
                                 </button>
                                 <div className="max-h-60 overflow-y-auto">
-                                    {qualities.map(quality => (
+                                    {sortedQualities.map(quality => (
                                         <button
                                             key={quality.id}
                                             className="w-full px-4 py-2 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white"

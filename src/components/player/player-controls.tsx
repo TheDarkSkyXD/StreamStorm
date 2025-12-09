@@ -3,8 +3,9 @@ import { PlayPauseButton } from './play-pause-button';
 import { VolumeControl } from './volume-control';
 import { SettingsMenu } from './settings-menu';
 import { QualityLevel } from './types';
-import { Maximize, Minimize } from 'lucide-react';
+import { Maximize, Minimize, Monitor } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 
 interface PlayerControlsProps {
     // Playback state
@@ -141,18 +142,43 @@ export function PlayerControls(props: PlayerControlsProps) {
                         isTheater={isTheater}
                     />
 
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-white hover:bg-white/20"
-                        onClick={onToggleFullscreen}
-                    >
-                        {isFullscreen ? (
-                            <Minimize className="w-5 h-5" />
-                        ) : (
-                            <Maximize className="w-5 h-5" />
-                        )}
-                    </Button>
+                    {onToggleTheater && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={`text-white hover:bg-white/20 ${isTheater ? 'text-primary' : ''}`}
+                                    onClick={onToggleTheater}
+                                >
+                                    <Monitor className="w-5 h-5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Theater Mode (t)</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    )}
+
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-white hover:bg-white/20"
+                                onClick={onToggleFullscreen}
+                            >
+                                {isFullscreen ? (
+                                    <Minimize className="w-5 h-5" />
+                                ) : (
+                                    <Maximize className="w-5 h-5" />
+                                )}
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>{isFullscreen ? 'Exit Fullscreen (f)' : 'Fullscreen (f)'}</p>
+                        </TooltipContent>
+                    </Tooltip>
                 </div>
             </div>
         </div>

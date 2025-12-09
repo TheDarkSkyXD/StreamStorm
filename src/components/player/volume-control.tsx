@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Volume2, Volume1, VolumeX } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 
 interface VolumeControlProps {
     volume: number; // 0 to 100
@@ -30,17 +31,24 @@ export function VolumeControl({ volume, muted, onVolumeChange, onMuteToggle, cla
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
         >
-            <Button
-                variant="ghost"
-                size="icon"
-                className="text-white hover:bg-white/20 select-none z-10"
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onMuteToggle();
-                }}
-            >
-                {getIcon()}
-            </Button>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-white hover:bg-white/20 select-none z-10"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onMuteToggle();
+                        }}
+                    >
+                        {getIcon()}
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    <p>{muted || volume === 0 ? 'Unmute (m)' : 'Mute (m)'}</p>
+                </TooltipContent>
+            </Tooltip>
 
             <div className={`
         flex items-center overflow-hidden transition-all duration-200 ease-in-out
