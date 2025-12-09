@@ -3,7 +3,6 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useMultiStreamStore } from '@/store/multistream-store';
 import { MultiStreamGrid } from '@/components/multistream/grid-layout';
 import { AddStreamDialog } from '@/components/multistream/add-stream-dialog';
-import { PresetManager } from '@/components/multistream/preset-manager';
 import { Button } from '@/components/ui/button';
 import { Settings, LayoutGrid, Maximize, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -86,8 +85,6 @@ export function MultiStreamPage() {
 
                 <div className="h-6 w-px bg-[var(--color-border)] mx-2" />
 
-                <PresetManager />
-                <div className="h-6 w-px bg-[var(--color-border)] mx-2" />
                 <AddStreamDialog />
 
                 <div className="h-6 w-px bg-[var(--color-border)] mx-2" />

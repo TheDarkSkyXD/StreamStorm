@@ -1,11 +1,15 @@
 
 import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Platform } from '@/shared/auth-types';
 import { useMultiStreamStore } from '@/store/multistream-store';
-import { Plus } from 'lucide-react';
+import { Plus, MonitorPlay } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { UnifiedSearchInput } from '@/components/search/UnifiedSearchInput';
+import { UnifiedChannel } from '@/backend/api/unified/platform-types';
+import { TwitchIcon, KickIcon } from '@/components/icons/PlatformIcons';
+import { cn } from '@/lib/utils';
 
 interface AddStreamDialogProps {
 
@@ -15,65 +19,99 @@ export function AddStreamDialog() {
     const [open, setOpen] = useState(false);
     const [channel, setChannel] = useState('');
     const [platform, setPlatform] = useState<Platform>('twitch');
+    const [resetKey, setResetKey] = useState(0); // Key to reset the search input
     const addStream = useMultiStreamStore(state => state.addStream);
 
-    const handleAdd = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (channel.trim()) {
-            addStream(platform, channel.trim());
-            setChannel('');
-            setOpen(false);
-        }
+    const handleSelectChannel = (selectedChannel: UnifiedChannel) => {
+        // Automatically add when selected from dropdown
+        addStream(selectedChannel.platform, selectedChannel.username);
+        setChannel('');
+        setResetKey(k => k + 1);
+        setOpen(false);
     };
 
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size="sm" className="gap-2">
+                <Button size="sm" className="gap-2 bg-[var(--color-storm-primary)] hover:bg-[var(--color-storm-primary)]/90 text-black font-bold shadow-lg shadow-purple-900/20">
                     <Plus className="h-4 w-4" />
                     Add Stream
                 </Button>
             </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>Add Stream</DialogTitle>
+            <DialogContent className="sm:max-w-[480px] bg-[#0F0F12] border-[var(--color-border)] p-6 shadow-2xl">
+                <DialogHeader className="pb-4 border-b border-[var(--color-border)]">
+                    <DialogTitle className="flex items-center gap-2 text-xl text-white">
+                        <MonitorPlay className="w-5 h-5 text-[var(--color-storm-primary)]" />
+                        Add Stream to Layout
+                    </DialogTitle>
+                    <DialogDescription className="text-[var(--color-foreground-muted)]">
+                        Choose a platform and search for a channel to add to your multistream grid.
+                    </DialogDescription>
                 </DialogHeader>
 
-                <form onSubmit={handleAdd} className="space-y-4 pt-4">
-                    <div className="grid gap-2">
-                        <label className="text-sm font-medium">Platform</label>
+                <div className="space-y-6 pt-6">
+                    <div className="grid gap-3">
+                        <label className="text-sm font-bold text-[var(--color-foreground)]">Platform</label>
                         <Select
                             value={platform}
                             onValueChange={(val) => setPlatform(val as Platform)}
                         >
-                            <SelectTrigger>
+                            <SelectTrigger className="h-11 bg-[var(--color-background-secondary)] border-[var(--color-border)] text-white focus:ring-[var(--color-storm-primary)]">
                                 <SelectValue placeholder="Select platform" />
                             </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="twitch">Twitch</SelectItem>
-                                <SelectItem value="kick">Kick</SelectItem>
+                            <SelectContent className="bg-[#1A1A1E] border-[var(--color-border)] text-white">
+                                <SelectItem value="twitch" className="focus:bg-zinc-800 focus:text-white cursor-pointer my-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-1 rounded bg-[#6441a5] text-white">
+                                            <TwitchIcon size={16} />
+                                        </div>
+                                        <span className="font-medium">Twitch</span>
+                                    </div>
+                                </SelectItem>
+                                <SelectItem value="kick" className="focus:bg-zinc-800 focus:text-white cursor-pointer my-1">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-1 rounded bg-[#53fc18] text-black">
+                                            <KickIcon size={16} />
+                                        </div>
+                                        <span className="font-medium">Kick</span>
+                                    </div>
+                                </SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
 
-                    <div className="grid gap-2">
-                        <label htmlFor="channel-name" className="text-sm font-medium">Channel Name</label>
-                        <input
-                            id="channel-name"
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                            placeholder="e.g. xqc"
-                            value={channel}
-                            onChange={(e) => setChannel(e.target.value)}
-                            autoFocus
-                        />
+                    <div className="grid gap-3">
+                        <label htmlFor="channel-search" className="text-sm font-bold text-[var(--color-foreground)]">Channel Search</label>
+                        <div className={cn(
+                            "rounded-xl p-1 transition-all duration-300",
+                            platform === 'twitch' ? "bg-gradient-to-r from-[#6441a5]/20 to-transparent" : "bg-gradient-to-r from-[#53fc18]/10 to-transparent"
+                        )}>
+                            <UnifiedSearchInput
+                                key={resetKey}
+                                platform={platform}
+                                onSelectChannel={handleSelectChannel}
+                                onSearch={(term) => {
+                                    setChannel(term);
+                                    if (term.trim()) {
+                                        addStream(platform, term.trim());
+                                        setChannel('');
+                                        setResetKey(k => k + 1);
+                                        setOpen(false);
+                                    }
+                                }}
+                                showCategories={false}
+                                placeholder={`Search for ${platform === 'twitch' ? 'Twitch' : 'Kick'} channels...`}
+                                inputClassName="h-12 rounded-lg border-[var(--color-border)] bg-[#0F0F12] px-4 text-base font-medium text-white focus:ring-2 focus:ring-[var(--color-storm-primary)] focus:border-transparent shadow-inner"
+                                className="w-full"
+                                autoFocus
+                            />
+                        </div>
+                        <p className="text-xs text-[var(--color-foreground-muted)] flex items-center gap-1.5 px-1">
+                            <span className="w-1 h-1 rounded-full bg-[var(--color-storm-primary)]" />
+                            Type to search or enter an exact username
+                        </p>
                     </div>
-
-                    <div className="flex justify-end pt-4">
-                        <Button type="submit" disabled={!channel.trim()}>
-                            Add to Layout
-                        </Button>
-                    </div>
-                </form>
+                </div>
             </DialogContent>
         </Dialog>
     );
