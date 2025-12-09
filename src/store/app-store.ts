@@ -5,9 +5,7 @@ import { persist } from 'zustand/middleware';
  * Application-wide UI state
  */
 interface AppState {
-  // Theme
-  theme: 'light' | 'dark' | 'system';
-  setTheme: (theme: AppState['theme']) => void;
+
 
   // Sidebar
   sidebarOpen: boolean;
@@ -25,9 +23,7 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-      // Theme
-      theme: 'dark',
-      setTheme: (theme) => set({ theme }),
+
 
       // Sidebar
       sidebarOpen: true,
@@ -52,7 +48,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'streamstorm-app-store',
       partialize: (state) => ({
-        theme: state.theme,
+
         sidebarCollapsed: state.sidebarCollapsed,
       }),
     }

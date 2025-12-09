@@ -12,10 +12,10 @@ import {
 } from '@/components/ui/select';
 import { useAppVersion } from '@/hooks';
 import { useAuthError } from '@/hooks/useAuth';
-import { useAppStore } from '@/store/app-store';
+
 
 export function SettingsPage() {
-  const { theme, setTheme } = useAppStore();
+
   const appVersion = useAppVersion();
 
   // Get auth state
@@ -63,40 +63,7 @@ export function SettingsPage() {
           <AccountConnect />
         </div>
 
-        {/* Appearance */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Appearance</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Theme</p>
-                <p className="text-sm text-[var(--color-foreground-secondary)]">
-                  Choose your preferred color scheme
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  variant="secondary"
-                  className={theme === 'light' ? 'bg-white text-black hover:bg-gray-100' : ''}
-                  size="sm"
-                  onClick={() => setTheme('light')}
-                >
-                  Light
-                </Button>
-                <Button
-                  variant="secondary"
-                  className={theme === 'dark' ? 'bg-white text-black hover:bg-gray-100' : ''}
-                  size="sm"
-                  onClick={() => setTheme('dark')}
-                >
-                  Dark
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+
 
         {/* Playback */}
         <Card>

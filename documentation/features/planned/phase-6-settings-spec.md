@@ -19,7 +19,7 @@ This phase implements the comprehensive settings system for StreamStorm, includi
 
 | Requirement | Description |
 |-------------|-------------|
-| FR-6.1 | UI/UX (Theme, Layout) |
+| FR-6.1 | UI/UX (Layout) |
 | FR-6.4 | Settings & Preferences |
 | FR-12.1 | Keyboard Navigation |
 
@@ -39,7 +39,7 @@ This phase implements the comprehensive settings system for StreamStorm, includi
 
 - [ ] Create SettingsPage with sidebar navigation
 - [ ] Section: General (language, startup, updates)
-- [ ] Section: Appearance (theme, sidebar, layout)
+- [ ] Section: Appearance (sidebar, layout)
 - [ ] Section: Playback (quality, autoplay, volume)
 - [ ] Section: Chat (appearance, filters, behavior)
 - [ ] Section: Notifications (covered in Phase 5)
@@ -47,13 +47,7 @@ This phase implements the comprehensive settings system for StreamStorm, includi
 - [ ] Section: Keyboard Shortcuts
 - [ ] Section: Advanced (cache, logs, devtools)
 
-### Phase 6.3: Theme System (2 days)
 
-- [ ] Implement light/dark/system theme detection
-- [ ] Create theme toggle component
-- [ ] Define CSS variables for theming
-- [ ] Add accent color customization
-- [ ] Persist theme preference
 
 ### Phase 6.4: Keyboard Shortcuts (2 days)
 
@@ -84,8 +78,7 @@ interface AppSettings {
     checkUpdates: boolean;
   };
   appearance: {
-    theme: 'light' | 'dark' | 'system';
-    accentColor: string;
+
     sidebarPosition: 'left' | 'right';
     compactMode: boolean;
   };
@@ -107,7 +100,7 @@ interface AppSettings {
 
 1. ✅ Settings page is comprehensive and organized
 2. ✅ All settings persist correctly
-3. ✅ Theme switching works seamlessly
+
 4. ✅ Keyboard shortcuts are customizable
 5. ✅ Data export/import functions properly
 
