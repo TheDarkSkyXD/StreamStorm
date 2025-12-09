@@ -32,20 +32,22 @@ export function StreamCard({ stream, showCategory = true }: StreamCardProps) {
                         fallback={<div className="w-full h-full bg-[var(--color-background-tertiary)] flex items-center justify-center text-[var(--color-foreground-muted)]">No Thumbnail</div>}
                     />
 
+
+
                     {/* Live Badge */}
                     {stream.isLive && (
-                        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider">
+                        <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] font-bold uppercase tracking-wider shadow-sm">
                             Live
                         </div>
                     )}
 
                     {/* Viewer Count */}
-                    <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs font-medium">
+                    <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs font-medium backdrop-blur-sm">
                         {formatViewerCount(stream.viewerCount)} viewers
                     </div>
 
                     {/* Platform Badge */}
-                    <div className={`absolute top-2 right-2 p-1 rounded bg-black/80 ${platformColor}`}>
+                    <div className={`absolute top-2 right-2 p-1 rounded bg-black/80 ${platformColor} backdrop-blur-sm`}>
                         <PlatformIcon size={14} />
                     </div>
                 </div>

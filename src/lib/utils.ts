@@ -13,7 +13,8 @@ export function cn(...inputs: ClassValue[]) {
  * Format viewer count to K/M format
  * e.g. 1200 -> 1.2K, 1500000 -> 1.5M
  */
-export function formatViewerCount(count: number): string {
+export function formatViewerCount(count: number | undefined | null): string {
+  if (!count) return '0';
   if (count >= 1000000) {
     return (count / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
   }

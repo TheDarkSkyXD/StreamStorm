@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { Search } from 'lucide-react';
-import { Skeleton } from '@/components/ui/skeleton';
 import { useTopCategories } from '@/hooks/queries/useCategories';
-import { CategoryCard } from '@/components/discovery/category-card';
+import { CategoryGrid } from '@/components/discovery/category-grid';
 
 export function CategoriesPage() {
   const { data: categories, isLoading } = useTopCategories(undefined, 100);
@@ -34,25 +33,11 @@ export function CategoriesPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-        {isLoading
-          ? Array.from({ length: 12 }).map((_, i) => (
-            <div key={i} className="space-y-2">
-              <Skeleton className="aspect-[3/4] w-full rounded-xl" />
-              <Skeleton className="h-4 w-3/4" />
-              <Skeleton className="h-3 w-1/2" />
-            </div>
-          ))
-          : filteredCategories?.length === 0 ? (
-            <div className="col-span-full py-12 text-center text-[var(--color-foreground-muted)]">
-              <p className="text-lg">No categories found matching "{searchQuery}"</p>
-            </div>
-          ) : (
-            filteredCategories?.map((category) => (
-              <CategoryCard key={`${category.platform}-${category.id}`} category={category} />
-            ))
-          )}
-      </div>
+      <CategoryGrid
+        categories={filteredCategories}
+        isLoading={isLoading}
+        emptyMessage={`No categories found matching "${searchQuery}"`}
+      />
     </div>
   );
 }

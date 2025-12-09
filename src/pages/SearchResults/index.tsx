@@ -13,8 +13,16 @@ import {
 import { Play, Clapperboard, Sparkles } from "lucide-react";
 import { cn, formatDuration } from '@/lib/utils';
 import { useSearchAll } from '@/hooks/queries/useSearch';
+import { StreamGrid } from '@/components/stream/stream-grid';
+import { CategoryGrid } from '@/components/discovery/category-grid';
+import { PlatformAvatar } from '@/components/ui/platform-avatar';
+import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
 
-// Define SearchTab type
+// ... (existing code)
+
+
+
+{/* CATEGORIES SECTION */ }
 type SearchTab = 'all' | 'channels' | 'streams' | 'videos' | 'clips' | 'categories';
 
 // Platform-agnostic unified search
@@ -191,328 +199,224 @@ export function SearchPage() {
         </div>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-10">
-          {/* CHANNELS SKELETON */}
-          <section>
-            <Skeleton className="h-8 w-32 mb-4" />
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 rounded-xl border border-[var(--color-border)]">
-                  <Skeleton className="w-16 h-16 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-5 w-3/4" />
-                    <Skeleton className="h-4 w-1/2" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* CATEGORIES SKELETON */}
-          <section>
-            <Skeleton className="h-8 w-32 mb-4" />
-            <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-              {[...Array(12)].map((_, i) => (
-                <Skeleton key={i} className="aspect-[3/4] rounded-lg" />
-              ))}
-            </div>
-          </section>
-
-          {/* STREAMS SKELETON */}
-          <section>
-            <Skeleton className="h-8 w-32 mb-4" />
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="aspect-video rounded-xl" />
-                  <div className="flex gap-3">
-                    <Skeleton className="w-10 h-10 rounded-full shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-3 w-2/3" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* VIDEOS SKELETON */}
-          <section>
-            <Skeleton className="h-8 w-32 mb-4" />
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="aspect-video rounded-xl" />
-                  <div className="flex gap-3">
-                    <Skeleton className="w-10 h-10 rounded-full shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-3 w-2/3" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* CLIPS SKELETON */}
-          <section>
-            <Skeleton className="h-8 w-32 mb-4" />
-            <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="space-y-3">
-                  <Skeleton className="aspect-video rounded-xl" />
-                  <div className="flex gap-3">
-                    <Skeleton className="w-8 h-8 rounded-full shrink-0" />
-                    <div className="flex-1 space-y-1.5">
-                      <Skeleton className="h-3.5 w-full" />
-                      <Skeleton className="h-3 w-1/2" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-      ) : (
-        <div className="space-y-10">
-          {/* BEST MATCHES SECTION */}
-          {showTopMatches && (
-            <section>
-              <h2 className="text-xl font-bold text-[var(--color-storm-primary)] mb-4 flex items-center gap-2">
-                <Sparkles className="w-5 h-5" /> Best Match
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {topMatches.map((channel: UnifiedChannel) => (
-                  <Link
-                    to="/stream/$platform/$channel"
-                    params={{ platform: channel.platform, channel: channel.username }}
-                    search={{ tab: 'videos' }}
-                    key={channel.id}
-                    className="group flex items-center gap-4 p-4 rounded-xl bg-[var(--color-background-secondary)]/50 hover:bg-[var(--color-background-elevated)] transition-all border border-[var(--color-storm-primary)] hover:shadow-lg hover:shadow-[var(--color-storm-primary)]/10"
-                  >
-                    <div className="relative">
-                      <img src={channel.avatarUrl} alt={channel.displayName} className="w-20 h-20 rounded-full object-cover ring-4 ring-[var(--color-storm-primary)]/20 group-hover:ring-[var(--color-storm-primary)] transition-all" />
-                      {channel.platform === 'kick' && <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#53FC18] rounded-full border-4 border-[var(--color-background)] flex items-center justify-center text-[10px] font-bold text-black">K</div>}
-                      {channel.platform === 'twitch' && <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#9146FF] rounded-full border-4 border-[var(--color-background)] flex items-center justify-center text-[10px] font-bold text-white">T</div>}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-lg text-white truncate">{channel.displayName}</h3>
-                      </div>
-                      <p className="text-sm text-[var(--color-foreground-secondary)] truncate">
-                        {channel.followerCount?.toLocaleString()} followers
-                      </p>
-                      {channel.isLive && (
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 text-xs font-bold mt-1 w-fit">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                          LIVE
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* CHANNELS SECTION */}
-          {showChannels && (
-            <section>
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                Channels
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {otherMatches.map((channel: UnifiedChannel) => (
-                  <Link
-                    to="/stream/$platform/$channel"
-                    params={{ platform: channel.platform, channel: channel.username }}
-                    search={{ tab: 'videos' }}
-                    key={channel.id}
-                    className="group flex items-center gap-4 p-4 rounded-xl bg-[var(--color-background-secondary)] hover:bg-[var(--color-background-elevated)] transition-all border border-[var(--color-border)] hover:border-[var(--color-storm-primary)]/50"
-                  >
-                    <div className="relative">
-                      <img src={channel.avatarUrl} alt={channel.displayName} className="w-16 h-16 rounded-full object-cover ring-2 ring-[var(--color-background)] group-hover:ring-[var(--color-storm-primary)] transition-all" />
-                      {channel.platform === 'kick' && <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#53FC18] rounded-full border-2 border-[var(--color-background)] flex items-center justify-center text-[10px] font-bold text-black">K</div>}
-                      {channel.platform === 'twitch' && <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-[#9146FF] rounded-full border-2 border-[var(--color-background)] flex items-center justify-center text-[10px] font-bold text-white">T</div>}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-white truncate">{channel.displayName}</h3>
-                      </div>
-                      <p className="text-sm text-[var(--color-foreground-secondary)] truncate">
-                        {channel.followerCount?.toLocaleString()} followers
-                      </p>
-                      {channel.isLive && (
-                        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 text-xs font-bold">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
-                          LIVE
-                        </div>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* CATEGORIES SECTION */}
-          {showCategories && (
-            <section>
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                Categories
-              </h2>
-              <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8">
-                {filteredCategories.map((category: UnifiedCategory) => (
-                  <Link
-                    to="/categories/$platform/$categoryId"
-                    params={{ platform: category.platform, categoryId: category.id }}
-                    key={category.id}
-                    className="group block relative aspect-[3/4] rounded-lg overflow-hidden bg-[var(--color-background-secondary)]"
-                  >
-                    <img src={category.boxArtUrl} alt={category.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
-                      <p className="text-white font-bold text-sm truncate w-full">{category.name}</p>
-                    </div>
-                    <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 text-[10px] text-white backdrop-blur-sm uppercase">
-                      {category.platform}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* STREAMS SECTION */}
-          {showStreams && (
-            <section>
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                Streams
-              </h2>
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {filteredStreams.map((stream: UnifiedStream) => (
-                  <Link
-                    to="/stream/$platform/$channel"
-                    params={{ platform: stream.platform, channel: stream.channelName }}
-                    search={{ tab: 'videos' }}
-                    key={stream.id}
-                    className="group block rounded-xl overflow-hidden bg-[var(--color-background-secondary)] transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-[var(--color-storm-primary)]/10"
-                  >
-                    <div className="relative aspect-video">
-                      <img src={stream.thumbnailUrl} alt={stream.title} className="w-full h-full object-cover" />
-                      <div className="absolute top-2 left-2 px-2 py-0.5 rounded bg-red-600 text-white text-xs font-bold flex items-center gap-1">
-                        LIVE
-                      </div>
-                      <div className="absolute bottom-2 left-2 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs backdrop-blur-sm">
-                        {(stream.viewerCount || 0).toLocaleString()} viewers
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <div className="flex gap-3">
-                        <img src={stream.channelAvatar} alt={stream.channelName} className="w-10 h-10 rounded-full" />
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-white truncate group-hover:text-[var(--color-storm-primary)] transition-colors">{stream.title}</h3>
-                          <p className="text-sm text-[var(--color-foreground-secondary)]">{stream.channelDisplayName}</p>
-                          <p className="text-xs text-[var(--color-foreground-muted)] mt-1">{stream.categoryName}</p>
-                        </div>
-                      </div>
-                      <div className="mt-2 flex gap-1">
-                        {stream.platform === 'twitch' && <span className="text-[10px] bg-[#9146FF]/20 text-[#9146FF] px-1.5 py-0.5 rounded uppercase font-bold">Twitch</span>}
-                        {stream.platform === 'kick' && <span className="text-[10px] bg-[#53FC18]/20 text-[#53FC18] px-1.5 py-0.5 rounded uppercase font-bold">Kick</span>}
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* VIDEOS SECTION */}
-          {showVideos && (
-            <section>
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <Play className="w-5 h-5 text-[var(--color-storm-primary)]" /> Videos
-              </h2>
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
-                {filteredVideos.map((video: UnifiedVideo) => (
-                  <Link
-                    to="/video/$platform/$videoId"
-                    params={{ platform: video.platform, videoId: video.id }}
-                    key={video.id}
-                    className="group block rounded-xl overflow-hidden bg-[var(--color-background-secondary)] transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-[var(--color-storm-primary)]/10"
-                  >
-                    <div className="relative aspect-video">
-                      <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
-                      <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs backdrop-blur-sm">
-                        {formatDuration(video.duration)}
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <div className="flex gap-3">
-                        <img src={video.channelAvatar} alt={video.channelName} className="w-10 h-10 rounded-full" />
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-white truncate group-hover:text-[var(--color-storm-primary)] transition-colors">{video.title}</h3>
-                          <p className="text-sm text-[var(--color-foreground-secondary)]">{video.channelDisplayName}</p>
-                          <p className="text-xs text-[var(--color-foreground-muted)] mt-1">{(video.viewCount || 0).toLocaleString()} views • {new Date(video.publishedAt).toLocaleDateString()}</p>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* CLIPS SECTION */}
-          {showClips && (
-            <section>
-              <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-                <Clapperboard className="w-5 h-5 text-white" /> Clips
-              </h2>
-              <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
-                {filteredClips.map((clip: UnifiedClip) => (
+      {/* BEST MATCHES SECTION */}
+      {showTopMatches && (
+        <section>
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            Best Matches
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {topMatches.map((channel) => (
+              <Link
+                key={channel.id}
+                to="/stream/$platform/$channel"
+                params={{ platform: channel.platform, channel: channel.username }}
+                search={{ tab: 'videos' }}
+                className="flex flex-col items-center text-center p-4 rounded-xl transition-all group"
+              >
+                <div className="relative mb-3">
+                  <PlatformAvatar
+                    src={channel.avatarUrl}
+                    alt={channel.displayName}
+                    platform={channel.platform}
+                    size="w-24 h-24"
+                    className="transition-transform group-hover:scale-105"
+                    showBadge={false}
+                  />
                   <div
-                    onClick={() => setSelectedClip(clip)}
-                    key={clip.id}
-                    className="group cursor-pointer rounded-xl overflow-hidden bg-[var(--color-background-secondary)] transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-[var(--color-storm-primary)]/10"
+                    className={cn(
+                      "absolute bottom-0 right-0 p-1.5 rounded-full bg-[var(--color-background)] border-2 border-[var(--color-background)]",
+                      channel.platform === 'twitch' ? "text-[#9146FF]" : "text-[#53FC18]"
+                    )}
                   >
-                    <div className="relative aspect-video">
-                      <img src={clip.thumbnailUrl} alt={clip.title} className="w-full h-full object-cover" />
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                          <Play className="w-5 h-5 text-white fill-white" />
-                        </div>
-                      </div>
+                    {channel.platform === 'twitch' ? <TwitchIcon size={16} /> : <KickIcon size={16} />}
+                  </div>
+                </div>
+                <h3 className="font-bold text-lg truncate w-full group-hover:text-[var(--color-primary)] transition-colors">
+                  {channel.displayName}
+                </h3>
+                {channel.isLive && (
+                  <span className="mt-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-wider border border-red-500/20">
+                    Live
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
-                      <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs backdrop-blur-sm">
-                        {formatDuration(clip.duration)}
-                      </div>
-                    </div>
-                    <div className="p-3">
-                      <div className="flex gap-2.5">
-                        <img src={clip.channelAvatar} alt={clip.channelName} className="w-8 h-8 rounded-full" />
-                        <div className="min-w-0">
-                          <h3 className="font-bold text-sm text-white truncate group-hover:text-[var(--color-storm-primary)] transition-colors">{clip.title}</h3>
-                          <p className="text-xs text-[var(--color-foreground-secondary)]">{clip.channelDisplayName}</p>
-                          <p className="text-xs text-[var(--color-foreground-muted)] mt-0.5">{(clip.viewCount || 0).toLocaleString()} views</p>
-                        </div>
-                      </div>
+      {/* CHANNELS SECTION */}
+      {showChannels && (
+        <section>
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            Channels
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+            {otherMatches.map((channel) => (
+              <Link
+                key={channel.id}
+                to="/stream/$platform/$channel"
+                params={{ platform: channel.platform, channel: channel.username }}
+                search={{ tab: 'videos' }}
+                className="flex flex-col items-center text-center p-4 rounded-xl transition-all group"
+              >
+                <div className="relative mb-3">
+                  <PlatformAvatar
+                    src={channel.avatarUrl}
+                    alt={channel.displayName}
+                    platform={channel.platform}
+                    size="w-20 h-20"
+                    className="ring-2 ring-transparent group-hover:ring-[var(--color-primary)] transition-all"
+                    showBadge={false}
+                  />
+                  <div
+                    className={cn(
+                      "absolute bottom-0 right-0 p-1.5 rounded-full bg-[var(--color-background)] border-2 border-[var(--color-background)]",
+                      channel.platform === 'twitch' ? "text-[#9146FF]" : "text-[#53FC18]"
+                    )}
+                  >
+                    {channel.platform === 'twitch' ? <TwitchIcon size={14} /> : <KickIcon size={14} />}
+                  </div>
+                </div>
+                <h3 className="font-bold text-base truncate w-full group-hover:text-[var(--color-primary)] transition-colors">
+                  {channel.displayName}
+                </h3>
+                {channel.isLive && (
+                  <span className="mt-1 px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 text-[10px] font-bold uppercase tracking-wider border border-red-500/20">
+                    Live
+                  </span>
+                )}
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* CATEGORIES SECTION */}
+      {(showCategories || isLoading) && (
+        <section>
+          {(!isLoading && showCategories) && (
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              Categories
+            </h2>
+          )}
+          {isLoading && (
+            <Skeleton className="h-8 w-32 mb-4" />
+          )}
+
+          <CategoryGrid
+            categories={filteredCategories}
+            isLoading={isLoading}
+            skeletons={12}
+            className={!showCategories && !isLoading ? "hidden" : ""}
+          />
+        </section>
+      )}
+
+      {/* STREAMS SECTION */}
+      {(showStreams || isLoading) && (
+        <section>
+          {(!isLoading && showStreams) && (
+            <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+              Streams
+            </h2>
+          )}
+          {isLoading && (
+            <Skeleton className="h-8 w-32 mb-4" />
+          )}
+
+          <StreamGrid
+            streams={filteredStreams}
+            isLoading={isLoading}
+            skeletons={6}
+            className={!showStreams && !isLoading ? "hidden" : ""}
+          />
+        </section>
+      )}
+
+      {/* VIDEOS SECTION */}
+      {showVideos && (
+        <section>
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <Play className="w-5 h-5 text-[var(--color-storm-primary)]" /> Videos
+          </h2>
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            {filteredVideos.map((video: UnifiedVideo) => (
+              <Link
+                to="/video/$platform/$videoId"
+                params={{ platform: video.platform, videoId: video.id }}
+                key={video.id}
+                className="group block rounded-xl overflow-hidden bg-[var(--color-background-secondary)] transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-[var(--color-storm-primary)]/10"
+              >
+                <div className="relative aspect-video">
+                  <img src={video.thumbnailUrl} alt={video.title} className="w-full h-full object-cover" />
+                  <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs backdrop-blur-sm">
+                    {formatDuration(video.duration)}
+                  </div>
+                </div>
+                <div className="p-3">
+                  <div className="flex gap-3">
+                    <img src={video.channelAvatar} alt={video.channelName} className="w-10 h-10 rounded-full" />
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-white truncate group-hover:text-[var(--color-storm-primary)] transition-colors">{video.title}</h3>
+                      <p className="text-sm text-[var(--color-foreground-secondary)]">{video.channelDisplayName}</p>
+                      <p className="text-xs text-[var(--color-foreground-muted)] mt-1">{(video.viewCount || 0).toLocaleString()} views • {new Date(video.publishedAt).toLocaleDateString()}</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </section>
-          )}
+                </div>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
-          {/* EMPTY STATE */}
-          {results && filteredChannels.length === 0 && filteredStreams.length === 0 && filteredCategories.length === 0 && filteredVideos.length === 0 && filteredClips.length === 0 && (
-            <div className="text-center py-20 bg-[var(--color-background-secondary)]/30 rounded-2xl border border-[var(--color-border)] border-dashed">
-              <p className="text-xl text-[var(--color-foreground-secondary)] font-medium">No results found for "{q}"</p>
-              <p className="text-[var(--color-foreground-muted)] mt-2">Try adjusting your filters or checking your spelling.</p>
-            </div>
-          )}
+      {/* CLIPS SECTION */}
+      {showClips && (
+        <section>
+          <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+            <Clapperboard className="w-5 h-5 text-white" /> Clips
+          </h2>
+          <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
+            {filteredClips.map((clip: UnifiedClip) => (
+              <div
+                onClick={() => setSelectedClip(clip)}
+                key={clip.id}
+                className="group cursor-pointer rounded-xl overflow-hidden bg-[var(--color-background-secondary)] transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-[var(--color-storm-primary)]/10"
+              >
+                <div className="relative aspect-video">
+                  <img src={clip.thumbnailUrl} alt={clip.title} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                      <Play className="w-5 h-5 text-white fill-white" />
+                    </div>
+                  </div>
+
+                  <div className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs backdrop-blur-sm">
+                    {formatDuration(clip.duration)}
+                  </div>
+                </div>
+                <div className="p-3">
+                  <div className="flex gap-2.5">
+                    <img src={clip.channelAvatar} alt={clip.channelName} className="w-8 h-8 rounded-full" />
+                    <div className="min-w-0">
+                      <h3 className="font-bold text-sm text-white truncate group-hover:text-[var(--color-storm-primary)] transition-colors">{clip.title}</h3>
+                      <p className="text-xs text-[var(--color-foreground-secondary)]">{clip.channelDisplayName}</p>
+                      <p className="text-xs text-[var(--color-foreground-muted)] mt-0.5">{(clip.viewCount || 0).toLocaleString()} views</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* EMPTY STATE */}
+      {results && filteredChannels.length === 0 && filteredStreams.length === 0 && filteredCategories.length === 0 && filteredVideos.length === 0 && filteredClips.length === 0 && (
+        <div className="text-center py-20 bg-[var(--color-background-secondary)]/30 rounded-2xl border border-[var(--color-border)] border-dashed">
+          <p className="text-xl text-[var(--color-foreground-secondary)] font-medium">No results found for "{q}"</p>
+          <p className="text-[var(--color-foreground-muted)] mt-2">Try adjusting your filters or checking your spelling.</p>
         </div>
       )}
       <Dialog open={!!selectedClip} onOpenChange={(open) => !open && setSelectedClip(null)}>

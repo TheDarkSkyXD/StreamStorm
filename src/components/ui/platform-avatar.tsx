@@ -52,7 +52,7 @@ export function PlatformAvatar({
     const borderSize = isLarge ? "border-2" : "border-[1.5px]";
 
     return (
-        <div className={cn("relative shrink-0", size, className)}>
+        <div className={cn("relative shrink-0 rounded-full", size, className)}>
             <div className={cn(
                 "w-full h-full rounded-full p-0.5",
                 platform === 'twitch' ? 'bg-[#9146FF]' : 'bg-[#53FC18]'
@@ -71,7 +71,7 @@ export function PlatformAvatar({
                             "bg-[var(--color-background-tertiary)] border-2 border-[var(--color-background)]"
                         )}>
                             <span className="font-bold text-[var(--color-foreground-muted)] uppercase select-none" style={{ fontSize: '120%' }}>
-                                {alt.slice(0, 1) || '?'}
+                                {(alt || '?').slice(0, 1)}
                             </span>
                         </div>
                     }

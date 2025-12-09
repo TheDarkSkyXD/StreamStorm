@@ -10,7 +10,7 @@ import { useFollowedChannels } from '@/hooks/queries/useChannels';
 import { useFollowedStreams } from '@/hooks/queries/useStreams';
 import type { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
 import type { Platform } from '@/shared/auth-types';
-import { StreamCard } from '@/components/stream/stream-card';
+import { StreamGrid } from '@/components/stream/stream-grid';
 import { PlatformAvatar } from '@/components/ui/platform-avatar';
 import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
 import { cn } from '@/lib/utils';
@@ -174,11 +174,7 @@ export function FollowingPage() {
           <div className="space-y-8">
             <div className="space-y-4">
               <Skeleton className="h-7 w-32" />
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                {[...Array(4)].map((_, i) => (
-                  <Skeleton key={i} className="aspect-video w-full rounded-xl" />
-                ))}
-              </div>
+              <StreamGrid isLoading={true} skeletons={4} />
             </div>
 
             <div className="space-y-4">
@@ -197,7 +193,7 @@ export function FollowingPage() {
           <>
             {/* Live Section */}
             {liveChannels.length > 0 && (
-              <div className="space-y-4">
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                   Live Now
@@ -205,17 +201,13 @@ export function FollowingPage() {
                     ({liveChannels.length})
                   </span>
                 </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {liveChannels.map((stream) => (
-                    <StreamCard key={stream.id} stream={stream} />
-                  ))}
-                </div>
+                <StreamGrid streams={liveChannels} />
               </div>
             )}
 
             {/* Offline Section */}
             {offlineChannels.length > 0 && (
-              <div className="space-y-4">
+              <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
                 <h2 className="text-xl font-semibold text-white">
                   Offline
                   <span className="text-sm font-normal text-[var(--color-foreground-muted)] ml-2">

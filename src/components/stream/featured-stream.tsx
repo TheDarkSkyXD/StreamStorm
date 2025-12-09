@@ -121,14 +121,7 @@ export function FeaturedStream({ stream, isLoading }: FeaturedStreamProps) {
                         />
                         <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
 
-                        {/* Play Button Overlay */}
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <div className="bg-black/60 rounded-full p-4 backdrop-blur-sm">
-                                <svg className="w-8 h-8 text-white fill-current" viewBox="0 0 24 24">
-                                    <path d="M8 5v14l11-7z" />
-                                </svg>
-                            </div>
-                        </div>
+
                     </Link>
                 </div>
             </div>
