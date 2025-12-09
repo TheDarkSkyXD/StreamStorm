@@ -376,10 +376,33 @@ Incoming Message
       // Subscriber emotes
       // Follower emotes
     }
+
+    // Requirements:
+    // - Global emotes
+    // - Channel-specific emotes
+    // - User-specific emotes (personal emotes)
+    // - Zero-width emotes (overlays)
+    // - Animated emotes (GIF/WEBP)
   }
   ```
 
-- [ ] **4.4.3** Implement third-party emote providers
+- [ ] **4.4.3** Implement Kick emote provider
+  ```typescript
+  // src/backend/services/emotes/kick-emotes.ts
+  export class KickEmoteProvider implements EmoteProvider {
+    async loadGlobal(): Promise<Emote[]> {
+      // Fetch from Kick internal API (e.g. /emotes/global)
+      // Parse 7TV-based emotes used by Kick
+    }
+    
+    async loadChannel(channelId: string): Promise<Emote[]> {
+      // Fetch channel data
+      // Extract subscriber_badges and emotes
+    }
+  }
+  ```
+
+- [ ] **4.4.4** Implement third-party emote providers
   ```typescript
   // src/backend/services/emotes/bttv-emotes.ts
   export class BTTVEmoteProvider implements EmoteProvider {}
@@ -391,7 +414,7 @@ Incoming Message
   export class SevenTVEmoteProvider implements EmoteProvider {}
   ```
 
-- [ ] **4.4.4** Create EmotePicker component
+- [ ] **4.4.5** Create EmotePicker component
   ```typescript
   // src/frontend/components/chat/EmotePicker.tsx
   export function EmotePicker({ onSelect }: EmotePickerProps) {
@@ -407,6 +430,9 @@ Incoming Message
           <TabPanel value="global">
             <GlobalEmotes onSelect={onSelect} />
           </TabPanel>
+          <TabPanel value="kick">
+             <KickEmotes onSelect={onSelect} />
+          </TabPanel>
           <TabPanel value="7tv">
             <SevenTVEmotes onSelect={onSelect} />
           </TabPanel>
@@ -417,14 +443,14 @@ Incoming Message
   }
   ```
 
-- [ ] **4.4.5** Implement emote autocomplete
+- [ ] **4.4.6** Implement emote autocomplete
   ```typescript
   // Type :emote to trigger autocomplete
   // Show matching emotes
   // Keyboard navigation
   ```
 
-- [ ] **4.4.6** Handle emote rendering
+- [ ] **4.4.7** Handle emote rendering
   ```typescript
   // src/frontend/components/chat/EmoteImage.tsx
   export function EmoteImage({ emote, size }: EmoteImageProps) {
@@ -432,6 +458,7 @@ Incoming Message
     // Multiple sizes (1x, 2x, 4x)
     // Animated emotes (GIF/WEBP)
     // Tooltip with name
+    // Kick emote support (parsing custom image URLs)
   }
   ```
 
