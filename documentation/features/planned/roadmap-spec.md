@@ -27,6 +27,7 @@ This document provides a high-level roadmap for StreamStorm development, linking
 | **8** | [Platform Features](./phase-8-platform-features-spec.md) | 1.5 weeks | Low | 📋 Planned |
 | **9** | [Global Tabs](./phase-9-global-tabs-spec.md) | 1 week | Medium | 📋 Planned |
 | **10** | [Downloads](./phase-10-downloads-spec.md) | 1.5 weeks | Medium | 📋 Planned |
+| **11** | [History](./phase-11-history-spec.md) | 1 week | Medium | 📋 Planned |
 
 ---
 
@@ -97,6 +98,7 @@ documentation/features/
 │   ├── phase-8-platform-features-spec.md
 │   ├── phase-9-global-tabs-spec.md
 │   ├── phase-10-downloads-spec.md
+│   ├── phase-11-history-spec.md
 │   └── roadmap-spec.md      # This file
 ├── active/                  # Move specs here when work begins
 │   └── [phase]-progress.md  # Track progress
