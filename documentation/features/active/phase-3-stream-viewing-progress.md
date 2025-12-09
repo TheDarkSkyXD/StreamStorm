@@ -35,13 +35,13 @@ This document tracks the implementation progress of Phase 3: Stream Viewing.
 - [x] **3.4.4** Implement stream popout window (`PopoutManager`)
 
 ## Phase 3.5: Multi-Stream Viewing
-- [ ] **3.5.1** Create multi-stream store (`MultiStreamState`)
-- [ ] **3.5.2** Create `MultiStreamPage` component
-- [ ] **3.5.3** Implement layout grid system
-- [ ] **3.5.4** Implement drag-and-drop reordering
-- [ ] **3.5.5** Create audio focus system
-- [ ] **3.5.6** Create add stream dialog
-- [ ] **3.5.7** Implement layout presets
+- [x] **3.5.1** Create multi-stream store (`MultiStreamState`)
+- [x] **3.5.2** Create `MultiStreamPage` component
+- [x] **3.5.3** Implement layout grid system
+- [x] **3.5.4** Implement drag-and-drop reordering
+- [x] **3.5.5** Create audio focus system
+- [x] **3.5.6** Create add stream dialog
+- [x] **3.5.7** Implement layout presets
 
 ## Phase 3.6: VOD & Clip Playback
 - [ ] **3.6.1** Create VOD player with seek support (`VodPlayer`)

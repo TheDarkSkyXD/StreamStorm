@@ -18,6 +18,7 @@ import {
   SettingsPage,
   ClipPage,
   PopoutPage,
+  MultiStreamPage,
 } from '@/pages';
 
 // Root layout (wraps everything)
@@ -112,6 +113,13 @@ const settingsRoute = createRoute({
   component: SettingsPage,
 });
 
+// MultiStream page
+const multiStreamRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/multistream',
+  component: MultiStreamPage,
+});
+
 // Build the route tree
 const routeTree = rootRoute.addChildren([
   appLayoutRoute.addChildren([
@@ -124,6 +132,7 @@ const routeTree = rootRoute.addChildren([
     videoRoute,
     clipRoute,
     settingsRoute,
+    multiStreamRoute,
   ]),
   popoutRoute,
 ]);

@@ -8,3 +8,4 @@ export { SettingsPage } from './Settings';
 export { VideoPage } from './Video';
 export { ClipPage } from './Clip';
 export { PopoutPage } from './Popout';
+export { MultiStreamPage } from './MultiStream';
