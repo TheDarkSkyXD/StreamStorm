@@ -70,6 +70,7 @@ The StreamStorm project follows a phased implementation approach. All phase spec
 | **6** | Settings & Preferences | `phase-6-settings-spec.md` |
 | **7** | Enhanced Features | `phase-7-enhanced-features-spec.md` |
 | **8** | Platform-Specific Features | `phase-8-platform-features-spec.md` |
+| **9** | Global Tabs & Workspace Management | `phase-9-global-tabs-spec.md` |
 
 **Start with**: [roadmap-spec.md](./features/planned/roadmap-spec.md) for the master plan.
 

@@ -16,15 +16,16 @@ This document provides a high-level roadmap for StreamStorm development, linking
 
 | Phase | Name | Timeline | Priority | Status |
 |-------|------|----------|----------|--------|
-| **0** | [Project Setup](./phase-0-project-setup-spec.md) | 1 week | Critical | ✅ Complete |
-| **1** | [Authentication](../active/phase-1-authentication-spec.md) | 2 weeks | High | 🔄 In Progress |
-| **2** | [Stream Discovery](./phase-2-discovery-spec.md) | 2 weeks | High | 📋 Planned |
-| **3** | [Stream Viewing](./phase-3-stream-viewing-spec.md) | 3 weeks | High | 📋 Planned |
+| **0** | [Project Setup](../completed/phase-0-project-setup-spec.md) | 1 week | Critical | ✅ Complete |
+| **1** | [Authentication](../completed/phase-1-authentication-spec.md) | 2 weeks | High | ✅ Complete |
+| **2** | [Stream Discovery](../completed/phase-2-discovery-spec.md) | 2 weeks | High | ✅ Complete |
+| **3** | [Stream Viewing](../active/phase-3-stream-viewing-spec.md) | 3 weeks | High | � In Progress |
 | **4** | [Chat Integration](./phase-4-chat-spec.md) | 2.5 weeks | High | 📋 Planned |
 | **5** | [Notifications](./phase-5-notifications-spec.md) | 1.5 weeks | Medium | 📋 Planned |
 | **6** | [Settings](./phase-6-settings-spec.md) | 1.5 weeks | Medium | 📋 Planned |
 | **7** | [Enhanced Features](./phase-7-enhanced-features-spec.md) | 2 weeks | Low | 📋 Planned |
 | **8** | [Platform Features](./phase-8-platform-features-spec.md) | 1.5 weeks | Low | 📋 Planned |
+| **9** | [Global Tabs](./phase-9-global-tabs-spec.md) | 1 week | Medium | 📋 Planned |
 
 ---
 
@@ -93,6 +94,7 @@ documentation/features/
 │   ├── phase-6-settings-spec.md
 │   ├── phase-7-enhanced-features-spec.md
 │   ├── phase-8-platform-features-spec.md
+│   ├── phase-9-global-tabs-spec.md
 │   └── roadmap-spec.md      # This file
 ├── active/                  # Move specs here when work begins
 │   └── [phase]-progress.md  # Track progress
