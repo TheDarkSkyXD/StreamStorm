@@ -50,4 +50,42 @@ export class KickStreamResolver {
             throw error;
         }
     }
+
+    /**
+     * Get playback URL for a Kick VOD
+     */
+    async getVodPlaybackUrl(videoId: string): Promise<StreamPlayback> {
+        try {
+            const response = await fetch(`${KICK_LEGACY_API_V1_BASE}/video/${videoId}`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                    'Referer': 'https://kick.com/',
+                    'Origin': 'https://kick.com'
+                }
+            });
+
+            if (!response.ok) {
+                if (response.status === 404) {
+                    throw new Error('Video not found');
+                }
+                throw new Error(`Kick API error: ${response.status}`);
+            }
+
+            const data = await response.json();
+            const playbackUrl = data.source;
+
+            if (!playbackUrl) {
+                throw new Error('No playback URL found in response');
+            }
+
+            return {
+                url: playbackUrl,
+                format: 'hls'
+            };
+        } catch (error) {
+            console.error('Failed to resolve Kick VOD URL for:', videoId, error);
+            throw error;
+        }
+    }
 }

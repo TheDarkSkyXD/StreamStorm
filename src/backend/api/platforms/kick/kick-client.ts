@@ -23,6 +23,8 @@ import * as ChannelEndpoints from './endpoints/channel-endpoints';
 import * as StreamEndpoints from './endpoints/stream-endpoints';
 import * as CategoryEndpoints from './endpoints/category-endpoints';
 import * as SearchEndpoints from './endpoints/search-endpoints';
+import * as VideoEndpoints from './endpoints/video-endpoints';
+import * as ClipEndpoints from './endpoints/clip-endpoints';
 
 // ========== Kick API Client Class ==========
 
@@ -286,16 +288,29 @@ class KickClient implements KickRequestor {
         return SearchEndpoints.search(this, query);
     }
 
+    // ========== Videos ==========
+
+    /**
+     * Get videos by channel slug
+     */
+    async getVideos(
+        slug: string,
+        options: PaginationOptions = {}
+    ): Promise<PaginatedResult<any>> {
+        return VideoEndpoints.getVideosByChannelSlug(slug, options);
+    }
+
     // ========== Clips ==========
     // Note: Clips endpoint not documented in official API
 
     /**
      * Get clips for a channel
-     * Note: Not available in official API
      */
-    async getClips(_slug: string): Promise<UnifiedClip[]> {
-        console.warn('⚠️ Kick official API does not support clips endpoint');
-        return [];
+    async getClips(
+        slug: string,
+        options: PaginationOptions = {}
+    ): Promise<PaginatedResult<any>> {
+        return ClipEndpoints.getClipsByChannelSlug(slug, options);
     }
 }
 

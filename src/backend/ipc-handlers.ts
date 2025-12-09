@@ -14,6 +14,7 @@ import { registerStreamHandlers } from './ipc/handlers/stream-handlers';
 import { registerCategoryHandlers } from './ipc/handlers/category-handlers';
 import { registerSearchHandlers } from './ipc/handlers/search-handlers';
 import { registerChannelHandlers } from './ipc/handlers/channel-handlers';
+import { registerVideoHandlers } from './ipc/handlers/video-handlers';
 
 export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   // Register all handlers
@@ -24,6 +25,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   registerCategoryHandlers();
   registerSearchHandlers();
   registerChannelHandlers();
+  registerVideoHandlers();
 
   console.log('✅ All IPC handlers registered successfully');
 }

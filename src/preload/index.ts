@@ -287,6 +287,29 @@ const electronAPI = {
     }): Promise<{ success: boolean; data?: any[]; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.CHANNELS_GET_FOLLOWED, params),
   },
+
+  // ========== Discovery: Videos & Clips ==========
+  videos: {
+    getByChannel: (params: {
+      platform: Platform;
+      channelName: string;
+      channelId?: string;
+      limit?: number;
+      cursor?: string;
+    }): Promise<{ success: boolean; data?: any[]; cursor?: string; debug?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.VIDEOS_GET_BY_CHANNEL, params),
+  },
+
+  clips: {
+    getByChannel: (params: {
+      platform: Platform;
+      channelName: string;
+      channelId?: string;
+      limit?: number;
+      cursor?: string;
+    }): Promise<{ success: boolean; data?: any[]; cursor?: string; debug?: string; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CLIPS_GET_BY_CHANNEL, params),
+  },
 };
 
 // Expose the API to the renderer

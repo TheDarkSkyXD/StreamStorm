@@ -114,6 +114,15 @@ export const IPC_CHANNELS = {
   CHANNELS_GET_BY_ID: 'channels:get-by-id',
   CHANNELS_GET_BY_USERNAME: 'channels:get-by-username',
   CHANNELS_GET_FOLLOWED: 'channels:get-followed',
+
+  // ========== Discovery: Videos ==========
+  VIDEOS_GET_METADATA: 'videos:get-metadata',
+  VIDEOS_GET_PLAYBACK_URL: 'videos:get-playback-url',
+  VIDEOS_GET_BY_CHANNEL: 'videos:get-by-channel',
+
+  // ========== Discovery: Clips ==========
+  CLIPS_GET_BY_CHANNEL: 'clips:get-by-channel',
+  CLIPS_GET_PLAYBACK_URL: 'clips:get-playback-url',
 } as const;
 
 // Type for channel names

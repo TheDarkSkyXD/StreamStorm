@@ -53,6 +53,9 @@ export function VideoPlayer(props: VideoPlayerProps) {
     const [availableQualities, setAvailableQualities] = useState<QualityLevel[]>([]);
     const [currentQualityId, setCurrentQualityId] = useState<string>('auto');
     const [isLoading, setIsLoading] = useState(true); // Initial load
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
+    const [buffered, setBuffered] = useState<TimeRanges | undefined>(undefined);
 
     // Sync state with video element
     const syncState = useCallback(() => {
@@ -77,12 +80,18 @@ export function VideoPlayer(props: VideoPlayerProps) {
         };
         const handleWaiting = () => setIsLoading(true);
         const handlePlaying = () => setIsLoading(false);
+        const handleTimeUpdate = () => setCurrentTime(video.currentTime);
+        const handleDurationChange = () => setDuration(video.duration);
+        const handleProgress = () => setBuffered(video.buffered);
 
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
         video.addEventListener('volumechange', handleVolumeChange);
         video.addEventListener('waiting', handleWaiting);
         video.addEventListener('playing', handlePlaying);
+        video.addEventListener('timeupdate', handleTimeUpdate);
+        video.addEventListener('durationchange', handleDurationChange);
+        video.addEventListener('progress', handleProgress);
 
         return () => {
             video.removeEventListener('play', handlePlay);
@@ -90,6 +99,9 @@ export function VideoPlayer(props: VideoPlayerProps) {
             video.removeEventListener('volumechange', handleVolumeChange);
             video.removeEventListener('waiting', handleWaiting);
             video.removeEventListener('playing', handlePlaying);
+            video.removeEventListener('timeupdate', handleTimeUpdate);
+            video.removeEventListener('durationchange', handleDurationChange);
+            video.removeEventListener('progress', handleProgress);
         };
     }, [isReady]);
 
@@ -135,6 +147,12 @@ export function VideoPlayer(props: VideoPlayerProps) {
         if (vol === 0) {
             video.muted = true;
         }
+    }, []);
+
+    const handleSeek = useCallback((time: number) => {
+        const video = videoRef.current;
+        if (!video) return;
+        video.currentTime = time;
     }, []);
 
     const handleQualityLevels = useCallback((levels: QualityLevel[]) => {
@@ -204,6 +222,10 @@ export function VideoPlayer(props: VideoPlayerProps) {
                         onToggleTheater={onToggleTheater}
                         isTheater={isTheater}
                         onTogglePip={togglePipHandler}
+                        currentTime={currentTime}
+                        duration={duration}
+                        onSeek={handleSeek}
+                        buffered={buffered}
                     />
                 </>
             ) : (

@@ -44,17 +44,15 @@ This document tracks the implementation progress of Phase 3: Stream Viewing.
 - [x] **3.5.7** Implement layout presets
 
 ## Phase 3.6: VOD & Clip Playback
-- [ ] **3.6.1** Create VOD player with seek support (`VodPlayer`)
-- [ ] **3.6.2** Implement progress bar with hover preview
+- [x] **3.6.1** Create VOD player with seek support (`VodPlayer`)
+- [x] **3.6.2** Implement progress bar with hover preview
 - [ ] **3.6.3** Create playback speed control
 - [ ] **3.6.4** Implement resume watching
-- [ ] **3.6.5** Create clip player
+- [x] **3.6.5** Create clip player
 
 ## Phase 3.7: Performance Optimization
 - [ ] **3.7.1** Implement adaptive quality (`useAdaptiveQuality`)
-- [ ] **3.7.2** Create resource manager (`ResourceManager`)
 - [ ] **3.7.3** Implement background stream throttling
-- [ ] **3.7.4** Add performance monitoring UI (`StatsOverlay`)
 - [ ] **3.7.5** Optimize video element lifecycle
 
 ## Completion Checklist

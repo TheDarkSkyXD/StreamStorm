@@ -1,12 +1,43 @@
 import { useParams, Link } from '@tanstack/react-router';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Heart, HeartCrack } from 'lucide-react';
+import { Heart, HeartCrack, AlertCircle } from 'lucide-react';
+import { VideoPlayer } from '@/components/player/video-player';
+import { IPC_CHANNELS } from '@/shared/ipc-channels';
 
 export function VideoPage() {
     const { platform, videoId } = useParams({ from: '/_app/video/$platform/$videoId' });
     const [isFollowing, setIsFollowing] = useState(false);
     const [isHoveringFollow, setIsHoveringFollow] = useState(false);
+    const [streamUrl, setStreamUrl] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    useEffect(() => {
+        const fetchUrl = async () => {
+            setError(null);
+            setStreamUrl(null);
+            try {
+                const electron = (window as any).electron;
+                if (!electron) throw new Error("Electron API not found");
+
+                const result = await electron.ipcRenderer.invoke(IPC_CHANNELS.VIDEOS_GET_PLAYBACK_URL, {
+                    platform,
+                    videoId
+                });
+
+                if (result.success && result.data) {
+                    setStreamUrl(result.data.url);
+                } else {
+                    console.error("VOD Fetch Error:", result.error);
+                    setError(result.error || 'Failed to resolve VOD URL');
+                }
+            } catch (err) {
+                console.error(err);
+                setError('Failed to load video');
+            }
+        };
+        if (platform && videoId) fetchUrl();
+    }, [platform, videoId]);
 
     // Mock video data - in a real app fetch this based on videoId
     const videoTitle = "Previous Stream Broadcast";
@@ -28,12 +59,25 @@ export function VideoPage() {
         <div className="h-full flex overflow-hidden">
             {/* Video Player Area */}
             <div className="flex-1 flex flex-col overflow-y-auto">
-                <div className="aspect-video bg-black flex items-center justify-center shrink-0">
-                    {/* Placeholder for Video Player */}
-                    <div className="text-center">
-                        <p className="text-white/50 text-xl font-bold mb-2">VOD Player ({platform})</p>
-                        <p className="text-white/30 text-sm">Playing Video ID: {videoId}</p>
-                    </div>
+                <div className="aspect-video bg-black flex items-center justify-center shrink-0 text-white relative group">
+                    {streamUrl ? (
+                        <VideoPlayer
+                            streamUrl={streamUrl}
+                            platform={platform as any}
+                            autoPlay={true}
+                            className="size-full"
+                        />
+                    ) : error ? (
+                        <div className="text-center text-red-500">
+                            <AlertCircle className="w-8 h-8 mx-auto mb-2" />
+                            <p>{error}</p>
+                        </div>
+                    ) : (
+                        <div className="text-center text-white/50">
+                            <div className="animate-spin w-8 h-8 border-4 border-white border-t-transparent rounded-full mx-auto mb-2" />
+                            <p>Loading VOD...</p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="p-6 space-y-6">

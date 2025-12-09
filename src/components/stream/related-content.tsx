@@ -13,26 +13,22 @@ import { PlatformAvatar } from '@/components/ui/platform-avatar';
 import { FollowButton } from '@/components/ui/follow-button';
 import { Platform } from '@/shared/auth-types';
 import { UnifiedChannel } from '@/backend/api/unified/platform-types';
+import { IPC_CHANNELS } from '@/shared/ipc-channels';
 
-// Mock Data (Moved from StreamPage)
-const MOCK_VIDEOS = Array.from({ length: 6 }).map((_, i) => ({
-    id: `vod-${i}`,
-    title: `Previous Stream broadcast ${i}`,
-    duration: '4:20:30',
-    views: '10K',
-    date: '2 days ago'
-}));
+interface VideoOrClip {
+    id: string;
+    title: string;
+    duration: string;
+    views: string;
+    date: string;
+    thumbnailUrl: string;
+    embedUrl?: string; // For clips
+    url?: string; // For clips
+    gameName?: string;
+    isLive?: boolean;
+}
 
-const MOCK_CLIPS = Array.from({ length: 6 }).map((_, i) => ({
-    id: `clip-${i}`,
-    title: `Insane moment from yesterday ${i}`,
-    duration: '0:30',
-    views: '15K',
-    date: '1 day ago',
-    embedUrl: 'https://player.kick.com/example',
-    gameName: 'Fortnite',
-    isLive: i % 2 === 0
-}));
+
 
 interface RelatedContentProps {
     platform: Platform;
@@ -43,16 +39,117 @@ interface RelatedContentProps {
 export function RelatedContent({ platform, channelName, channelData }: RelatedContentProps) {
     const { tab: activeTab } = useSearch({ from: '/_app/stream/$platform/$channel' });
     const [isLoading, setIsLoading] = useState(true);
-    const [selectedClip, setSelectedClip] = useState<typeof MOCK_CLIPS[0] | null>(null);
+    const [videos, setVideos] = useState<VideoOrClip[]>([]);
+    const [clips, setClips] = useState<VideoOrClip[]>([]);
+    const [selectedClip, setSelectedClip] = useState<VideoOrClip | null>(null);
+    const [error, setError] = useState<string | null>(null);
+    const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
-    // Fallback Loading logic
+    // Fetch data
     useEffect(() => {
-        setIsLoading(true);
-        const timer = setTimeout(() => {
-            setIsLoading(false);
-        }, 1000);
-        return () => clearTimeout(timer);
-    }, [activeTab, platform, channelName]);
+        const fetchData = async () => {
+            setIsLoading(true);
+            setError(null);
+            try {
+                const api = (window as any).electronAPI;
+                if (!api) {
+                    // This should not happen if preload ran correctly
+                    console.error('[RelatedContent] window.electronAPI is missing');
+                    return;
+                }
+
+                const targetTab = activeTab || 'videos';
+
+                if (targetTab === 'videos') {
+                    console.log(`[RelatedContent] Requesting videos for ${platform}/${channelName} (ID: ${channelData?.id})`);
+                    const result = await api.videos.getByChannel({
+                        platform,
+                        channelName,
+                        channelId: channelData?.id,
+                        limit: 12
+                    });
+                    if (result.success) {
+                        console.log(`[RelatedContent] Received ${result.data?.length ?? 0} videos`);
+                        setVideos(result.data || []);
+                        setDebugInfo(result.debug || null);
+                    } else {
+                        console.error("Failed to fetch videos:", result.error);
+                        setError(result.error || "Failed to fetch videos");
+                    }
+                } else if (targetTab === 'clips') {
+                    console.log(`[RelatedContent] Requesting clips for ${platform}/${channelName} (ID: ${channelData?.id})`);
+                    const result = await api.clips.getByChannel({
+                        platform,
+                        channelName,
+                        channelId: channelData?.id,
+                        limit: 12
+                    });
+                    if (result.success) {
+                        console.log(`[RelatedContent] Received ${result.data?.length ?? 0} clips`);
+                        setClips(result.data || []);
+                    } else {
+                        console.error("Failed to fetch clips:", result.error);
+                        setError(result.error || "Failed to fetch clips");
+                    }
+                }
+            } catch (error) {
+                console.error("Failed to fetch content:", error);
+                setError("Failed to load content");
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (platform && channelName) {
+            fetchData();
+        }
+    }, [activeTab, platform, channelName, channelData?.id]); // Re-run when channelData loads to provide channelId
+
+    // Helper to format time ago
+    const formatTimeAgo = (dateString: string) => {
+        try {
+            const date = new Date(dateString);
+            const now = new Date();
+            const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+
+            let interval = seconds / 31536000;
+            if (interval > 1) return Math.floor(interval) + " years ago";
+
+            interval = seconds / 2592000;
+            if (interval > 1) return Math.floor(interval) + " months ago";
+
+            interval = seconds / 86400;
+            if (interval > 1) {
+                const days = Math.floor(interval);
+                if (days === 1) return "Yesterday";
+                return days + " days ago";
+            }
+
+            interval = seconds / 3600;
+            if (interval > 1) return Math.floor(interval) + " hours ago";
+
+            interval = seconds / 60;
+            if (interval > 1) return Math.floor(interval) + " mins ago";
+
+            return Math.floor(seconds) + " seconds ago";
+        } catch (e) {
+            return dateString; // Fallback
+        }
+    };
+
+    // Helper to format view counts
+    const formatViews = (views: string | number) => {
+        const num = typeof views === 'string' ? parseInt(views.replace(/,/g, ''), 10) : views;
+        if (isNaN(num)) return views;
+
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+        }
+        if (num >= 1000) {
+            return (num / 1000).toFixed(1).replace(/\.0$/, '') + 'K';
+        }
+        return num.toString();
+    };
 
     return (
         <div className="space-y-6">
@@ -101,66 +198,127 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
                                 </div>
                             </div>
                         ))
+                    ) : error ? (
+                        <div className="col-span-full py-12 text-center text-red-400">
+                            <p>{error}</p>
+                            <Button variant="ghost" size="sm" onClick={() => window.location.reload()} className="mt-2">Retry</Button>
+                        </div>
                     ) : (
                         (activeTab === 'videos' || !activeTab) ? (
-                            MOCK_VIDEOS.map((video) => (
-                                <Link
-                                    key={video.id}
-                                    to="/video/$platform/$videoId"
-                                    params={{
-                                        platform: platform || 'twitch',
-                                        videoId: video.id
-                                    }}
-                                    className="block group"
-                                >
-                                    <Card className="overflow-hidden cursor-pointer hover:border-white transition-colors h-full">
-                                        <div className="aspect-video bg-[var(--color-background-tertiary)] relative">
-                                            <div className="absolute bottom-2 right-2 bg-black/70 px-1.5 py-0.5 rounded text-xs text-white">
-                                                {video.duration}
-                                            </div>
-                                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                                                    <Play className="w-5 h-5 text-white fill-white" />
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <CardContent className="pt-3">
-                                            <h3 className="font-medium text-sm line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors">
-                                                {video.title}
-                                            </h3>
-                                            <p className="text-xs text-[var(--color-foreground-muted)] mt-1">{video.date} • {video.views} views</p>
-                                        </CardContent>
-                                    </Card>
-                                </Link>
-                            ))
-                        ) : (
-                            MOCK_CLIPS.map((clip) => (
-                                <div
-                                    key={clip.id}
-                                    onClick={() => setSelectedClip(clip)}
-                                    className="block group cursor-pointer"
-                                >
-                                    <Card className="overflow-hidden hover:border-white transition-colors h-full">
-                                        <div className="aspect-video bg-[var(--color-background-tertiary)] relative">
+                            videos.length > 0 ? (
+                                videos.map((video) => (
+                                    <Link
+                                        key={video.id}
+                                        to={video.isLive ? "/stream/$platform/$channel" : "/video/$platform/$videoId"}
+                                        params={video.isLive ? {
+                                            platform: platform || 'twitch',
+                                            channel: channelName
+                                        } : {
+                                            platform: platform || 'twitch',
+                                            videoId: video.id
+                                        }}
+                                        className="block group"
+                                        onClick={(e) => {
+                                            if (video.isLive) {
+                                                // Use setTimeout to ensure scroll happens after any potential navigation/render updates
+                                                setTimeout(() => {
+                                                    const scrollContainer = document.getElementById('main-content-scroll-area');
+                                                    if (scrollContainer) {
+                                                        scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+                                                    }
+                                                }, 50);
+                                            }
+                                        }}
+                                    >
+                                        <Card className="overflow-hidden cursor-pointer hover:border-white transition-colors h-full border border-transparent bg-[var(--color-background-secondary)]">
+                                            <div className="aspect-video bg-[var(--color-background-tertiary)] relative">
+                                                {video.thumbnailUrl && (
+                                                    <img src={video.thumbnailUrl} alt={video.title} className="absolute inset-0 w-full h-full object-cover" />
+                                                )}
 
-                                            <div className="absolute bottom-2 right-2 bg-black/70 px-1.5 py-0.5 rounded text-xs text-white">
-                                                {clip.duration}
-                                            </div>
-                                            <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                                                    <Play className="w-5 h-5 text-white fill-white" />
+                                                {/* Duration: Top Left */}
+                                                <div className={`absolute top-2 left-2 px-1.5 py-0.5 rounded text-xs font-medium ${video.isLive ? 'bg-red-600 text-white' : 'bg-black/80 text-white'}`}>
+                                                    {video.isLive ? 'LIVE' : video.duration}
+                                                </div>
+
+                                                {/* Views: Bottom Left */}
+                                                <div className="absolute bottom-2 left-2 bg-black/80 px-1.5 py-0.5 rounded text-xs text-white font-medium">
+                                                    {formatViews(video.views)} views
+                                                </div>
+
+                                                {/* Date: Bottom Right */}
+                                                <div className="absolute bottom-2 right-2 bg-black/80 px-1.5 py-0.5 rounded text-xs text-white font-medium">
+                                                    {video.isLive ? 'Today' : formatTimeAgo(video.date)}
+                                                </div>
+
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                                        <Play className="w-5 h-5 text-white fill-white" />
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <CardContent className="pt-3">
-                                            <h3 className="font-medium text-sm line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors">
-                                                {clip.title}
-                                            </h3>
-                                            <p className="text-xs text-[var(--color-foreground-muted)] mt-1">{clip.date} • {clip.views} views</p>
-                                        </CardContent>
-                                    </Card>
+                                            <CardContent className="pt-3">
+                                                <h3 className="font-medium text-sm line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors text-white">
+                                                    {video.title}
+                                                </h3>
+                                            </CardContent>
+                                        </Card>
+                                    </Link>
+                                ))
+                            ) : (
+                                <div className="col-span-full py-12 text-center text-[var(--color-foreground-muted)]">
+                                    No videos found
+                                    {debugInfo && <p className="text-xs mt-2 opacity-50 font-mono">{debugInfo}</p>}
                                 </div>
-                            ))
+                            )
+                        ) : (
+                            clips.length > 0 ? (
+                                clips.map((clip) => (
+                                    <div
+                                        key={clip.id}
+                                        onClick={() => setSelectedClip(clip)}
+                                        className="block group cursor-pointer"
+                                    >
+                                        <Card className="overflow-hidden hover:border-white transition-colors h-full border border-transparent bg-[var(--color-background-secondary)]">
+                                            <div className="aspect-video bg-[var(--color-background-tertiary)] relative">
+                                                {clip.thumbnailUrl && (
+                                                    <img src={clip.thumbnailUrl} alt={clip.title} className="absolute inset-0 w-full h-full object-cover" />
+                                                )}
+
+                                                {/* Duration: Top Left */}
+                                                <div className="absolute top-2 left-2 bg-black/80 px-1.5 py-0.5 rounded text-xs text-white font-medium">
+                                                    {clip.duration}
+                                                </div>
+
+                                                {/* Views: Bottom Left */}
+                                                <div className="absolute bottom-2 left-2 bg-black/80 px-1.5 py-0.5 rounded text-xs text-white font-medium">
+                                                    {formatViews(clip.views)} views
+                                                </div>
+
+                                                {/* Date: Bottom Right */}
+                                                <div className="absolute bottom-2 right-2 bg-black/80 px-1.5 py-0.5 rounded text-xs text-white font-medium">
+                                                    {formatTimeAgo(clip.date)}
+                                                </div>
+
+                                                <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                                                        <Play className="w-5 h-5 text-white fill-white" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <CardContent className="pt-3">
+                                                <h3 className="font-medium text-sm line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors text-white">
+                                                    {clip.title}
+                                                </h3>
+                                            </CardContent>
+                                        </Card>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="col-span-full py-12 text-center text-[var(--color-foreground-muted)]">
+                                    No clips found
+                                </div>
+                            )
                         )
                     )}
                 </div>

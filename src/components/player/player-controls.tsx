@@ -6,6 +6,8 @@ import { QualityLevel } from './types';
 import { Maximize, Minimize, Monitor } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
+import { ProgressBar } from './progress-bar';
+import { formatDuration } from '@/lib/utils';
 
 interface PlayerControlsProps {
     // Playback state
@@ -32,6 +34,11 @@ interface PlayerControlsProps {
     onToggleFullscreen: () => void;
     onToggleTheater?: () => void;
     onTogglePip?: () => void;
+    // VOD specific
+    currentTime?: number;
+    duration?: number;
+    onSeek?: (time: number) => void;
+    buffered?: TimeRanges;
 }
 
 export function PlayerControls(props: PlayerControlsProps) {
@@ -50,7 +57,11 @@ export function PlayerControls(props: PlayerControlsProps) {
         onQualityChange,
         onToggleFullscreen,
         onToggleTheater,
-        onTogglePip
+        onTogglePip,
+        currentTime = 0,
+        duration = 0,
+        onSeek,
+        buffered
     } = props;
 
     const [isVisible, setIsVisible] = useState(true);
@@ -110,6 +121,20 @@ export function PlayerControls(props: PlayerControlsProps) {
                 }
             }}
         >
+            {/* VOD Progress Bar */}
+            {
+                duration > 0 && onSeek && (
+                    <div className="w-full px-4 mb-2">
+                        <ProgressBar
+                            currentTime={currentTime}
+                            duration={duration}
+                            onSeek={onSeek}
+                            buffered={buffered}
+                        />
+                    </div>
+                )
+            }
+
             <div className="flex items-center justify-between w-full max-w-screen-2xl mx-auto">
                 <div className="flex items-center gap-2">
                     <PlayPauseButton
@@ -125,11 +150,17 @@ export function PlayerControls(props: PlayerControlsProps) {
                         onMuteToggle={onToggleMute}
                     />
 
-                    {/* Live Badge */}
-                    <div className="flex items-center gap-1.5 px-2 py-1 bg-red-600 rounded text-xs font-bold uppercase tracking-wider text-white ml-2 select-none">
-                        <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                        Live
-                    </div>
+                    {/* Live Badge or Timestamp */}
+                    {(!duration || duration === Infinity) ? (
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-red-600 rounded text-xs font-bold uppercase tracking-wider text-white ml-2 select-none">
+                            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                            Live
+                        </div>
+                    ) : (
+                        <div className="text-white text-xs font-mono ml-2 select-none">
+                            {formatDuration(currentTime)} / {formatDuration(duration)}
+                        </div>
+                    )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -181,6 +212,6 @@ export function PlayerControls(props: PlayerControlsProps) {
                     </Tooltip>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

@@ -54,7 +54,9 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
 
         let hls: Hls | null = null;
 
-        if (Hls.isSupported()) {
+        const isHls = src.includes('.m3u8') || src.includes('usher.ttvnw.net');
+
+        if (isHls && Hls.isSupported()) {
             hls = new Hls({
                 enableWorker: true,
                 lowLatencyMode: true,
@@ -125,7 +127,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 }
             });
 
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
             // Native HLS (Safari)
             console.log('Using native HLS');
             video.src = src;
@@ -141,10 +143,20 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 });
             });
         } else {
-            onErrorRef.current?.({
-                code: 'NOT_SUPPORTED',
-                message: 'HLS is not supported in this browser',
-                fatal: true
+            // Standard Native Playback (e.g. MP4)
+            console.log('Using standard native playback');
+            video.src = src;
+            video.addEventListener('loadedmetadata', () => {
+                if (autoPlay) video.play().catch(e => console.warn('Autoplay failed', e));
+            });
+            video.addEventListener('error', (e) => {
+                // Only report error if we really fail
+                onErrorRef.current?.({
+                    code: 'PLAYBACK_ERROR',
+                    message: 'Playback failed',
+                    fatal: true,
+                    originalError: e
+                });
             });
         }
 

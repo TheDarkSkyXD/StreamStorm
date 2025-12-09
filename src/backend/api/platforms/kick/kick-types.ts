@@ -252,6 +252,47 @@ export const KICK_API_BASE = 'https://api.kick.com/public/v1';
 // ========== Legacy Types (for undocumented/unofficial APIs) ==========
 // Note: These types are from the legacy undocumented API and may not work reliably
 
+export interface KickLegacyApiVideo {
+    id: number;
+    live_stream_id: number;
+    slug: string;
+    thumb: string | null;
+    s3: string | null;
+    trading_platform_id: number | null;
+    created_at: string;
+    updated_at: string;
+    uuid: string;
+    views: number;
+    deleted_at: string | null;
+    video: {
+        id: number;
+        live_stream_id: number;
+        slug: string | null;
+        thumb: string | null;
+        s3: string | null;
+        trading_platform_id: number | null;
+        created_at: string;
+        updated_at: string;
+        uuid: string;
+        views: number;
+        deleted_at: string | null;
+    };
+    session_title: string;
+    source: string; // m3u8 url
+    livestream: {
+        id: number;
+        channel_id: number;
+        session_title: string;
+        source: string | null;
+        created_at: string;
+        start_time: string;
+        duration: number; // in milliseconds usually? or seconds? API varies.
+        // ... other fields
+    };
+    start_time: string;
+    duration: number; // Duration in milliseconds
+}
+
 export interface KickLegacyApiClip {
     id: string;
     livestream_id: string;

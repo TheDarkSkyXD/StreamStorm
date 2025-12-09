@@ -81,7 +81,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 overflow-auto">
+        <main id="main-content-scroll-area" className="flex-1 overflow-auto">
           {children}
         </main>
       </div>
