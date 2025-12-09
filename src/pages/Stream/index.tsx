@@ -1,252 +1,134 @@
-import { useParams, Link, useSearch } from '@tanstack/react-router';
-import { useState, useEffect } from 'react';
+
+import { useParams } from '@tanstack/react-router';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Play, Clapperboard } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { useChannelByUsername } from '@/hooks/queries/useChannels'; // Updated import
+import { useChannelByUsername } from '@/hooks/queries/useChannels';
 import { useStreamByChannel } from '@/hooks/queries/useStreams';
-import { FollowButton } from '@/components/ui/follow-button';
-import { PlatformAvatar } from '@/components/ui/platform-avatar';
 import { Platform } from '@/shared/auth-types';
-import { formatViewerCount } from '@/lib/utils';
-import { UnifiedChannel } from '@/backend/api/unified/platform-types';
-
-const MOCK_VIDEOS = Array.from({ length: 6 }).map((_, i) => ({
-  id: `vod-${i}`,
-  title: `Previous Stream broadcast ${i}`,
-  duration: '4:20:30',
-  views: '10K',
-  date: '2 days ago'
-}));
-
-const MOCK_CLIPS = Array.from({ length: 6 }).map((_, i) => ({
-  id: `clip-${i}`,
-  title: `Insane moment from yesterday ${i}`,
-  duration: '0:30',
-  views: '15K',
-  date: '1 day ago',
-  embedUrl: 'https://player.kick.com/example', // Mock
-  gameName: 'Fortnite',
-  isLive: i % 2 === 0 // Mock some as live
-}));
+import { VideoPlayer } from '@/components/player';
+import { useStreamPlayback } from '@/hooks/useStreamPlayback';
+import { StreamInfo } from '@/components/stream/stream-info';
+import { RelatedContent } from '@/components/stream/related-content';
 
 export function StreamPage() {
-  const { platform, channel: channelName } = useParams({ from: '/stream/$platform/$channel' });
-  const { tab: activeTab } = useSearch({ from: '/stream/$platform/$channel' });
+  const { platform, channel: channelName } = useParams({ from: '/_app/stream/$platform/$channel' });
+
+  // Playback URL resolution
+  const {
+    playback,
+    isLoading: isPlaybackLoading,
+    reload: reloadPlayback
+  } = useStreamPlayback(platform as Platform, channelName);
 
   // Real data fetching
   const { data: channelData, isLoading: isChannelLoading } = useChannelByUsername(channelName, platform as Platform);
-  const { data: streamData, isLoading: isStreamLoading } = useStreamByChannel(channelName, platform as Platform);
+  const { data: streamData } = useStreamByChannel(channelName, platform as Platform);
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [selectedClip, setSelectedClip] = useState<typeof MOCK_CLIPS[0] | null>(null);
+  // Chat Resizing Logic
+  const [chatWidth, setChatWidth] = useState(350);
+  const [isResizing, setIsResizing] = useState(false);
 
-  // Fallback Loading logic for tabs content (still mocked)
+  // Theater Mode Logic
+  const [isTheater, setIsTheater] = useState(false);
+
+  const startResizing = useCallback(() => {
+    setIsResizing(true);
+    // Disable iframe pointer events globally to prevent capturing mouse events during drag
+    document.body.style.userSelect = 'none';
+  }, []);
+
+  const stopResizing = useCallback(() => {
+    setIsResizing(false);
+    document.body.style.userSelect = '';
+  }, []);
+
+  const resize = useCallback(
+    (mouseMoveEvent: MouseEvent) => {
+      if (isResizing) {
+        const newWidth = window.innerWidth - mouseMoveEvent.clientX;
+        // Min 300px, Max 600px
+        if (newWidth > 300 && newWidth < 600) {
+          setChatWidth(newWidth);
+        }
+      }
+    },
+    [isResizing]
+  );
+
   useEffect(() => {
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [activeTab, platform, channelName]);
-
-  // Use real data if available, otherwise construct minimal object for FollowButton if we have at least params
-  // But FollowButton needs ID for persistence. 
-  // If channelData is missing (loading or error), we can't show a working FollowButton easily unless we fake an ID.
-  // We'll show Skeleton for header if loading.
-
-  const renderHeader = () => {
-    if (isChannelLoading || !channelData) {
-      return (
-        <div className="flex justify-between items-start gap-4">
-          <Skeleton className="w-16 h-16 rounded-full shrink-0" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-8 w-64" />
-            <Skeleton className="h-6 w-48" />
-            <Skeleton className="h-4 w-32" />
-          </div>
-          <Skeleton className="w-32 h-10 rounded-full" />
-        </div>
-      );
+    if (isResizing) {
+      window.addEventListener("mousemove", resize);
+      window.addEventListener("mouseup", stopResizing);
     }
-
-    const channel = channelData;
-    const stream = streamData;
-
-    return (
-      <div className="flex justify-between items-start gap-4">
-        <PlatformAvatar
-          src={channel.avatarUrl}
-          alt={channel.displayName}
-          platform={channel.platform}
-          size="w-16 h-16"
-          className="shrink-0 text-xl font-bold shadow-lg ring-2 ring-offset-2 ring-offset-[var(--color-background)]"
-        />
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            {channel.displayName}
-            {channel.isVerified && (
-              <span className={`text-xs px-2 py-0.5 h-auto rounded font-bold ${channel.platform === 'twitch'
-                ? 'bg-[#9146FF]/20 text-[#9146FF]'
-                : 'bg-[#53FC18]/20 text-[#53FC18]'
-                }`}>
-                Verified
-              </span>
-            )}
-          </h1>
-          <p className="text-white font-bold">{stream?.title || channel.bio || "No title set"}</p>
-          <p className="text-[var(--color-foreground-muted)] text-sm capitalize flex items-center gap-1.5 mt-1">
-            <span className={channel.platform === 'twitch' ? 'text-[#9146FF]' : 'text-[#53FC18]'}>
-              {stream?.categoryName || "Variety"}
-            </span>
-            {stream?.viewerCount !== undefined && (
-              <>
-                <span className="w-1 h-1 rounded-full bg-[var(--color-foreground-muted)]" />
-                <span>{formatViewerCount(stream.viewerCount)} viewers</span>
-              </>
-            )}
-          </p>
-        </div>
-
-        <FollowButton channel={channel} size="default" />
-      </div>
-    );
-  };
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, [isResizing, resize, stopResizing]);
 
   return (
-    <div className="h-full flex">
-      {/* Video Player Area */}
-      <div className="flex-1 flex flex-col overflow-y-auto">
-        <div className="aspect-video bg-black flex items-center justify-center shrink-0">
-          <span className="text-white/50">Video Player ({platform})</span>
-        </div>
-
-        <div className="p-6 space-y-6">
-
-          {renderHeader()}
-
-
-          {/* Tabs Navigation */}
-          <div className="flex items-center gap-4 border-b border-[var(--color-border)]">
-            <Link
-              from="/stream/$platform/$channel"
-              search={{ tab: 'videos' }}
-              className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'videos'
-                ? 'text-[var(--color-foreground)]'
-                : 'text-[var(--color-foreground-muted)] hover:text-[var(--color-foreground)]'
-                }`}
-            >
-              <span className="flex items-center gap-2"><Play className="w-4 h-4" /> Videos</span>
-              {activeTab === 'videos' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
-              )}
-            </Link>
-            <Link
-              from="/stream/$platform/$channel"
-              search={{ tab: 'clips' }}
-              className={`pb-3 text-sm font-medium transition-colors relative ${activeTab === 'clips'
-                ? 'text-[var(--color-foreground)]'
-                : 'text-[var(--color-foreground-muted)] hover:text-[var(--color-foreground)]'
-                }`}
-            >
-              <span className="flex items-center gap-2"><Clapperboard className="w-4 h-4" /> Clips</span>
-              {activeTab === 'clips' && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
-              )}
-            </Link>
+    <div className="h-full flex overflow-hidden">
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        <div className={`flex-1 overflow-y-auto ${isTheater ? 'flex flex-col' : ''}`}>
+          {/* Video Player Area */}
+          <div className={`${isTheater ? 'flex-1 min-h-0' : 'aspect-video'} bg-black flex items-center justify-center shrink-0 w-full relative transition-all duration-300`}>
+            <VideoPlayer
+              streamUrl={playback?.url || ''}
+              platform={platform as Platform}
+              autoPlay={true}
+              muted={false}
+              onReady={() => console.log('Player ready')}
+              onError={(e) => console.error('Player error', e)}
+              isTheater={isTheater}
+              onToggleTheater={() => setIsTheater(prev => !prev)}
+            />
+            {isPlaybackLoading && !playback && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10 pointer-events-none">
+                <span className="text-white text-sm">Loading stream...</span>
+              </div>
+            )}
+            {!isPlaybackLoading && !playback && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
+                <div className="text-center">
+                  <p className="text-white mb-2">Stream offline or unavailable</p>
+                  <Button variant="outline" size="sm" onClick={reloadPlayback}>Retry</Button>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Tab Content */}
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold capitalize">{activeTab}</h2>
+          <div className={`${isTheater ? 'hidden' : 'block'} p-6 space-y-6`}>
+            <StreamInfo
+              channel={channelData || null}
+              stream={streamData}
+              isLoading={isChannelLoading}
+            />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {isLoading ? (
-                [...Array(6)].map((_, i) => (
-                  <div key={i} className="space-y-3">
-                    <Skeleton className="aspect-video rounded-xl" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-4 w-3/4" />
-                      <Skeleton className="h-3 w-1/2" />
-                    </div>
-                  </div>
-                ))
-              ) : (
-                activeTab === 'videos' ? (
-                  MOCK_VIDEOS.map((video) => (
-                    <Link
-                      key={video.id}
-                      to="/video/$platform/$videoId"
-                      params={{
-                        platform: platform || 'twitch',
-                        videoId: video.id
-                      }}
-                      className="block group"
-                    >
-                      <Card className="overflow-hidden cursor-pointer hover:border-white transition-colors h-full">
-                        <div className="aspect-video bg-[var(--color-background-tertiary)] relative">
-                          <div className="absolute bottom-2 right-2 bg-black/70 px-1.5 py-0.5 rounded text-xs text-white">
-                            {video.duration}
-                          </div>
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                              <Play className="w-5 h-5 text-white fill-white" />
-                            </div>
-                          </div>
-                        </div>
-                        <CardContent className="pt-3">
-                          <h3 className="font-medium text-sm line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors">
-                            {video.title}
-                          </h3>
-                          <p className="text-xs text-[var(--color-foreground-muted)] mt-1">{video.date} • {video.views} views</p>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))
-                ) : (
-                  MOCK_CLIPS.map((clip) => (
-                    <div
-                      key={clip.id}
-                      onClick={() => setSelectedClip(clip)}
-                      className="block group cursor-pointer"
-                    >
-                      <Card className="overflow-hidden hover:border-white transition-colors h-full">
-                        <div className="aspect-video bg-[var(--color-background-tertiary)] relative">
-
-                          <div className="absolute bottom-2 right-2 bg-black/70 px-1.5 py-0.5 rounded text-xs text-white">
-                            {clip.duration}
-                          </div>
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                              <Play className="w-5 h-5 text-white fill-white" />
-                            </div>
-                          </div>
-                        </div>
-                        <CardContent className="pt-3">
-                          <h3 className="font-medium text-sm line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors">
-                            {clip.title}
-                          </h3>
-                          <p className="text-xs text-[var(--color-foreground-muted)] mt-1">{clip.date} • {clip.views} views</p>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  ))
-                )
-              )}
-            </div>
+            <RelatedContent
+              platform={platform as Platform}
+              channelName={channelName}
+              channelData={channelData}
+            />
           </div>
         </div>
+      </div>
+
+      {/* Resize Handle */}
+      {/* We use a slightly wider invisible hit area for easier grabbing */}
+      <div className="relative z-20 shrink-0">
+        <div
+          className="absolute inset-y-0 -left-1 w-2 cursor-ew-resize"
+          onMouseDown={startResizing}
+        />
+        <div className="w-1 h-full bg-[var(--color-border)] hover:bg-[var(--color-primary)] transition-colors" />
       </div>
 
       {/* Chat Panel */}
-      <div className="w-80 border-l border-[var(--color-border)] bg-[var(--color-background-secondary)] flex flex-col shrink-0">
+      <div
+        style={{ width: chatWidth }}
+        className="bg-[var(--color-background-secondary)] flex flex-col shrink-0 relative"
+      >
         <div className="p-3 border-b border-[var(--color-border)]">
           <h2 className="font-semibold">Chat</h2>
         </div>
@@ -261,104 +143,6 @@ export function StreamPage() {
           />
         </div>
       </div>
-
-      <Dialog open={!!selectedClip} onOpenChange={(open) => !open && setSelectedClip(null)}>
-        <DialogContent className="max-w-[90vw] w-full max-w-[1600px] bg-black border-[var(--color-border)] p-0 overflow-hidden">
-          {selectedClip && (
-            <>
-              <div className="flex flex-col md:flex-row p-0 overflow-hidden h-[80vh] w-full">
-
-                {/* Left Side: Video Player */}
-                <div className="flex-1 bg-black flex flex-col justify-center relative">
-                  <div className="aspect-video w-full flex items-center justify-center">
-                    {/* Placeholder for clip player */}
-                    <div className="text-center">
-                      <p className="text-white font-bold text-lg mb-2">Playing Clip: {selectedClip.title}</p>
-                      <p className="text-[var(--color-foreground-muted)]">Source: {selectedClip.embedUrl}</p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Right Side: Info & Actions */}
-                <div className="w-[350px] bg-[var(--color-background-secondary)] shrink-0 border-l border-[var(--color-border)] p-6 flex flex-col gap-6 overflow-y-auto">
-                  {/* Clip Info */}
-                  <div className="mt-8">
-                    <h2 className="text-xl font-bold text-white line-clamp-2">{selectedClip.title}</h2>
-                    <div className="flex items-center gap-2 text-sm text-[var(--color-foreground-secondary)] mt-1">
-                      <span>{selectedClip.gameName}</span>
-                      <span>•</span>
-                      <span>{selectedClip.views} views</span>
-                      <span>•</span>
-                      <span>{selectedClip.date}</span>
-                    </div>
-                  </div>
-
-                  <div className="h-px bg-[var(--color-border)] w-full" />
-
-                  {/* Channel Identity */}
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-3">
-                      <PlatformAvatar
-                        src={channelData?.avatarUrl || ''}
-                        alt={channelData?.displayName || channelName || ''}
-                        platform={(platform as Platform) || 'twitch'}
-                        size="w-12 h-12"
-                        className="bg-neutral-800"
-                      />
-                      <div className="flex flex-col">
-                        <span className="font-bold text-lg hover:underline decoration-2 underline-offset-4 decoration-[var(--color-primary)] cursor-pointer">
-                          {channelData?.displayName || channelName}
-                        </span>
-                        <span className="text-[var(--color-foreground-muted)] text-sm">
-                          {/* Placeholder for follower count since our API might not return it directly/consistently here yet */}
-                          Followers hidden
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Actions Row */}
-                    <div className="flex gap-2 w-full">
-                      {channelData ? (
-                        <FollowButton channel={channelData} className="flex-1" />
-                      ) : (
-                        <Button disabled className="flex-1 rounded-full">Follow</Button>
-                      )}
-
-                      <Button variant="secondary" className="px-4 rounded-full font-bold">
-                        Share
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="h-px bg-[var(--color-border)] w-full" />
-
-                  {/* Watch Actions */}
-                  <div className="flex flex-col gap-3 mt-auto">
-                    {selectedClip.isLive && (
-                      <Button variant="secondary" className="w-full h-12 text-base font-bold">
-                        Watch Livestream
-                      </Button>
-                    )}
-                    <Link
-                      to="/video/$platform/$videoId"
-                      params={{ platform: platform || 'twitch', videoId: 'mock-vod-id' }}
-                      className="w-full"
-                    >
-                      <Button variant="outline" className="w-full h-12 text-base font-bold border-[var(--color-border)] hover:bg-[var(--color-background-tertiary)]">
-                        Watch Full Video
-                      </Button>
-                    </Link>
-                  </div>
-                </div>
-              </div>
-              <DialogHeader className="hidden">
-                <DialogTitle>{selectedClip.title}</DialogTitle>
-              </DialogHeader>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
-

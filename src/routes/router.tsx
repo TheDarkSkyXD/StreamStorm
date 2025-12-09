@@ -3,6 +3,7 @@ import {
   createRootRoute,
   createRoute,
   Outlet,
+  createHashHistory,
 } from '@tanstack/react-router';
 
 import { AppLayout } from '@/components/layout/AppLayout';
@@ -16,10 +17,18 @@ import {
   VideoPage,
   SettingsPage,
   ClipPage,
+  PopoutPage,
 } from '@/pages';
 
-// Root layout with AppLayout wrapper
+// Root layout (wraps everything)
 const rootRoute = createRootRoute({
+  component: () => <Outlet />,
+});
+
+// App Layout Route (Pathless) - provides the sidebar/navbar
+const appLayoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: '_app',
   component: () => (
     <AppLayout>
       <Outlet />
@@ -27,37 +36,44 @@ const rootRoute = createRootRoute({
   ),
 });
 
+// Popout Route (Minimal layout)
+const popoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/popout/$platform/$channel',
+  component: PopoutPage,
+});
+
 // Home/Browse page
 const homeRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/',
   component: HomePage,
 });
 
 // Following page
 const followingRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/following',
   component: FollowingPage,
 });
 
 // Categories page
 const categoriesRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/categories',
   component: CategoriesPage,
 });
 
 // Category detail page
 const categoryDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/categories/$platform/$categoryId',
   component: CategoryDetailPage,
 });
 
 // Search page
 const searchRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/search',
   validateSearch: (search: Record<string, unknown>) => ({
     q: (search.q as string) || '',
@@ -67,7 +83,7 @@ const searchRoute = createRoute({
 
 // Stream viewing page
 const streamRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/stream/$platform/$channel',
   validateSearch: (search: Record<string, unknown>): { tab: 'videos' | 'clips' } => ({
     tab: (search.tab as 'videos' | 'clips') || 'videos',
@@ -77,40 +93,46 @@ const streamRoute = createRoute({
 
 // Video viewing page (VOD)
 const videoRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/video/$platform/$videoId',
   component: VideoPage,
 });
 
 // Clip viewing page
 const clipRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/clip/$platform/$clipId',
   component: ClipPage,
 });
 
 // Settings page
 const settingsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => appLayoutRoute,
   path: '/settings',
   component: SettingsPage,
 });
 
 // Build the route tree
 const routeTree = rootRoute.addChildren([
-  homeRoute,
-  followingRoute,
-  categoriesRoute,
-  categoryDetailRoute,
-  searchRoute,
-  streamRoute,
-  videoRoute,
-  clipRoute,
-  settingsRoute,
+  appLayoutRoute.addChildren([
+    homeRoute,
+    followingRoute,
+    categoriesRoute,
+    categoryDetailRoute,
+    searchRoute,
+    streamRoute,
+    videoRoute,
+    clipRoute,
+    settingsRoute,
+  ]),
+  popoutRoute,
 ]);
 
 // Create and export the router
-export const router = createRouter({ routeTree });
+export const router = createRouter({
+  routeTree,
+  history: createHashHistory(),
+});
 
 // Type declarations for type-safe routing
 declare module '@tanstack/react-router' {

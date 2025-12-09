@@ -185,3 +185,36 @@ export interface TwitchClientError {
     message: string;
     retryAfter?: number;
 }
+
+// ========== Twitch GQL & Playback ==========
+
+export interface TwitchGqlResponse<T> {
+    data: T;
+    extensions?: {
+        durationMilliseconds: number;
+        operationName: string;
+        requestID: string;
+    };
+    errors?: any[];
+}
+
+export interface TwitchPlaybackAccessTokenData {
+    streamPlaybackAccessToken?: {
+        value: string;
+        signature: string;
+    } | null;
+    videoPlaybackAccessToken?: {
+        value: string;
+        signature: string;
+    } | null;
+}
+
+export interface StreamPlaybackAccessToken {
+    value: string;
+    signature: string;
+}
+
+export interface StreamPlayback {
+    url: string;
+    format: 'hls' | 'dash' | 'mp4';
+}

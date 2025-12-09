@@ -10,37 +10,40 @@ import { getUsersById } from './user-endpoints';
  */
 export async function getChannel(client: KickRequestor, slug: string): Promise<UnifiedChannel | null> {
     try {
-        const response = await client.request<KickApiResponse<KickApiChannel[]>>(
-            `/channels?slug[]=${encodeURIComponent(slug)}`
-        );
-        if (response.data && response.data.length > 0) {
-            const channel = transformKickChannel(response.data[0]);
+        // Try official API first if we have credentials
+        if (client.isAuthenticated()) {
+            const response = await client.request<KickApiResponse<KickApiChannel[]>>(
+                `/channels?slug[]=${encodeURIComponent(slug)}`
+            );
+            if (response.data && response.data.length > 0) {
+                const channel = transformKickChannel(response.data[0]);
 
-            // Fetch user info to get avatar and display name
-            try {
-                const users = await getUsersById(client, [parseInt(channel.id)]);
-                if (users.length > 0) {
-                    const user = users[0];
-                    if (user.profile_picture) {
-                        channel.avatarUrl = user.profile_picture;
+                // Fetch user info to get avatar and display name
+                try {
+                    const users = await getUsersById(client, [parseInt(channel.id)]);
+                    if (users.length > 0) {
+                        const user = users[0];
+                        if (user.profile_picture) {
+                            channel.avatarUrl = user.profile_picture;
+                        }
+                        if (user.name) {
+                            channel.displayName = user.name;
+                        }
                     }
-                    if (user.name) {
-                        channel.displayName = user.name;
-                    }
+                } catch (e) {
+                    console.warn('Failed to fetch user info for channel', channel.username);
                 }
-            } catch (e) {
-                console.warn('Failed to fetch user info for channel', channel.username);
-            }
 
-            return channel;
+                return channel;
+            }
         }
-        return null; // Not found
     } catch (error) {
-        console.warn('Failed to fetch Kick channel via official API:', error);
-        // Fallback to public/legacy if needed? 
-        // For now, let's allow it to return null and maybe let caller handle fallback if they want
-        return null;
+        console.warn('Failed to fetch Kick channel via official API, trying fallback:', error);
     }
+
+    // Fallback to public/legacy API
+    // This is robust against auth failures and provides the necessary data for the UI
+    return getPublicChannel(slug);
 }
 
 /**

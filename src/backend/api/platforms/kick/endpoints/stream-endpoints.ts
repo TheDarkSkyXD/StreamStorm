@@ -19,20 +19,55 @@ const CACHE_TTL = 1000 * 60 * 5; // 5 minutes
  */
 export async function getPublicStreamBySlug(slug: string): Promise<UnifiedStream | null> {
     try {
-        const response = await fetch(`${KICK_LEGACY_API_V1_BASE}/channels/${slug}`, {
-            headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Referer': 'https://kick.com/',
-                'Origin': 'https://kick.com'
-            }
+        const { net } = require('electron');
+
+        const data = await new Promise<any>((resolve, reject) => {
+            const request = net.request({
+                method: 'GET',
+                url: `${KICK_LEGACY_API_V1_BASE}/channels/${slug}`,
+            });
+
+            request.setHeader('Accept', 'application/json');
+            request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            request.setHeader('Referer', 'https://kick.com/');
+            request.setHeader('X-Requested-With', 'XMLHttpRequest');
+
+            request.on('response', (response: any) => {
+                if (response.statusCode === 404) {
+                    resolve(null);
+                    return;
+                }
+
+                if (response.statusCode !== 200) {
+                    reject(new Error(`Status ${response.statusCode}`));
+                    return;
+                }
+
+                let body = '';
+                response.on('data', (chunk: Buffer) => {
+                    body += chunk.toString();
+                });
+
+                response.on('end', () => {
+                    try {
+                        resolve(JSON.parse(body));
+                    } catch (e) {
+                        console.warn(`[KickStream] Failed to parse JSON for ${slug}`);
+                        reject(new Error('Failed to parse JSON'));
+                    }
+                });
+            });
+
+            request.on('error', (error: Error) => {
+                reject(error);
+            });
+
+            request.end();
         });
 
-        if (!response.ok) return null;
+        if (!data) return null;
 
-        const data = await response.json();
         const livestream = data.livestream;
-
         if (!livestream) return null;
 
         // Map legacy livestream to UnifiedStream

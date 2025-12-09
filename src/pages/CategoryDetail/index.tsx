@@ -14,7 +14,7 @@ import { normalizeCategoryName, formatViewerCount } from '@/lib/utils';
 import { UnifiedCategory } from '@/backend/api/unified/platform-types';
 
 export function CategoryDetailPage() {
-  const { platform, categoryId } = useParams({ from: '/categories/$platform/$categoryId' });
+  const { platform, categoryId } = useParams({ from: '/_app/categories/$platform/$categoryId' });
 
   // 1. Fetch primary category details
   const {

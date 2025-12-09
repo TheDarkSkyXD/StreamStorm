@@ -18,7 +18,7 @@ const MOCK_CLIPS = Array.from({ length: 6 }).map((_, i) => ({
 }));
 
 export function ClipPage() {
-    const { platform, clipId } = useParams({ from: '/clip/$platform/$clipId' });
+    const { platform, clipId } = useParams({ from: '/_app/clip/$platform/$clipId' });
     const [isFollowing, setIsFollowing] = useState(false);
     const [isHoveringFollow, setIsHoveringFollow] = useState(false);
 

@@ -27,7 +27,7 @@ type SearchTab = 'all' | 'channels' | 'streams' | 'videos' | 'clips' | 'categori
 
 // Platform-agnostic unified search
 export function SearchPage() {
-  const search: any = useSearch({ from: '/search' });
+  const search: any = useSearch({ from: '/_app/search' });
   const q = search.q as string;
   const [activeTab, setActiveTab] = React.useState<SearchTab>('all');
   const [platformFilter, setPlatformFilter] = React.useState<'all' | 'twitch' | 'kick'>('all');

@@ -87,6 +87,7 @@ class WindowManager {
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: false, // Disabled to allow preload IPC
+        webSecurity: false, // Allow CORS for video streams
       },
     });
 
@@ -155,6 +156,7 @@ class WindowManager {
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: true,
+        webSecurity: false, // Allow CORS for video streams
       },
     });
 

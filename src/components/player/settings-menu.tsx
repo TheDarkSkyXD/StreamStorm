@@ -1,0 +1,137 @@
+import React, { useState } from 'react';
+import { Settings, PictureInPicture, Monitor, Check } from 'lucide-react';
+import { Button } from '../ui/button';
+import { QualityLevel } from './types';
+
+// Custom Settings Menu (replaces simple QualitySelector)
+// Features: Quality, Theater Mode, Picture-in-Picture
+
+interface SettingsMenuProps {
+    qualities: QualityLevel[];
+    currentQualityId: string;
+    onQualityChange: (qualityId: string) => void;
+    onTogglePip?: () => void;
+    onToggleTheater?: () => void;
+    isTheater?: boolean;
+}
+
+export function SettingsMenu({
+    qualities,
+    currentQualityId,
+    onQualityChange,
+    onTogglePip,
+    onToggleTheater,
+    isTheater
+}: SettingsMenuProps) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [activeSubMenu, setActiveSubMenu] = useState<'main' | 'quality'>('main');
+
+    const toggleOpen = () => {
+        setIsOpen(!isOpen);
+        setActiveSubMenu('main');
+    };
+
+    return (
+        <div className="relative">
+            <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    toggleOpen();
+                }}
+            >
+                <Settings className={`w-5 h-5 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`} />
+            </Button>
+
+            {isOpen && (
+                <>
+                    {/* Backdrop to close */}
+                    <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+
+                    <div className="absolute bottom-12 right-0 w-64 bg-[#1a1b1e]/95 backdrop-blur-md border border-[#2c2e33] rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+
+                        {activeSubMenu === 'main' && (
+                            <div className="py-2">
+                                {/* Quality Menu Item */}
+                                <button
+                                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white"
+                                    onClick={() => setActiveSubMenu('quality')}
+                                >
+                                    <span>Quality</span>
+                                    <div className="flex items-center text-white/50">
+                                        <span className="mr-2">
+                                            {qualities.find(q => q.id === currentQualityId)?.label || 'Auto'}
+                                        </span>
+                                        <span className="rotate-[-90deg]">›</span>
+                                    </div>
+                                </button>
+
+                                {/* Theater Toggle */}
+                                {onToggleTheater && (
+                                    <button
+                                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white"
+                                        onClick={() => {
+                                            onToggleTheater();
+                                            setIsOpen(false);
+                                        }}
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <Monitor className="w-4 h-4" />
+                                            Theater Mode
+                                        </span>
+                                        {isTheater && <Check className="w-4 h-4" />}
+                                    </button>
+                                )}
+
+                                {/* PiP Toggle */}
+                                {onTogglePip && (
+                                    <button
+                                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white"
+                                        onClick={() => {
+                                            onTogglePip();
+                                            setIsOpen(false);
+                                        }}
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <PictureInPicture className="w-4 h-4" />
+                                            Picture in Picture
+                                        </span>
+                                    </button>
+                                )}
+                            </div>
+                        )}
+
+                        {activeSubMenu === 'quality' && (
+                            <div className="py-2">
+                                <button
+                                    className="w-full px-4 py-3 flex items-center gap-2 hover:bg-white/10 transition-colors text-sm text-white border-b border-white/5"
+                                    onClick={() => setActiveSubMenu('main')}
+                                >
+                                    <span className="rotate-90">›</span>
+                                    <span className="font-semibold">Quality</span>
+                                </button>
+                                <div className="max-h-60 overflow-y-auto">
+                                    {qualities.map(quality => (
+                                        <button
+                                            key={quality.id}
+                                            className="w-full px-4 py-2 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white"
+                                            onClick={() => {
+                                                onQualityChange(quality.id);
+                                                setIsOpen(false);
+                                            }}
+                                        >
+                                            <span>{quality.label}</span>
+                                            {currentQualityId === quality.id && <Check className="w-4 h-4" />}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+}

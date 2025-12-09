@@ -6,7 +6,7 @@
  */
 
 // Components will be added in Phase 2
-// export { VideoPlayer } from './VideoPlayer';
+export { VideoPlayer } from './video-player';
 // export { PlayerControls } from './PlayerControls';
-// export { QualitySelector } from './QualitySelector';
+export { QualitySelector } from './quality-selector';
 // export { VolumeControl } from './VolumeControl';

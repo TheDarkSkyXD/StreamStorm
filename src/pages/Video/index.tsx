@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Heart, HeartCrack } from 'lucide-react';
 
 export function VideoPage() {
-    const { platform, videoId } = useParams({ from: '/video/$platform/$videoId' });
+    const { platform, videoId } = useParams({ from: '/_app/video/$platform/$videoId' });
     const [isFollowing, setIsFollowing] = useState(false);
     const [isHoveringFollow, setIsHoveringFollow] = useState(false);
 
