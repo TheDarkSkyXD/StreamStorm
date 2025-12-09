@@ -168,7 +168,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
         <div
             ref={containerRef}
             className={`relative w-full h-full bg-black overflow-hidden group ${className || ''}`}
-            onClick={(e: any) => e.target.tagName !== 'BUTTON' && togglePlay()} // Simple click to play/pause on container
+
         >
             {streamUrl ? (
                 <>
@@ -183,7 +183,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
                         onError={onError}
                         className="size-full object-contain cursor-pointer"
                         controls={false} // Disable native controls
-                        onClick={togglePlay} // Click to toggle
+
                         onDoubleClick={toggleFullscreen} // Double click to fullscreen
                     />
 
