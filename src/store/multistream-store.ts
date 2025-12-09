@@ -13,13 +13,6 @@ export interface MultiStreamConfig {
 
 export type LayoutMode = 'grid' | 'focus';
 
-export interface LayoutPreset {
-    id: string;
-    name: string;
-    streams: Omit<MultiStreamConfig, 'id' | 'isMuted' | 'volume'>[]; // Only save basic info
-    layout: LayoutMode;
-    createdAt: number;
-}
 
 interface MultiStreamState {
     // Streams
@@ -45,12 +38,6 @@ interface MultiStreamState {
     // Audio
     toggleMute: (streamId: string) => void;
     setVolume: (streamId: string, volume: number) => void;
-
-    // Presets
-    presets: LayoutPreset[];
-    savePreset: (name: string) => void;
-    loadPreset: (presetId: string) => void;
-    deletePreset: (presetId: string) => void;
 }
 
 export const useMultiStreamStore = create<MultiStreamState>()(
@@ -61,7 +48,6 @@ export const useMultiStreamStore = create<MultiStreamState>()(
             focusedStreamId: null,
             isChatOpen: true,
             chatStreamId: null,
-            presets: [],
 
             addStream: (platform, channelName) => set((state) => {
                 if (state.streams.length >= 6) return state; // Max 6 streams
@@ -121,45 +107,6 @@ export const useMultiStreamStore = create<MultiStreamState>()(
                 streams: state.streams.map(s => s.id === streamId ? { ...s, volume } : s)
             })),
 
-            // Presets
-            savePreset: (name) => set((state) => {
-                const newPreset: LayoutPreset = {
-                    id: crypto.randomUUID(),
-                    name,
-                    layout: state.layout,
-                    streams: state.streams.map(s => ({
-                        platform: s.platform,
-                        channelName: s.channelName
-                    })),
-                    createdAt: Date.now()
-                };
-                return { presets: [...state.presets, newPreset] };
-            }),
-
-            loadPreset: (presetId) => set((state) => {
-                const preset = state.presets.find(p => p.id === presetId);
-                if (!preset) return state;
-
-                const newStreams: MultiStreamConfig[] = preset.streams.map((s, index) => ({
-                    id: `${s.platform}-${s.channelName}`,
-                    platform: s.platform,
-                    channelName: s.channelName,
-                    isMuted: index > 0, // Mute all except first
-                    volume: 0.5
-                }));
-
-                return {
-                    streams: newStreams,
-                    layout: preset.layout,
-                    focusedStreamId: null,
-                    chatStreamId: newStreams.length > 0 ? newStreams[0].id : null
-                };
-            }),
-
-            deletePreset: (presetId) => set((state) => ({
-                presets: state.presets.filter(p => p.id !== presetId)
-            })),
-
         }),
         {
             name: 'multistream-storage',
@@ -167,7 +114,6 @@ export const useMultiStreamStore = create<MultiStreamState>()(
                 streams: state.streams,
                 layout: 'grid',
                 isChatOpen: state.isChatOpen,
-                presets: state.presets,
             }),
         }
     )
