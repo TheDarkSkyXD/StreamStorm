@@ -48,6 +48,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
         onErrorRef.current = onError;
     }, [onQualityLevels, onError]);
 
+
     useEffect(() => {
         const video = videoRef.current;
         if (!video || !src) return;
@@ -62,6 +63,16 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 lowLatencyMode: true,
                 maxBufferLength: 30, // 30 seconds buffer
                 maxMaxBufferLength: 60,
+                // Manifest loading retry settings - 3 retries with 5 second delays
+                manifestLoadingMaxRetry: 3,
+                manifestLoadingRetryDelay: 5000, // 5 seconds between retries
+                manifestLoadingMaxRetryTimeout: 30000, // Max 30 seconds total
+                // Level loading retry settings
+                levelLoadingMaxRetry: 3,
+                levelLoadingRetryDelay: 5000,
+                // Fragment loading retry settings  
+                fragLoadingMaxRetry: 3,
+                fragLoadingRetryDelay: 5000,
                 xhrSetup: (xhr, url) => {
                     xhr.withCredentials = false; // Important to avoid CORS issues with wildcards
                 },
@@ -73,7 +84,8 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             hls.attachMedia(video);
 
             hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-                console.log('Manifest parsed, levels:', data.levels.length);
+                console.log('[HLS] Manifest parsed, levels:', data.levels.length);
+
                 if (autoPlay) {
                     video.play().catch(e => console.warn('Autoplay failed', e));
                 }
@@ -102,19 +114,30 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 }
             });
 
+            // Log non-fatal errors (these are retries in progress)
             hls.on(Hls.Events.ERROR, (event, data) => {
+                // Log all errors for debugging
+                console.log(`[HLS] Error: ${data.details}, fatal: ${data.fatal}, type: ${data.type}`);
+
                 if (data.fatal) {
+                    // Fatal error means all internal retries have been exhausted
                     switch (data.type) {
                         case Hls.ErrorTypes.NETWORK_ERROR:
-                            console.log('Fatal network error encountered, trying to recover...');
-                            hls?.startLoad();
+                            console.log('[HLS] Fatal network error - all retries exhausted, stream likely offline');
+                            onErrorRef.current?.({
+                                code: 'STREAM_OFFLINE',
+                                message: 'Stream offline or unavailable',
+                                fatal: true,
+                                originalError: data
+                            });
+                            hls?.destroy();
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
-                            console.log('Fatal media error encountered, trying to recover...');
+                            console.log('[HLS] Fatal media error encountered, trying to recover...');
                             hls?.recoverMediaError();
                             break;
                         default:
-                            console.error('Unrecoverable HLS error', data);
+                            console.error('[HLS] Unrecoverable error', data);
                             onErrorRef.current?.({
                                 code: 'HLS_FATAL',
                                 message: `Fatal HLS Error: ${data.details}`,
@@ -123,6 +146,11 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                             });
                             hls?.destroy();
                             break;
+                    }
+                } else {
+                    // Non-fatal error - HLS.js is handling this internally (retrying)
+                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                        console.log(`[HLS] Network error (will retry automatically): ${data.details}`);
                     }
                 }
             });

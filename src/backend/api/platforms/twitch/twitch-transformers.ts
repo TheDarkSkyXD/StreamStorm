@@ -89,11 +89,11 @@ export function transformTwitchCategory(game: TwitchApiGame): UnifiedCategory {
 
 /**
  * Transform Twitch channel info to unified channel
- * Optionally accepts user data for additional fields like avatar
+ * Optionally accepts user data for additional fields like avatar and offline banner
  */
 export function transformTwitchChannel(
     channel: TwitchApiChannel,
-    user?: { id: string; login: string; display_name: string; profile_image_url: string; broadcaster_type: string }
+    user?: { id: string; login: string; display_name: string; profile_image_url: string; broadcaster_type: string; offline_image_url?: string }
 ): UnifiedChannel {
     return {
         id: channel.broadcaster_id,
@@ -101,6 +101,7 @@ export function transformTwitchChannel(
         username: channel.broadcaster_login,
         displayName: channel.broadcaster_name,
         avatarUrl: user?.profile_image_url || '',
+        bannerUrl: user?.offline_image_url || undefined,
         bio: channel.title || undefined,
         isLive: false, // Need to check streams endpoint for live status
         isVerified: user?.broadcaster_type === 'partner',

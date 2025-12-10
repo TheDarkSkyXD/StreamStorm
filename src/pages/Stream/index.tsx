@@ -6,6 +6,7 @@ import { useChannelByUsername } from '@/hooks/queries/useChannels';
 import { useStreamByChannel } from '@/hooks/queries/useStreams';
 import { Platform } from '@/shared/auth-types';
 import { VideoPlayer } from '@/components/player';
+import { PlayerError } from '@/components/player/types';
 import { useStreamPlayback } from '@/hooks/useStreamPlayback';
 import { StreamInfo } from '@/components/stream/stream-info';
 import { RelatedContent } from '@/components/stream/related-content';
@@ -30,6 +31,19 @@ export function StreamPage() {
 
   // Theater Mode Logic
   const [isTheater, setIsTheater] = useState(false);
+
+  // Player error state (e.g., stream offline even though URL was provided)
+  const [playerError, setPlayerError] = useState<PlayerError | null>(null);
+
+  const handlePlayerError = useCallback((error: PlayerError) => {
+    console.error('Player error', error);
+    setPlayerError(error);
+  }, []);
+
+  // Reset player error when playback changes
+  useEffect(() => {
+    setPlayerError(null);
+  }, [playback?.url]);
 
   const startResizing = useCallback(() => {
     setIsResizing(true);
@@ -79,20 +93,114 @@ export function StreamPage() {
               autoPlay={true}
               muted={false}
               onReady={() => console.log('Player ready')}
-              onError={(e) => console.error('Player error', e)}
+              onError={handlePlayerError}
               isTheater={isTheater}
               onToggleTheater={() => setIsTheater(prev => !prev)}
             />
-            {isPlaybackLoading && !playback && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10 pointer-events-none">
+            {isPlaybackLoading && !playback && !playerError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 pointer-events-none">
                 <span className="text-white text-sm">Loading stream...</span>
               </div>
             )}
-            {!isPlaybackLoading && !playback && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
-                <div className="text-center">
-                  <p className="text-white mb-2">Stream offline or unavailable</p>
-                  <Button variant="outline" size="sm" onClick={reloadPlayback}>Retry</Button>
+            {playerError && (
+              <div className="absolute inset-0 z-20 overflow-hidden">
+                {/* Background: Offline banner if available, otherwise blurred avatar or gradient */}
+                {channelData?.bannerUrl ? (
+                  <img
+                    src={channelData.bannerUrl}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : channelData?.avatarUrl ? (
+                  <>
+                    {/* Blurred, scaled-up avatar as background */}
+                    <img
+                      src={channelData.avatarUrl}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover blur-3xl scale-150 opacity-40"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/80 to-black" />
+                  </>
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-b from-purple-900/50 via-gray-900 to-black" />
+                )}
+                {/* Content overlay */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  {/* Avatar (if available and no banner) */}
+                  {channelData?.avatarUrl && !channelData?.bannerUrl && (
+                    <div className="mb-6">
+                      <img
+                        src={channelData.avatarUrl}
+                        alt={channelData.displayName || channelName}
+                        className="w-24 h-24 rounded-full border-4 border-white/20 shadow-2xl"
+                      />
+                    </div>
+                  )}
+                  <div className="text-center">
+                    <p className="text-white text-3xl font-bold mb-2 drop-shadow-lg">
+                      {channelData?.displayName || channelName}
+                    </p>
+                    <p className="text-white/70 text-lg mb-8">is currently offline</p>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="bg-white/10 border-white/30 hover:bg-white/20 backdrop-blur-sm"
+                      onClick={() => { setPlayerError(null); reloadPlayback(); }}
+                    >
+                      Check Again
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+            {!isPlaybackLoading && !playback && !playerError && (
+              <div className="absolute inset-0 z-20 overflow-hidden">
+                {/* Background: Offline banner if available, otherwise blurred avatar or gradient */}
+                {channelData?.bannerUrl ? (
+                  <img
+                    src={channelData.bannerUrl}
+                    alt=""
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                ) : channelData?.avatarUrl ? (
+                  <>
+                    {/* Blurred, scaled-up avatar as background */}
+                    <img
+                      src={channelData.avatarUrl}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover blur-3xl scale-150 opacity-40"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/80 to-black" />
+                  </>
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-b from-purple-900/50 via-gray-900 to-black" />
+                )}
+                {/* Content overlay */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                  {/* Avatar (if available and no banner) */}
+                  {channelData?.avatarUrl && !channelData?.bannerUrl && (
+                    <div className="mb-6">
+                      <img
+                        src={channelData.avatarUrl}
+                        alt={channelData.displayName || channelName}
+                        className="w-24 h-24 rounded-full border-4 border-white/20 shadow-2xl"
+                      />
+                    </div>
+                  )}
+                  <div className="text-center">
+                    <p className="text-white text-3xl font-bold mb-2 drop-shadow-lg">
+                      {channelData?.displayName || channelName}
+                    </p>
+                    <p className="text-white/70 text-lg mb-8">is currently offline</p>
+                    <Button
+                      variant="outline"
+                      size="lg"
+                      className="bg-white/10 border-white/30 hover:bg-white/20 backdrop-blur-sm"
+                      onClick={reloadPlayback}
+                    >
+                      Check Again
+                    </Button>
+                  </div>
                 </div>
               </div>
             )}

@@ -75,6 +75,12 @@ export function VideoPlayer(props: VideoPlayerProps) {
     const [duration, setDuration] = useState(0);
     const [buffered, setBuffered] = useState<TimeRanges | undefined>(undefined);
     const [playbackRate, setPlaybackRate] = useState(1);
+    const [hasError, setHasError] = useState(false); // Track if player has errored
+
+    // Reset error state when streamUrl changes
+    useEffect(() => {
+        setHasError(false);
+    }, [streamUrl]);
 
     // Sync state with video element
     const syncState = useCallback(() => {
@@ -217,51 +223,54 @@ export function VideoPlayer(props: VideoPlayerProps) {
 
         >
             {streamUrl ? (
-                <>
-                    <HlsPlayer
-                        ref={videoRef}
-                        src={streamUrl}
-                        poster={poster}
-                        muted={initialMuted}
-                        autoPlay={autoPlay}
-                        currentLevel={currentQualityId}
-                        onQualityLevels={handleQualityLevels}
-                        onError={onError}
-                        className="size-full object-contain cursor-pointer"
-                        controls={false} // Disable native controls
+                <HlsPlayer
+                    ref={videoRef}
+                    src={streamUrl}
+                    poster={poster}
+                    muted={initialMuted}
+                    autoPlay={autoPlay}
+                    currentLevel={currentQualityId}
+                    onQualityLevels={handleQualityLevels}
+                    onError={(error) => {
+                        setHasError(true);
+                        onError?.(error);
+                    }}
+                    className="size-full object-contain cursor-pointer"
+                    controls={false} // Disable native controls
 
-                        onDoubleClick={toggleFullscreen} // Double click to fullscreen
-                    />
-
-                    {/* Controls Overlay */}
-                    <PlayerControls
-                        isPlaying={isPlaying}
-                        isLoading={isLoading}
-                        volume={volume}
-                        muted={isMuted}
-                        qualities={availableQualities}
-                        currentQualityId={currentQualityId}
-                        isFullscreen={isFullscreen}
-                        onTogglePlay={togglePlay}
-                        onToggleMute={toggleMute}
-                        onVolumeChange={handleVolumeChange}
-                        onQualityChange={handleQualitySet}
-                        onToggleFullscreen={toggleFullscreen}
-                        onToggleTheater={onToggleTheater}
-                        isTheater={isTheater}
-                        onTogglePip={togglePipHandler}
-                        currentTime={currentTime}
-                        duration={duration}
-                        onSeek={handleSeek}
-                        buffered={buffered}
-                        playbackRate={playbackRate}
-                        onPlaybackRateChange={handlePlaybackRateChange}
-                    />
-                </>
+                    onDoubleClick={toggleFullscreen} // Double click to fullscreen
+                />
             ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-white">
+                <div className="absolute inset-0 flex items-center justify-center text-white z-0">
                     <p>No Stream Source</p>
                 </div>
+            )}
+
+            {/* Controls Overlay - Only show when stream is available and no error */}
+            {streamUrl && !hasError && (
+                <PlayerControls
+                    isPlaying={isPlaying}
+                    isLoading={isLoading}
+                    volume={volume}
+                    muted={isMuted}
+                    qualities={availableQualities}
+                    currentQualityId={currentQualityId}
+                    isFullscreen={isFullscreen}
+                    onTogglePlay={togglePlay}
+                    onToggleMute={toggleMute}
+                    onVolumeChange={handleVolumeChange}
+                    onQualityChange={handleQualitySet}
+                    onToggleFullscreen={toggleFullscreen}
+                    onToggleTheater={onToggleTheater}
+                    isTheater={isTheater}
+                    onTogglePip={togglePipHandler}
+                    currentTime={currentTime}
+                    duration={duration}
+                    onSeek={handleSeek}
+                    buffered={buffered}
+                    playbackRate={playbackRate}
+                    onPlaybackRateChange={handlePlaybackRateChange}
+                />
             )}
         </div>
     );

@@ -8,7 +8,10 @@ import { Play, Clapperboard } from 'lucide-react';
 import {
     Dialog,
     DialogContent,
+    DialogTitle,
+    DialogDescription,
 } from "@/components/ui/dialog";
+import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { PlatformAvatar } from '@/components/ui/platform-avatar';
 import { FollowButton } from '@/components/ui/follow-button';
 import { Platform } from '@/shared/auth-types';
@@ -343,6 +346,10 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
 
             <Dialog open={!!selectedClip} onOpenChange={(open) => !open && setSelectedClip(null)}>
                 <DialogContent className="max-w-[90vw] w-full max-w-[1600px] bg-black border-[var(--color-border)] p-0 overflow-hidden">
+                    <VisuallyHidden>
+                        <DialogTitle>{selectedClip?.title || 'Clip Viewer'}</DialogTitle>
+                        <DialogDescription>Viewing clip: {selectedClip?.title || 'Selected clip'}</DialogDescription>
+                    </VisuallyHidden>
                     {selectedClip && (
                         <div className="flex flex-col md:flex-row p-0 overflow-hidden h-[80vh] w-full">
                             {/* Left Side: Video Player */}
