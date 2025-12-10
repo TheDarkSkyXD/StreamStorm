@@ -24,8 +24,14 @@ interface VideoOrClip {
     thumbnailUrl: string;
     embedUrl?: string; // For clips
     url?: string; // For clips
+    source?: string; // HLS m3u8 URL for VODs (especially Kick)
     gameName?: string;
     isLive?: boolean;
+    // Additional metadata for passing to video page
+    channelSlug?: string;
+    channelName?: string;
+    channelAvatar?: string | null;
+    category?: string;
 }
 
 
@@ -217,6 +223,17 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
                                             platform: platform || 'twitch',
                                             videoId: video.id
                                         }}
+                                        search={!video.isLive ? {
+                                            src: video.source || undefined,
+                                            title: video.title,
+                                            channelName: video.channelName || video.channelSlug || channelName,
+                                            channelDisplayName: video.channelName || channelData?.displayName || channelName,
+                                            channelAvatar: video.channelAvatar || channelData?.avatarUrl || undefined,
+                                            views: video.views,
+                                            date: video.date,
+                                            category: video.category || video.gameName || undefined,
+                                            duration: video.duration
+                                        } : undefined}
                                         className="block group"
                                         onClick={(e) => {
                                             if (video.isLive) {

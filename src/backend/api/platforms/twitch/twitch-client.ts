@@ -167,6 +167,13 @@ class TwitchClient extends TwitchRequestor {
         return VideoEndpoints.getVideosByUser(this, userId, options);
     }
 
+    /**
+     * Get a single video by ID
+     */
+    async getVideoById(videoId: string): Promise<TwitchApiVideo | null> {
+        return VideoEndpoints.getVideoById(this, videoId);
+    }
+
     // ========== Clips ==========
 
     /**

@@ -225,6 +225,12 @@ const electronAPI = {
       username: string;
     }): Promise<{ success: boolean; data?: any; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.STREAMS_GET_BY_CHANNEL, params),
+
+    getPlaybackUrl: (params: {
+      platform: Platform;
+      channelSlug: string;
+    }): Promise<{ success: boolean; data?: { url: string; format: string }; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.STREAMS_GET_PLAYBACK_URL, params),
   },
 
   // ========== Discovery: Categories ==========
@@ -298,6 +304,36 @@ const electronAPI = {
       cursor?: string;
     }): Promise<{ success: boolean; data?: any[]; cursor?: string; debug?: string; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.VIDEOS_GET_BY_CHANNEL, params),
+
+    getPlaybackUrl: (params: {
+      platform: Platform;
+      videoId: string;
+    }): Promise<{ success: boolean; data?: { url: string }; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.VIDEOS_GET_PLAYBACK_URL, params),
+
+    getMetadata: (params: {
+      platform: Platform;
+      videoId: string;
+    }): Promise<{
+      success: boolean;
+      data?: {
+        id: string;
+        title: string;
+        channelId: string;
+        channelName: string;
+        channelDisplayName: string;
+        channelAvatar: string | null;
+        views: number;
+        duration: string;
+        createdAt: string;
+        thumbnailUrl: string;
+        description: string;
+        type: string;
+        platform: string;
+      };
+      error?: string;
+    }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.VIDEOS_GET_METADATA, params),
   },
 
   clips: {

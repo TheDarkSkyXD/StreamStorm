@@ -96,6 +96,27 @@ const streamRoute = createRoute({
 const videoRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/video/$platform/$videoId',
+  validateSearch: (search: Record<string, unknown>): {
+    src?: string;
+    title?: string;
+    channelName?: string;
+    channelDisplayName?: string;
+    channelAvatar?: string;
+    views?: string;
+    date?: string;
+    category?: string;
+    duration?: string;
+  } => ({
+    src: (search.src as string) || undefined, // Direct HLS URL (for Kick VODs)
+    title: (search.title as string) || undefined,
+    channelName: (search.channelName as string) || undefined,
+    channelDisplayName: (search.channelDisplayName as string) || undefined,
+    channelAvatar: (search.channelAvatar as string) || undefined,
+    views: (search.views as string) || undefined,
+    date: (search.date as string) || undefined,
+    category: (search.category as string) || undefined,
+    duration: (search.duration as string) || undefined,
+  }),
   component: VideoPage,
 });
 

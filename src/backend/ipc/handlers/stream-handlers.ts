@@ -279,4 +279,35 @@ export function registerStreamHandlers(): void {
             return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch stream' };
         }
     });
+
+    /**
+     * Get playback URL for a live stream
+     */
+    ipcMain.handle(IPC_CHANNELS.STREAMS_GET_PLAYBACK_URL, async (_event, params: {
+        platform: Platform;
+        channelSlug: string;
+    }) => {
+        const { TwitchStreamResolver } = await import('../../api/platforms/twitch/twitch-stream-resolver');
+        const { KickStreamResolver } = await import('../../api/platforms/kick/kick-stream-resolver');
+
+        const twitchResolver = new TwitchStreamResolver();
+        const kickResolver = new KickStreamResolver();
+
+        try {
+            if (params.platform === 'twitch') {
+                const result = await twitchResolver.getStreamPlaybackUrl(params.channelSlug);
+                return { success: true, data: result };
+            } else if (params.platform === 'kick') {
+                const result = await kickResolver.getStreamPlaybackUrl(params.channelSlug);
+                return { success: true, data: result };
+            }
+            throw new Error(`Unsupported platform: ${params.platform}`);
+        } catch (error) {
+            console.error('❌ Failed to get stream playback URL:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to resolve stream URL'
+            };
+        }
+    });
 }

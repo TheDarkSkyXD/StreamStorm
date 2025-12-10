@@ -5,8 +5,20 @@
  * The player component works with both Twitch and Kick streams.
  */
 
-// Components will be added in Phase 2
 export { VideoPlayer } from './video-player';
-// export { PlayerControls } from './PlayerControls';
+export { PlayerControls } from './player-controls';
 export { QualitySelector } from './quality-selector';
-// export { VolumeControl } from './VolumeControl';
+export { VolumeControl } from './volume-control';
+export { SettingsMenu } from './settings-menu';
+export { ProgressBar } from './progress-bar';
+export { PlayPauseButton } from './play-pause-button';
+export { HlsPlayer } from './hls-player';
+
+// Hooks
+export { useFullscreen } from './use-fullscreen';
+export { usePictureInPicture } from './use-picture-in-picture';
+export { usePlayerKeyboard } from './use-player-keyboard';
+export { useResumePlayback } from './use-resume-playback';
+
+// Types
+export * from './types';

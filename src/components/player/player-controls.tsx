@@ -39,6 +39,10 @@ interface PlayerControlsProps {
     duration?: number;
     onSeek?: (time: number) => void;
     buffered?: TimeRanges;
+
+    // Playback Speed
+    playbackRate?: number;
+    onPlaybackRateChange?: (rate: number) => void;
 }
 
 export function PlayerControls(props: PlayerControlsProps) {
@@ -61,7 +65,9 @@ export function PlayerControls(props: PlayerControlsProps) {
         currentTime = 0,
         duration = 0,
         onSeek,
-        buffered
+        buffered,
+        playbackRate,
+        onPlaybackRateChange
     } = props;
 
     const [isVisible, setIsVisible] = useState(true);
@@ -171,6 +177,8 @@ export function PlayerControls(props: PlayerControlsProps) {
                         onTogglePip={onTogglePip}
                         onToggleTheater={onToggleTheater}
                         isTheater={isTheater}
+                        playbackRate={playbackRate}
+                        onPlaybackRateChange={onPlaybackRateChange}
                     />
 
                     {onToggleTheater && (

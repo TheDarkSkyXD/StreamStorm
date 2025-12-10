@@ -1,12 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Platform } from '@/shared/auth-types';
-import { TwitchStreamResolver } from '@/backend/api/platforms/twitch/twitch-stream-resolver';
-import { KickStreamResolver } from '@/backend/api/platforms/kick/kick-stream-resolver';
 import { StreamPlayback } from '@/components/player/types';
-
-// Singleton instances
-const twitchResolver = new TwitchStreamResolver();
-const kickResolver = new KickStreamResolver();
 
 interface UseStreamPlaybackResult {
     playback: StreamPlayback | null;
@@ -30,20 +24,25 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
 
         const fetchUrl = async () => {
             try {
-                let result: StreamPlayback;
+                if (!window.electronAPI) {
+                    throw new Error('Electron API not available');
+                }
 
-                if (platform === 'twitch') {
-                    // Identifier is username (login) for live streams
-                    result = await twitchResolver.getStreamPlaybackUrl(identifier);
-                } else if (platform === 'kick') {
-                    // Identifier is slug for live streams
-                    result = await kickResolver.getStreamPlaybackUrl(identifier);
-                } else {
-                    throw new Error(`Unsupported platform: ${platform}`);
+                // Use IPC to fetch playback URL from main process
+                const result = await window.electronAPI.streams.getPlaybackUrl({
+                    platform,
+                    channelSlug: identifier
+                });
+
+                if (!result.success || !result.data) {
+                    throw new Error(result.error || 'Failed to get stream playback URL');
                 }
 
                 if (isMounted) {
-                    setPlayback(result);
+                    setPlayback({
+                        url: result.data.url,
+                        format: result.data.format as 'hls' | 'dash' | 'mp4'
+                    });
                     setIsLoading(false);
                 }
             } catch (err) {

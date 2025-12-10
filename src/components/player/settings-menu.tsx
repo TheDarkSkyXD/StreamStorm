@@ -7,14 +7,18 @@ import { QualityLevel } from './types';
 // Custom Settings Menu (replaces simple QualitySelector)
 // Features: Quality, Theater Mode, Picture-in-Picture
 
-interface SettingsMenuProps {
+export interface SettingsMenuProps {
     qualities: QualityLevel[];
     currentQualityId: string;
     onQualityChange: (qualityId: string) => void;
     onTogglePip?: () => void;
     onToggleTheater?: () => void;
     isTheater?: boolean;
+    playbackRate?: number;
+    onPlaybackRateChange?: (rate: number) => void;
 }
+
+const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
 
 export function SettingsMenu({
     qualities,
@@ -22,10 +26,12 @@ export function SettingsMenu({
     onQualityChange,
     onTogglePip,
     onToggleTheater,
-    isTheater
+    isTheater,
+    playbackRate = 1,
+    onPlaybackRateChange
 }: SettingsMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
-    const [activeSubMenu, setActiveSubMenu] = useState<'main' | 'quality'>('main');
+    const [activeSubMenu, setActiveSubMenu] = useState<'main' | 'quality' | 'speed'>('main');
 
     const toggleOpen = () => {
         setIsOpen(!isOpen);
@@ -92,7 +98,21 @@ export function SettingsMenu({
                                     </div>
                                 </button>
 
-
+                                {/* Speed Menu Item */}
+                                {onPlaybackRateChange && (
+                                    <button
+                                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white"
+                                        onClick={() => setActiveSubMenu('speed')}
+                                    >
+                                        <span>Speed</span>
+                                        <div className="flex items-center text-white/50">
+                                            <span className="mr-2">
+                                                {playbackRate}x
+                                            </span>
+                                            <span className="rotate-[-90deg]">›</span>
+                                        </div>
+                                    </button>
+                                )}
 
                                 {/* PiP Toggle */}
                                 {onTogglePip && (
@@ -133,6 +153,33 @@ export function SettingsMenu({
                                         >
                                             <span>{quality.label}</span>
                                             {currentQualityId === quality.id && <Check className="w-4 h-4" />}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {activeSubMenu === 'speed' && onPlaybackRateChange && (
+                            <div className="py-2">
+                                <button
+                                    className="w-full px-4 py-3 flex items-center gap-2 hover:bg-white/10 transition-colors text-sm text-white border-b border-white/5"
+                                    onClick={() => setActiveSubMenu('main')}
+                                >
+                                    <span className="rotate-90">›</span>
+                                    <span className="font-semibold">Speed</span>
+                                </button>
+                                <div className="max-h-60 overflow-y-auto">
+                                    {PLAYBACK_SPEEDS.map(speed => (
+                                        <button
+                                            key={speed}
+                                            className="w-full px-4 py-2 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white"
+                                            onClick={() => {
+                                                onPlaybackRateChange(speed);
+                                                setIsOpen(false);
+                                            }}
+                                        >
+                                            <span>{speed}x</span>
+                                            {playbackRate === speed && <Check className="w-4 h-4" />}
                                         </button>
                                     ))}
                                 </div>

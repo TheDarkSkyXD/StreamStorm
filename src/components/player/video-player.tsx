@@ -6,6 +6,7 @@ import { PlayerControls } from './player-controls';
 import { usePlayerKeyboard } from './use-player-keyboard';
 import { usePictureInPicture } from './use-picture-in-picture';
 import { useFullscreen } from './use-fullscreen';
+import { useResumePlayback } from './use-resume-playback';
 
 export interface VideoPlayerProps {
     streamUrl: string;
@@ -20,6 +21,10 @@ export interface VideoPlayerProps {
     className?: string;
     isTheater?: boolean;
     onToggleTheater?: () => void;
+    // Resume playback props (for VODs)
+    videoId?: string;
+    title?: string;
+    thumbnail?: string;
 }
 
 export function VideoPlayer(props: VideoPlayerProps) {
@@ -35,7 +40,10 @@ export function VideoPlayer(props: VideoPlayerProps) {
         onQualityChange,
         className,
         isTheater,
-        onToggleTheater
+        onToggleTheater,
+        videoId,
+        title,
+        thumbnail
     } = props;
 
     const containerRef = useRef<HTMLDivElement>(null);
@@ -44,6 +52,16 @@ export function VideoPlayer(props: VideoPlayerProps) {
     // Hooks
     const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
     const { isPip, togglePip } = usePictureInPicture(videoRef);
+
+    // Resume playback hook (only for VODs with videoId)
+    useResumePlayback({
+        platform,
+        videoId: videoId || '',
+        videoRef: videoRef as React.RefObject<HTMLVideoElement>,
+        title,
+        thumbnail,
+        enabled: !!videoId
+    });
 
     // State
     const [isReady, setIsReady] = useState(false);
@@ -56,6 +74,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [buffered, setBuffered] = useState<TimeRanges | undefined>(undefined);
+    const [playbackRate, setPlaybackRate] = useState(1);
 
     // Sync state with video element
     const syncState = useCallback(() => {
@@ -83,6 +102,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
         const handleTimeUpdate = () => setCurrentTime(video.currentTime);
         const handleDurationChange = () => setDuration(video.duration);
         const handleProgress = () => setBuffered(video.buffered);
+        const handleRateChange = () => setPlaybackRate(video.playbackRate);
 
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
@@ -92,6 +112,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
         video.addEventListener('timeupdate', handleTimeUpdate);
         video.addEventListener('durationchange', handleDurationChange);
         video.addEventListener('progress', handleProgress);
+        video.addEventListener('ratechange', handleRateChange);
 
         return () => {
             video.removeEventListener('play', handlePlay);
@@ -102,6 +123,7 @@ export function VideoPlayer(props: VideoPlayerProps) {
             video.removeEventListener('timeupdate', handleTimeUpdate);
             video.removeEventListener('durationchange', handleDurationChange);
             video.removeEventListener('progress', handleProgress);
+            video.removeEventListener('ratechange', handleRateChange);
         };
     }, [isReady]);
 
@@ -153,6 +175,12 @@ export function VideoPlayer(props: VideoPlayerProps) {
         const video = videoRef.current;
         if (!video) return;
         video.currentTime = time;
+    }, []);
+
+    const handlePlaybackRateChange = useCallback((rate: number) => {
+        const video = videoRef.current;
+        if (!video) return;
+        video.playbackRate = rate;
     }, []);
 
     const handleQualityLevels = useCallback((levels: QualityLevel[]) => {
@@ -226,6 +254,8 @@ export function VideoPlayer(props: VideoPlayerProps) {
                         duration={duration}
                         onSeek={handleSeek}
                         buffered={buffered}
+                        playbackRate={playbackRate}
+                        onPlaybackRateChange={handlePlaybackRateChange}
                     />
                 </>
             ) : (

@@ -74,10 +74,60 @@ export function registerVideoHandlers(): void {
     });
 
     /**
-     * Get metadata for a VOD (Optional, can be expanded later)
-     * For now, standard client calls are likely sufficient on the frontend if they don't hit CORS.
-     * But providing an IPC endpoint is safer.
+     * Get metadata for a VOD
      */
+    ipcMain.handle(IPC_CHANNELS.VIDEOS_GET_METADATA, async (_event, params: {
+        platform: Platform;
+        videoId: string;
+    }) => {
+        const { twitchClient } = await import('../../api/platforms/twitch/twitch-client');
+
+        try {
+            if (params.platform === 'twitch') {
+                const video = await twitchClient.getVideoById(params.videoId);
+                if (!video) {
+                    return { success: false, error: 'Video not found' };
+                }
+
+                // Get user info for the channel
+                const users = await twitchClient.getUsersById([video.user_id]);
+                const user = users[0];
+
+                return {
+                    success: true,
+                    data: {
+                        id: video.id,
+                        title: video.title,
+                        channelId: video.user_id,
+                        channelName: video.user_login,
+                        channelDisplayName: video.user_name,
+                        channelAvatar: user?.profileImageUrl || null,
+                        views: video.view_count,
+                        duration: formatTwitchDuration(video.duration),
+                        createdAt: video.created_at,
+                        thumbnailUrl: video.thumbnail_url.replace('%{width}', '320').replace('%{height}', '180'),
+                        description: video.description,
+                        type: video.type,
+                        platform: 'twitch'
+                    }
+                };
+            } else if (params.platform === 'kick') {
+                const metadata = await kickResolver.getVideoMetadata(params.videoId);
+                return {
+                    success: true,
+                    data: metadata
+                };
+            }
+
+            throw new Error(`Unsupported platform: ${params.platform}`);
+        } catch (error) {
+            console.error('❌ Failed to get video metadata:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to fetch video metadata'
+            };
+        }
+    });
 
 
     /**

@@ -46,8 +46,8 @@ This document tracks the implementation progress of Phase 3: Stream Viewing.
 ## Phase 3.6: VOD & Clip Playback
 - [x] **3.6.1** Create VOD player with seek support (`VodPlayer`)
 - [x] **3.6.2** Implement progress bar with hover preview
-- [ ] **3.6.3** Create playback speed control
-- [ ] **3.6.4** Implement resume watching
+- [x] **3.6.3** Create playback speed control
+- [x] **3.6.4** Implement resume watching
 - [x] **3.6.5** Create clip player
 
 ## Phase 3.7: Performance Optimization

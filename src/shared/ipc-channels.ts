@@ -100,6 +100,7 @@ export const IPC_CHANNELS = {
   STREAMS_GET_BY_CATEGORY: 'streams:get-by-category',
   STREAMS_GET_FOLLOWED: 'streams:get-followed',
   STREAMS_GET_BY_CHANNEL: 'streams:get-by-channel',
+  STREAMS_GET_PLAYBACK_URL: 'streams:get-playback-url',
 
   // ========== Discovery: Categories ==========
   CATEGORIES_GET_TOP: 'categories:get-top',

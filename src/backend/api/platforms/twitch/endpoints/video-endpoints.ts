@@ -35,3 +35,17 @@ export async function getVideosByUser(
         cursor: data.pagination?.cursor,
     };
 }
+
+/**
+ * Get a single video by ID
+ */
+export async function getVideoById(
+    client: TwitchRequestor,
+    videoId: string
+): Promise<TwitchApiVideo | null> {
+    const data = await client.request<TwitchApiResponse<TwitchApiVideo>>(
+        `/videos?id=${videoId}`
+    );
+
+    return data.data[0] || null;
+}
