@@ -35,11 +35,11 @@ interface KickLivePlayerControlsProps {
     onToggleTheater?: () => void;
     onTogglePip?: () => void;
 
-    // DVR/Seek support for live streams
     currentTime?: number;
     duration?: number;
     onSeek?: (time: number) => void;
     buffered?: TimeRanges;
+    seekableRange?: { start: number; end: number } | null;
     onGoLive?: () => void;
 
     // Playback Speed
@@ -68,6 +68,7 @@ export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
         duration = 0,
         onSeek,
         buffered,
+        seekableRange,
         onGoLive,
         playbackRate,
         onPlaybackRateChange
@@ -80,8 +81,13 @@ export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
     const kickGreen = '#53fc18';
 
     // Check if we're at the live edge (within 10 seconds of duration)
+    const isAtLiveEdge = true; // Forced Live State per user request (No DVR support)
+    const isBehindLive = false;
+
+    /* DISABLED - DVR SUPPORT BLOCKED
     const isAtLiveEdge = duration > 0 ? (duration - currentTime) < 10 : true;
     const isBehindLive = duration > 0 && !isAtLiveEdge;
+    */
 
     // Handle go live click
     const handleGoLive = () => {
@@ -134,6 +140,8 @@ export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
                         duration={duration}
                         onSeek={onSeek}
                         buffered={buffered}
+                        seekableRange={seekableRange}
+                        isLive={isAtLiveEdge}
                     />
                 </div>
             )}

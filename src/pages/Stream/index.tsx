@@ -98,6 +98,7 @@ export function StreamPage() {
                 onError={handlePlayerError}
                 isTheater={isTheater}
                 onToggleTheater={() => setIsTheater(prev => !prev)}
+                startedAt={streamData?.startedAt}
               />
             ) : (
               <TwitchLivePlayer

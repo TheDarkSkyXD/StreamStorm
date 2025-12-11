@@ -6,6 +6,7 @@ export interface HlsPlayerProps extends Omit<React.VideoHTMLAttributes<HTMLVideo
     src: string;
     onQualityLevels?: (levels: QualityLevel[]) => void;
     onError?: (error: PlayerError) => void;
+    onHlsInstance?: (hls: Hls) => void;
     autoPlay?: boolean;
     currentLevel?: string; // 'auto' or level index as string
 }
@@ -14,6 +15,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
     src,
     onQualityLevels,
     onError,
+    onHlsInstance,
     autoPlay = false,
     currentLevel,
     ...props
@@ -63,8 +65,8 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 lowLatencyMode: true,
                 backBufferLength: 90,
                 // Refined for stability to prevent bufferStalledError
-                liveSyncDurationCount: 3,
-                liveMaxLatencyDurationCount: 10,
+                liveSyncDurationCount: 2, // Closer to live edge (was 3)
+                liveMaxLatencyDurationCount: 5, // Jump to live sooner if behind (was 10)
                 maxBufferLength: 30, // 30 seconds buffer
                 maxMaxBufferLength: 60,
                 // Manifest loading retry settings - 3 retries with 5 second delays
@@ -82,6 +84,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 },
             });
             hlsRef.current = hls;
+            if (onHlsInstance) onHlsInstance(hls);
 
             console.log('Initializing HLS for:', src);
             hls.loadSource(src);

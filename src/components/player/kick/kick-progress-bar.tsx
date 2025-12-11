@@ -4,9 +4,11 @@ import { formatDuration } from '@/lib/utils';
 interface KickProgressBarProps {
     currentTime: number;
     duration: number;
-    onSeek: (time: number) => void;
+    onSeek?: (time: number) => void;
     buffered?: TimeRanges;
+    seekableRange?: { start: number; end: number } | null;
     className?: string;
+    isLive?: boolean;
 }
 
 export function KickProgressBar({
@@ -14,16 +16,40 @@ export function KickProgressBar({
     duration,
     onSeek,
     buffered,
-    className = ''
+    seekableRange,
+    className = '',
+    isLive = false
 }: KickProgressBarProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isHovering, setIsHovering] = useState(false);
     const [hoverPosition, setHoverPosition] = useState(0); // 0 to 1
 
     const progress = useMemo(() => {
+        return 100;
+        // DISABLED DVR UPTIME CALCULATION
+        /*
+        if (isLive) return 100;
         if (!duration || duration === 0) return 0;
         return Math.min(100, (currentTime / duration) * 100);
-    }, [currentTime, duration]);
+        */
+    }, [currentTime, duration, isLive]);
+
+    // Calculate seekable bar styles
+    const seekableStyle = useMemo(() => {
+        return { left: '0%', width: '0%' };
+
+        /* DISABLED SEEKABLE RANGE CALC
+        if (!duration || !seekableRange) return { left: '0%', width: '0%' };
+        
+        const startPct = Math.max(0, (seekableRange.start / duration) * 100);
+        const endPct = Math.min(100, (seekableRange.end / duration) * 100);
+        
+        return {
+            left: `${startPct}%`,
+            width: `${Math.max(0, endPct - startPct)}%`
+        };
+        */
+    }, [duration, seekableRange]);
 
     const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         if (!containerRef.current) return;
@@ -34,12 +60,21 @@ export function KickProgressBar({
     }, []);
 
     const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
-        if (!containerRef.current || !duration) return;
+        if (!containerRef.current || !duration || !onSeek) return;
         const rect = containerRef.current.getBoundingClientRect();
         if (rect.width === 0) return;
         const pos = (e.clientX - rect.left) / rect.width;
-        onSeek(Math.max(0, Math.min(1, pos)) * duration);
-    }, [duration, onSeek]);
+        let time = Math.max(0, Math.min(1, pos)) * duration;
+
+        // Clamp to seekable range if available
+        if (seekableRange) {
+            if (time < seekableRange.start) time = seekableRange.start;
+            if (time > seekableRange.end) time = seekableRange.end;
+        }
+
+        // Disabled per user request (Kick streams don't support full DVR seeking yet)
+        // onSeek(time);
+    }, [duration, onSeek, seekableRange]);
 
     // Kick brand green color
     const kickGreen = '#53fc18';
@@ -53,8 +88,17 @@ export function KickProgressBar({
             onMouseMove={handleMouseMove}
             onClick={handleClick}
         >
-            {/* Background Track */}
-            <div className="relative w-full h-1 bg-white/20 rounded-full overflow-hidden">
+            {/* Background Track - Darker */}
+            <div className="relative w-full h-1 bg-white/10 rounded-full overflow-hidden">
+
+                {/* Seekable Range - White/20 */}
+                {seekableRange && (
+                    <div
+                        className="absolute top-0 bottom-0 h-full bg-white/20"
+                        style={seekableStyle}
+                    />
+                )}
+
                 {/* Current Progress - Kick Green */}
                 <div
                     className="absolute top-0 bottom-0 left-0 h-full"

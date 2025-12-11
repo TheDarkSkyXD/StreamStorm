@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import Hls from 'hls.js';
 import { QualityLevel, PlayerError, Platform } from '../types';
 import { HlsPlayer } from '../hls-player';
 import { KickLivePlayerControls } from './kick-live-player-controls';
@@ -24,6 +25,7 @@ export interface KickLivePlayerProps {
     channelName?: string;
     title?: string;
     thumbnail?: string;
+    startedAt?: string; // Stream start time for uptime calculation
 }
 
 export function KickLivePlayer(props: KickLivePlayerProps) {
@@ -41,11 +43,13 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         onToggleTheater,
         channelName,
         title,
-        thumbnail
+        thumbnail,
+        startedAt
     } = props;
 
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
+    const hlsRef = useRef<Hls | null>(null);
 
     // Hooks
     const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
@@ -58,7 +62,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         videoRef: videoRef as React.RefObject<HTMLVideoElement>,
         title: title || channelName,
         thumbnail,
-        enabled: !!channelName
+        enabled: false // Disabled: Always start at live edge (no DVR support)
     });
 
     // State
@@ -72,6 +76,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [buffered, setBuffered] = useState<TimeRanges | undefined>(undefined);
+    const [seekableRange, setSeekableRange] = useState<{ start: number; end: number } | null>(null);
     const [playbackRate, setPlaybackRate] = useState(1);
     const [hasError, setHasError] = useState(false);
 
@@ -79,6 +84,65 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
     useEffect(() => {
         setHasError(false);
     }, [streamUrl]);
+
+    // Uptime Calculation Effect
+    useEffect(() => {
+        if (!startedAt || !isPlaying) return;
+
+        const updateUptime = () => {
+            const now = Date.now();
+            const start = new Date(startedAt).getTime();
+            const uptime = (now - start) / 1000;
+            const video = videoRef.current;
+
+            // Set duration to uptime (growing constantly)
+            setDuration(uptime);
+
+            if (hlsRef.current && hlsRef.current.playingDate) {
+                // Precise absolute time from HLS Program Date Time
+                const current = (hlsRef.current.playingDate.getTime() - start) / 1000;
+                setCurrentTime(current);
+
+                // Calculate seekable range in uptime coordinates
+                if (video && video.seekable.length > 0) {
+                    const seekableStartVideo = video.seekable.start(0);
+                    const seekableEndVideo = video.seekable.end(video.seekable.length - 1);
+                    const currentVideo = video.currentTime;
+
+                    // Offset: currentUptime - currentVideoTime
+                    const offset = current - currentVideo;
+
+                    const calculatedStart = seekableStartVideo + offset;
+                    const calculatedEnd = seekableEndVideo + offset;
+
+                    setSeekableRange({
+                        start: calculatedStart,
+                        end: calculatedEnd
+                    });
+                }
+            } else if (video && video.seekable.length > 0) {
+                // Fallback: Estimate time based on "Live Edge" assumption
+                // We assume video.seekable.end() is "Now" (uptime)
+                const seekableEnd = video.seekable.end(video.seekable.length - 1);
+                const secondsFromLive = seekableEnd - video.currentTime;
+                const current = Math.max(0, uptime - secondsFromLive);
+                setCurrentTime(current);
+
+                // In this fallback model, seekable.end maps to uptime
+                // So seekable.start maps to uptime - (seekable.end - seekable.start)
+                const windowDuration = seekableEnd - video.seekable.start(0);
+                const calculatedStart = Math.max(0, uptime - windowDuration);
+
+                setSeekableRange({
+                    start: calculatedStart,
+                    end: uptime
+                });
+            }
+        };
+
+        const interval = setInterval(updateUptime, 250); // Higher frequency for smoother UI
+        return () => clearInterval(interval);
+    }, [startedAt, isPlaying]);
 
     // Setup event listeners
     useEffect(() => {
@@ -91,13 +155,18 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
             setIsMuted(video.muted);
             setVolume(video.volume * 100);
         };
-        const handleWaiting = () => setIsLoading(true);
+        const handleWait = () => setIsLoading(true);
         const handlePlaying = () => setIsLoading(false);
-        const handleTimeUpdate = () => setCurrentTime(video.currentTime);
+        // We use the interval above for time updates when startedAt is present
+        const handleTimeUpdate = () => {
+            if (!startedAt) {
+                setCurrentTime(video.currentTime);
+            }
+        };
         const handleDurationChange = () => {
             // For live streams, duration might be Infinity or a large number
             const dur = video.duration;
-            if (isFinite(dur) && dur > 0) {
+            if (!startedAt && isFinite(dur) && dur > 0) {
                 setDuration(dur);
             }
         };
@@ -107,7 +176,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
         video.addEventListener('volumechange', handleVolumeChange);
-        video.addEventListener('waiting', handleWaiting);
+        video.addEventListener('waiting', handleWait);
         video.addEventListener('playing', handlePlaying);
         video.addEventListener('timeupdate', handleTimeUpdate);
         video.addEventListener('durationchange', handleDurationChange);
@@ -118,14 +187,14 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
             video.removeEventListener('play', handlePlay);
             video.removeEventListener('pause', handlePause);
             video.removeEventListener('volumechange', handleVolumeChange);
-            video.removeEventListener('waiting', handleWaiting);
+            video.removeEventListener('waiting', handleWait);
             video.removeEventListener('playing', handlePlaying);
             video.removeEventListener('timeupdate', handleTimeUpdate);
             video.removeEventListener('durationchange', handleDurationChange);
             video.removeEventListener('progress', handleProgress);
             video.removeEventListener('ratechange', handleRateChange);
         };
-    }, [isReady]);
+    }, [isReady, startedAt]);
 
     // Initialize volume/mute
     useEffect(() => {
@@ -171,11 +240,53 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         }
     }, []);
 
-    const handleSeek = useCallback((time: number) => {
+    const handleSeek = useCallback((targetTime: number) => {
         const video = videoRef.current;
         if (!video) return;
-        video.currentTime = time;
-    }, []);
+
+        if (startedAt) {
+            // Delta Seeking: Calculate difference from current UI time
+            // usage: targetTime is "seconds since stream start"
+            // currentTime is "seconds since stream start" (state)
+
+            // We recalculate precise currentTime here just in case state is stale
+            let currentStreamTime = currentTime;
+
+            // If we have HLS playingDate, use it for base truth
+            if (hlsRef.current && hlsRef.current.playingDate) {
+                const start = new Date(startedAt).getTime();
+                currentStreamTime = (hlsRef.current.playingDate.getTime() - start) / 1000;
+            } else if (video.seekable.length > 0) {
+                // Fallback calculations
+                const now = Date.now();
+                const start = new Date(startedAt).getTime();
+                const uptime = (now - start) / 1000;
+                const seekableEnd = video.seekable.end(video.seekable.length - 1);
+                const secondsFromLive = seekableEnd - video.currentTime;
+                currentStreamTime = uptime - secondsFromLive;
+            }
+
+            const diff = targetTime - currentStreamTime;
+            let newTime = video.currentTime + diff;
+
+            // Clamp to seekable, but allow a bit of buffer
+            if (video.seekable.length > 0) {
+                const start = video.seekable.start(0);
+                const end = video.seekable.end(video.seekable.length - 1);
+
+                if (newTime < start) {
+                    newTime = start;
+                }
+                if (newTime > end) {
+                    newTime = end;
+                }
+            }
+
+            video.currentTime = newTime;
+        } else {
+            video.currentTime = targetTime;
+        }
+    }, [startedAt, currentTime]);
 
     const handlePlaybackRateChange = useCallback((rate: number) => {
         const video = videoRef.current;
@@ -199,6 +310,10 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
             if (level) onQualityChange(level);
         }
     }, [availableQualities, onQualityChange]);
+
+    const handleHlsInstance = useCallback((hls: Hls) => {
+        hlsRef.current = hls;
+    }, []);
 
     // Keyboard shortcuts
     usePlayerKeyboard({
@@ -228,6 +343,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
                         setHasError(true);
                         onError?.(error);
                     }}
+                    onHlsInstance={handleHlsInstance}
                     className="size-full object-contain cursor-pointer"
                     controls={false}
                     onDoubleClick={toggleFullscreen}
@@ -265,6 +381,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
                     onTogglePip={togglePipHandler}
                     currentTime={currentTime}
                     duration={duration}
+                    seekableRange={seekableRange}
                     onSeek={handleSeek}
                     buffered={buffered}
                     playbackRate={playbackRate}
