@@ -81,3 +81,23 @@ export function normalizeCategoryName(name: string): string {
   }
   return key;
 }
+
+/**
+ * Format uptime from a startedAt ISO date string to HH:MM:SS format
+ * e.g. "2025-12-10T21:00:00Z" -> "1:15:33" if stream has been live for 1 hour, 15 mins, 33 secs
+ */
+export function formatUptime(startedAt: string | undefined | null): string {
+  if (!startedAt) return '0:00:00';
+
+  const start = new Date(startedAt);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now.getTime() - start.getTime()) / 1000);
+
+  if (diffInSeconds < 0) return '0:00:00';
+
+  const hours = Math.floor(diffInSeconds / 3600);
+  const minutes = Math.floor((diffInSeconds % 3600) / 60);
+  const seconds = Math.floor(diffInSeconds % 60);
+
+  return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+}

@@ -66,5 +66,7 @@ export function useStreamByChannel(username: string, platform: Platform) {
             return response.data as UnifiedStream;
         },
         enabled: !!username && !!platform,
+        refetchInterval: 30000, // Refetch every 30 seconds for real-time viewer count updates
+        refetchIntervalInBackground: false, // Don't refetch when tab is not active
     });
 }

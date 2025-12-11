@@ -61,12 +61,16 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             hls = new Hls({
                 enableWorker: true,
                 lowLatencyMode: true,
+                backBufferLength: 90,
+                // Refined for stability to prevent bufferStalledError
+                liveSyncDurationCount: 3,
+                liveMaxLatencyDurationCount: 10,
                 maxBufferLength: 30, // 30 seconds buffer
                 maxMaxBufferLength: 60,
                 // Manifest loading retry settings - 3 retries with 5 second delays
                 manifestLoadingMaxRetry: 3,
-                manifestLoadingRetryDelay: 5000, // 5 seconds between retries
-                manifestLoadingMaxRetryTimeout: 30000, // Max 30 seconds total
+                manifestLoadingRetryDelay: 5000,
+                manifestLoadingMaxRetryTimeout: 30000,
                 // Level loading retry settings
                 levelLoadingMaxRetry: 3,
                 levelLoadingRetryDelay: 5000,
@@ -116,8 +120,10 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
 
             // Log non-fatal errors (these are retries in progress)
             hls.on(Hls.Events.ERROR, (event, data) => {
-                // Log all errors for debugging
-                console.log(`[HLS] Error: ${data.details}, fatal: ${data.fatal}, type: ${data.type}`);
+                // Ignore innocuous buffer stalls that resolve themselves, unless user is debugging
+                if (data.details !== 'bufferStalledError') {
+                    console.log(`[HLS] Error: ${data.details}, fatal: ${data.fatal}, type: ${data.type}`);
+                }
 
                 if (data.fatal) {
                     // Fatal error means all internal retries have been exhausted
@@ -149,7 +155,13 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                     }
                 } else {
                     // Non-fatal error - HLS.js is handling this internally (retrying)
-                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                    if (data.details === 'bufferStalledError') {
+                        console.warn('[HLS] Buffer stalled, attempting to recover...');
+                        // Nudge playhead if stuck
+                        if (videoRef.current && !videoRef.current.paused) {
+                            hls?.recoverMediaError();
+                        }
+                    } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
                         console.log(`[HLS] Network error (will retry automatically): ${data.details}`);
                     }
                 }

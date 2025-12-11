@@ -79,7 +79,7 @@ export async function getPublicStreamBySlug(slug: string): Promise<UnifiedStream
             channelDisplayName: data.user?.username || data.slug,
             channelAvatar: data.user?.profile_pic || '',
             title: livestream.session_title || '',
-            viewerCount: livestream.viewers || 0,
+            viewerCount: livestream.viewer_count ?? livestream.viewers ?? 0,
             thumbnailUrl: livestream.thumbnail?.url || '',
             isLive: true,
             startedAt: livestream.created_at,
@@ -105,7 +105,7 @@ export async function getStreamBySlug(client: KickRequestor, slug: string): Prom
             // Need to get full stream data from livestreams endpoint
             try {
                 const response = await client.request<KickApiResponse<KickApiLivestream[]>>(
-                    `/livestreams?broadcaster_user_id[]=${channel.id}`
+                    `/livestreams?broadcaster_user_id=${channel.id}`
                 );
                 if (response.data && response.data.length > 0) {
                     const stream = transformKickLivestream(response.data[0]);
@@ -180,7 +180,7 @@ export async function getPublicTopStreams(
                 channelDisplayName: item.user?.username || item.slug,
                 channelAvatar: item.user?.profile_pic || '',
                 title: item.session_title || item.title || '',
-                viewerCount: item.viewers || item.viewer_count || 0,
+                viewerCount: item.viewer_count ?? item.viewers ?? 0,
                 thumbnailUrl: item.thumbnail?.url || item.thumbnail_url || '',
                 isLive: true,
                 startedAt: item.created_at || item.start_time || new Date().toISOString(),
