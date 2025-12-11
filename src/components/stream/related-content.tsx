@@ -51,6 +51,9 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
     const [videos, setVideos] = useState<VideoOrClip[]>([]);
     const [clips, setClips] = useState<VideoOrClip[]>([]);
     const [selectedClip, setSelectedClip] = useState<VideoOrClip | null>(null);
+    const [clipPlaybackUrl, setClipPlaybackUrl] = useState<string | null>(null);
+    const [clipLoading, setClipLoading] = useState(false);
+    const [clipError, setClipError] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
@@ -113,6 +116,56 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
             fetchData();
         }
     }, [activeTab, platform, channelName, channelData?.id]); // Re-run when channelData loads to provide channelId
+
+    // Fetch clip playback URL when a clip is selected
+    useEffect(() => {
+        if (!selectedClip) {
+            setClipPlaybackUrl(null);
+            setClipError(null);
+            return;
+        }
+
+        const fetchClipUrl = async () => {
+            setClipLoading(true);
+            setClipError(null);
+            try {
+                const api = (window as any).electronAPI;
+                if (!api) {
+                    throw new Error('Electron API not found');
+                }
+
+                const result = await api.clips.getPlaybackUrl({
+                    platform,
+                    clipId: selectedClip.id,
+                    clipUrl: selectedClip.embedUrl || selectedClip.url,
+                });
+
+                if (result.success && result.data) {
+                    setClipPlaybackUrl(result.data.url);
+                } else {
+                    console.error('[RelatedContent] Failed to get clip URL:', result.error);
+                    // For Twitch, we'll fall back to iframe embed
+                    if (platform === 'twitch') {
+                        setClipPlaybackUrl(null); // Signal to use iframe
+                    } else {
+                        setClipError(result.error || 'Failed to load clip');
+                    }
+                }
+            } catch (err) {
+                console.error('[RelatedContent] Error fetching clip URL:', err);
+                // For Twitch, we'll fall back to iframe embed
+                if (platform === 'twitch') {
+                    setClipPlaybackUrl(null);
+                } else {
+                    setClipError('Failed to load clip');
+                }
+            } finally {
+                setClipLoading(false);
+            }
+        };
+
+        fetchClipUrl();
+    }, [selectedClip, platform]);
 
     // Helper to format time ago
     const formatTimeAgo = (dateString: string) => {
@@ -355,10 +408,46 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
                             {/* Left Side: Video Player */}
                             <div className="flex-1 bg-black flex flex-col justify-center relative">
                                 <div className="aspect-video w-full flex items-center justify-center">
-                                    <div className="text-center">
-                                        <p className="text-white font-bold text-lg mb-2">Playing Clip: {selectedClip.title}</p>
-                                        <p className="text-[var(--color-foreground-muted)]">Source: {selectedClip.embedUrl}</p>
-                                    </div>
+                                    {clipLoading ? (
+                                        <div className="text-center text-white/50">
+                                            <div className="animate-spin w-8 h-8 border-4 border-white border-t-transparent rounded-full mx-auto mb-2" />
+                                            <p>Loading clip...</p>
+                                        </div>
+                                    ) : clipError ? (
+                                        <div className="text-center text-red-500">
+                                            <p className="mb-2">Failed to load clip</p>
+                                            <p className="text-sm text-[var(--color-foreground-muted)]">{clipError}</p>
+                                        </div>
+                                    ) : clipPlaybackUrl ? (
+                                        // Use native video player for direct MP4 URL
+                                        <video
+                                            src={clipPlaybackUrl}
+                                            controls
+                                            autoPlay
+                                            className="w-full h-full object-contain"
+                                            onError={() => {
+                                                if (platform === 'twitch') {
+                                                    // Fall back to iframe for Twitch
+                                                    setClipPlaybackUrl(null);
+                                                } else {
+                                                    setClipError('Failed to play clip');
+                                                }
+                                            }}
+                                        />
+                                    ) : platform === 'twitch' ? (
+                                        // Twitch iframe fallback when direct MP4 fails
+                                        <iframe
+                                            src={`https://clips.twitch.tv/embed?clip=${selectedClip.id}&parent=localhost`}
+                                            width="100%"
+                                            height="100%"
+                                            allowFullScreen
+                                            className="w-full h-full"
+                                        />
+                                    ) : (
+                                        <div className="text-center text-white/50">
+                                            <p>No playback URL available</p>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

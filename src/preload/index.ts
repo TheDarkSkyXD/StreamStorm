@@ -345,6 +345,14 @@ const electronAPI = {
       cursor?: string;
     }): Promise<{ success: boolean; data?: any[]; cursor?: string; debug?: string; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.CLIPS_GET_BY_CHANNEL, params),
+
+    getPlaybackUrl: (params: {
+      platform: Platform;
+      clipId: string;
+      thumbnailUrl?: string;
+      clipUrl?: string;
+    }): Promise<{ success: boolean; data?: { url: string; format: string }; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.CLIPS_GET_PLAYBACK_URL, params),
   },
 };
 

@@ -133,4 +133,100 @@ export class TwitchStreamResolver {
         const p = Math.floor(Math.random() * 999999);
         return `https://usher.ttvnw.net/vod/${vodId}.m3u8?token=${encodeURIComponent(token)}&sig=${sig}&allow_source=true&allow_audio_only=true&p=${p}`;
     }
+
+    /**
+     * Get playback URL for a clip using GQL API
+     * This fetches the actual video qualities AND the playback access token from Twitch's GraphQL endpoint
+     * The sourceURL needs the sig and token query parameters to work - otherwise Twitch returns 404
+     */
+    async getClipPlaybackUrl(clipSlug: string): Promise<StreamPlayback> {
+        try {
+            // Use the VideoAccessToken_Clip persisted query which returns both video qualities AND access token
+            // Hash updated from streamlink project: https://github.com/streamlink/streamlink/blob/master/src/streamlink/plugins/twitch.py
+            const query = {
+                operationName: 'VideoAccessToken_Clip',
+                extensions: {
+                    persistedQuery: {
+                        version: 1,
+                        sha256Hash: '993d9a5131f15a37bd16f32342c44ed1e0b1a9b968c6afdb662d2cddd595f6c5'
+                    }
+                },
+                variables: {
+                    slug: clipSlug,
+                    platform: 'web'
+                }
+            };
+
+            const response = await fetch(this.GQL_ENDPOINT, {
+                method: 'POST',
+                headers: {
+                    'Client-Id': this.GQL_CLIENT_ID,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(query)
+            });
+
+            if (!response.ok) {
+                throw new Error(`GQL request failed: ${response.status}`);
+            }
+
+            const json = await response.json() as {
+                data?: {
+                    clip?: {
+                        playbackAccessToken?: {
+                            signature: string;
+                            value: string;
+                        };
+                        videoQualities?: Array<{
+                            sourceURL: string;
+                            quality: string;
+                            frameRate: number;
+                        }>;
+                    };
+                };
+                errors?: any[];
+            };
+
+            if (json.errors) {
+                throw new Error(`GQL Errors: ${JSON.stringify(json.errors)}`);
+            }
+
+            const clip = json.data?.clip;
+            if (!clip) {
+                throw new Error('Clip not found');
+            }
+
+            const qualities = clip.videoQualities;
+            const accessToken = clip.playbackAccessToken;
+
+            if (!qualities || qualities.length === 0) {
+                throw new Error('No video qualities found for this clip');
+            }
+
+            if (!accessToken) {
+                throw new Error('No playback access token found for this clip');
+            }
+
+            // Get the highest quality - sort by quality (descending) and pick the first
+            // Quality is usually like "1080", "720", "480", "360"
+            const sortedQualities = [...qualities].sort((a, b) => {
+                const qualityA = parseInt(a.quality) || 0;
+                const qualityB = parseInt(b.quality) || 0;
+                return qualityB - qualityA;
+            });
+
+            const bestQuality = sortedQualities[0];
+
+            // Construct the final URL with authentication parameters
+            const finalUrl = `${bestQuality.sourceURL}?sig=${accessToken.signature}&token=${encodeURIComponent(accessToken.value)}`;
+
+            return {
+                url: finalUrl,
+                format: 'mp4'
+            };
+        } catch (error) {
+            console.error('Failed to get clip playback URL:', clipSlug, error);
+            throw error;
+        }
+    }
 }

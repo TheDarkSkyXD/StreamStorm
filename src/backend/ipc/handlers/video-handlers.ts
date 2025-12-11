@@ -273,4 +273,41 @@ export function registerVideoHandlers(): void {
             };
         }
     });
+
+    /**
+     * Get playback URL for a clip
+     */
+    ipcMain.handle(IPC_CHANNELS.CLIPS_GET_PLAYBACK_URL, async (_event, params: {
+        platform: Platform;
+        clipId: string;
+        thumbnailUrl?: string;
+        clipUrl?: string;
+    }) => {
+        try {
+            if (params.platform === 'twitch') {
+                // Twitch clips use GQL to fetch the actual video URL by clip slug/ID
+                const result = await twitchResolver.getClipPlaybackUrl(params.clipId);
+                return { success: true, data: result };
+            } else if (params.platform === 'kick') {
+                // Kick clips have a direct clip_url
+                if (!params.clipUrl) {
+                    throw new Error('Clip URL required for Kick clip playback');
+                }
+                return {
+                    success: true,
+                    data: {
+                        url: params.clipUrl,
+                        format: 'mp4'
+                    }
+                };
+            }
+            throw new Error(`Unsupported platform: ${params.platform}`);
+        } catch (error) {
+            console.error('❌ Failed to get clip playback URL:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to resolve clip URL'
+            };
+        }
+    });
 }
