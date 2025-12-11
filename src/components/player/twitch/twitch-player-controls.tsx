@@ -3,11 +3,26 @@ import { PlayPauseButton } from '../play-pause-button';
 import { VolumeControl } from '../volume-control';
 import { SettingsMenu } from '../settings-menu';
 import { QualityLevel } from '../types';
-import { Maximize, Minimize, Monitor } from 'lucide-react';
+import { Maximize, Minimize } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip';
 import { TwitchProgressBar } from './twitch-progress-bar';
 import { formatDuration } from '@/lib/utils';
+
+const TheaterOutlineIcon = ({ className }: { className?: string }) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+        <line x1="15" x2="15" y1="3" y2="21" />
+    </svg>
+);
+
+const TheaterFilledIcon = ({ className }: { className?: string }) => (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+        <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4V3z" fill="currentColor" stroke="none" />
+        <line x1="15" x2="15" y1="3" y2="21" />
+    </svg>
+);
 
 interface TwitchPlayerControlsProps {
     // Playback state
@@ -161,7 +176,7 @@ export function TwitchPlayerControls(props: TwitchPlayerControlsProps) {
                         onPlaybackRateChange={onPlaybackRateChange}
                     />
 
-                    {onToggleTheater && (
+                    {onToggleTheater && !isFullscreen && (
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <Button
@@ -169,9 +184,12 @@ export function TwitchPlayerControls(props: TwitchPlayerControlsProps) {
                                     size="icon"
                                     className={`text-white hover:bg-white/20`}
                                     onClick={onToggleTheater}
-                                    style={isTheater ? { color: twitchPurple } : undefined}
                                 >
-                                    <Monitor className="w-5 h-5" />
+                                    {isTheater ? (
+                                        <TheaterFilledIcon className="w-5 h-5" />
+                                    ) : (
+                                        <TheaterOutlineIcon className="w-5 h-5" />
+                                    )}
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
