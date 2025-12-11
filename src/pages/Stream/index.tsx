@@ -85,7 +85,7 @@ export function StreamPage() {
     <div className="h-full flex overflow-hidden">
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        <div className={`flex-1 overflow-y-auto ${isTheater ? 'flex flex-col' : ''}`}>
+        <div className={`flex-1 overflow-y-auto no-scrollbar ${isTheater ? 'flex flex-col' : ''}`}>
           {/* Video Player Area */}
           <div className={`${isTheater ? 'flex-1 min-h-0' : 'aspect-video'} bg-black flex items-center justify-center shrink-0 w-full relative transition-all duration-300`}>
             {/* Platform-specific live stream players */}
