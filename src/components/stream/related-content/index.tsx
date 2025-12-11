@@ -91,16 +91,25 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
         const fetchClipUrl = async () => {
             setClipLoading(true);
             setClipError(null);
+
+            // DEBUG: Log selected clip data
+            console.log('[RelatedContent] Selected clip:', JSON.stringify(selectedClip, null, 2));
+            console.log('[RelatedContent] embedUrl:', selectedClip.embedUrl);
+            console.log('[RelatedContent] url:', selectedClip.url);
+
             try {
                 const api = (window as any).electronAPI;
                 if (!api) {
                     throw new Error('Electron API not found');
                 }
 
+                const clipUrlToUse = selectedClip.embedUrl || selectedClip.url;
+                console.log('[RelatedContent] Requesting playback for clipUrl:', clipUrlToUse);
+
                 const result = await api.clips.getPlaybackUrl({
                     platform,
                     clipId: selectedClip.id,
-                    clipUrl: selectedClip.embedUrl || selectedClip.url,
+                    clipUrl: clipUrlToUse,
                 });
 
                 if (result.success && result.data) {

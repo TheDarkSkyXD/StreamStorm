@@ -68,14 +68,22 @@ export async function getClipsByChannelSlug(
         const clips = data.clips || [];
         const nextCursor = data.nextCursor;
 
+        // DEBUG: Log first clip to see what fields are available
+        if (clips.length > 0) {
+            console.log('[KickClip] Sample clip from API:', JSON.stringify(clips[0], null, 2));
+            console.log('[KickClip] clip_url:', clips[0].clip_url);
+            console.log('[KickClip] video_url:', clips[0].video_url);
+        }
+
         return {
             data: clips.map((c: KickLegacyApiClip) => ({
                 id: c.id,
                 title: c.title,
                 duration: formatDuration(c.duration),
-                views: c.views?.toString() || '0',
+                views: c.views?.toString() || c.view_count?.toString() || '0',
                 date: new Date(c.created_at).toLocaleDateString(),
-                embedUrl: c.clip_url, // Direct url?
+                embedUrl: c.video_url, // Actual video file URL for playback
+                url: c.clip_url, // Clip page URL on Kick website
                 gameName: c.category?.name || 'Unknown',
                 isLive: false, // Clips aren't live
                 thumbnailUrl: c.thumbnail_url

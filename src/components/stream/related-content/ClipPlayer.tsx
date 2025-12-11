@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import Hls from 'hls.js';
 import { Play, Pause, Maximize, Minimize, Volume2, Volume1, VolumeX } from 'lucide-react';
 import { formatDuration } from '@/lib/utils';
 import { ClipPlayerProps } from './types';
 
 /**
  * Custom clip player component with volume control on the left
+ * Supports both HLS (.m3u8) and MP4 streams
  */
 export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) {
     const videoRef = useRef<HTMLVideoElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const volumeSliderRef = useRef<HTMLDivElement>(null);
+    const hlsRef = useRef<Hls | null>(null);
     const [isPlaying, setIsPlaying] = useState(autoPlay);
     const [volume, setVolume] = useState(100);
     const [muted, setMuted] = useState(false);
@@ -18,7 +21,99 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showControls, setShowControls] = useState(true);
     const [isDraggingVolume, setIsDraggingVolume] = useState(false);
+    const [isReady, setIsReady] = useState(false);
     const hideTimeoutRef = useRef<NodeJS.Timeout>(null);
+
+    // Initialize HLS or native video
+    useEffect(() => {
+        const video = videoRef.current;
+        if (!video || !src) return;
+
+        let hls: Hls | null = null;
+        const isHls = src.includes('.m3u8');
+
+        console.log('[ClipPlayer] Loading source:', src, 'isHLS:', isHls);
+
+        if (isHls && Hls.isSupported()) {
+            // Use HLS.js for HLS streams
+            hls = new Hls({
+                enableWorker: true,
+                lowLatencyMode: false, // Clips don't need low latency
+                maxBufferLength: 30,
+                maxMaxBufferLength: 60,
+                manifestLoadingMaxRetry: 3,
+                manifestLoadingRetryDelay: 2000,
+                levelLoadingMaxRetry: 3,
+                levelLoadingRetryDelay: 2000,
+                fragLoadingMaxRetry: 3,
+                fragLoadingRetryDelay: 2000,
+                xhrSetup: (xhr, url) => {
+                    xhr.withCredentials = false;
+                },
+            });
+            hlsRef.current = hls;
+
+            hls.loadSource(src);
+            hls.attachMedia(video);
+
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                console.log('[ClipPlayer] HLS manifest parsed, ready to play');
+                setIsReady(true);
+                if (autoPlay) {
+                    video.play().catch(e => console.warn('[ClipPlayer] Autoplay failed:', e));
+                }
+            });
+
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                console.error('[ClipPlayer] HLS error:', data.type, data.details, data.fatal);
+                if (data.fatal) {
+                    switch (data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            console.error('[ClipPlayer] Fatal network error');
+                            onError?.();
+                            hls?.destroy();
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            console.log('[ClipPlayer] Trying to recover from media error');
+                            hls?.recoverMediaError();
+                            break;
+                        default:
+                            console.error('[ClipPlayer] Unrecoverable error');
+                            onError?.();
+                            hls?.destroy();
+                            break;
+                    }
+                }
+            });
+
+        } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
+            // Native HLS support (Safari)
+            console.log('[ClipPlayer] Using native HLS');
+            video.src = src;
+            video.addEventListener('loadedmetadata', () => {
+                setIsReady(true);
+                if (autoPlay) video.play().catch(console.error);
+            });
+            video.addEventListener('error', () => onError?.());
+        } else {
+            // MP4 or other native formats
+            console.log('[ClipPlayer] Using native video playback');
+            video.src = src;
+            video.addEventListener('loadedmetadata', () => {
+                setIsReady(true);
+                if (autoPlay) video.play().catch(console.error);
+            });
+            video.addEventListener('error', () => onError?.());
+        }
+
+        return () => {
+            if (hls) {
+                console.log('[ClipPlayer] Destroying HLS instance');
+                hls.destroy();
+            }
+            hlsRef.current = null;
+        };
+    }, [src, autoPlay, onError]);
 
     // Handle play/pause
     const togglePlay = useCallback(() => {
@@ -132,11 +227,16 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
         >
             <video
                 ref={videoRef}
-                src={src}
-                autoPlay={autoPlay}
                 className="w-full h-full object-contain"
-                onError={onError}
+                playsInline
             />
+
+            {/* Loading indicator */}
+            {!isReady && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="animate-spin w-8 h-8 border-4 border-white border-t-transparent rounded-full" />
+                </div>
+            )}
 
             {/* Custom Controls */}
             <div

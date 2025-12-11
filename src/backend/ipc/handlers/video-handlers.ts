@@ -289,15 +289,27 @@ export function registerVideoHandlers(): void {
                 const result = await twitchResolver.getClipPlaybackUrl(params.clipId);
                 return { success: true, data: result };
             } else if (params.platform === 'kick') {
-                // Kick clips have a direct clip_url
+                // Kick clips have a direct video_url (passed as clipUrl)
+                console.log('[KickClip] Playback request - clipId:', params.clipId);
+                console.log('[KickClip] Playback request - clipUrl:', params.clipUrl);
+                console.log('[KickClip] Playback request - thumbnailUrl:', params.thumbnailUrl);
+
                 if (!params.clipUrl) {
+                    console.error('[KickClip] No clipUrl provided for Kick clip playback');
                     throw new Error('Clip URL required for Kick clip playback');
                 }
+
+                console.log('[KickClip] Returning playback URL:', params.clipUrl);
+
+                // Detect format based on URL - Kick clips use HLS (.m3u8)
+                const format = params.clipUrl.includes('.m3u8') ? 'hls' : 'mp4';
+                console.log('[KickClip] Detected format:', format);
+
                 return {
                     success: true,
                     data: {
                         url: params.clipUrl,
-                        format: 'mp4'
+                        format: format
                     }
                 };
             }
