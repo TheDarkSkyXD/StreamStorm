@@ -20,8 +20,8 @@ export { HlsPlayer } from './hls-player';
 // Kick - with green progress bar
 export { KickVideoPlayer, KickPlayerControls, KickProgressBar } from './kick';
 
-// Twitch - without progress bar for live streams  
-export { TwitchVideoPlayer, TwitchPlayerControls } from './twitch';
+// Twitch - with purple progress bar
+export { TwitchVideoPlayer, TwitchPlayerControls, TwitchProgressBar } from './twitch';
 
 // Hooks
 export { useFullscreen } from './use-fullscreen';

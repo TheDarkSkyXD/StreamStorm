@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback, useMemo } from 'react';
 import { formatDuration } from '@/lib/utils';
 
-interface KickProgressBarProps {
+interface TwitchProgressBarProps {
     currentTime: number;
     duration: number;
     onSeek: (time: number) => void;
@@ -9,13 +9,13 @@ interface KickProgressBarProps {
     className?: string;
 }
 
-export function KickProgressBar({
+export function TwitchProgressBar({
     currentTime,
     duration,
     onSeek,
     buffered,
     className = ''
-}: KickProgressBarProps) {
+}: TwitchProgressBarProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isHovering, setIsHovering] = useState(false);
     const [hoverPosition, setHoverPosition] = useState(0); // 0 to 1
@@ -41,8 +41,8 @@ export function KickProgressBar({
         onSeek(Math.max(0, Math.min(1, pos)) * duration);
     }, [duration, onSeek]);
 
-    // Kick brand green color
-    const kickGreen = '#53fc18';
+    // Twitch brand purple color
+    const twitchPurple = '#9146ff';
 
     return (
         <div
@@ -71,16 +71,16 @@ export function KickProgressBar({
                             style={{
                                 left: `${startPct}%`,
                                 width: `${widthPct}%`,
-                                backgroundColor: `${kickGreen}40` // 40 = 25% opacity in hex
+                                backgroundColor: `${twitchPurple}40` // 40 = 25% opacity in hex
                             }}
                         />
                     )
                 })}
 
-                {/* Current Progress - Kick Green */}
+                {/* Current Progress - Twitch Purple */}
                 <div
                     className="absolute top-0 bottom-0 left-0 h-full"
-                    style={{ width: `${progress}%`, backgroundColor: kickGreen }}
+                    style={{ width: `${progress}%`, backgroundColor: twitchPurple }}
                 />
             </div>
 
@@ -100,7 +100,7 @@ export function KickProgressBar({
                     style={{
                         left: `${hoverPosition * 100}%`,
                         backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                        borderColor: `${kickGreen}50`
+                        borderColor: `${twitchPurple}50`
                     }}
                 >
                     {formatDuration(hoverPosition * duration)}

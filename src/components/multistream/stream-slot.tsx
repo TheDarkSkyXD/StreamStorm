@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { useStreamPlayback } from '@/hooks/useStreamPlayback';
-import { VideoPlayer } from '@/components/player/video-player';
+import { KickVideoPlayer } from '@/components/player/kick';
+import { TwitchVideoPlayer } from '@/components/player/twitch';
 import { useMultiStreamStore } from '@/store/multistream-store';
 import { Button } from '@/components/ui/button';
 import { X, MessageSquare, Volume2, VolumeX, GripVertical } from 'lucide-react';
@@ -107,19 +108,23 @@ export function StreamSlot({
                 </Button>
             </div>
 
-            {/* Video Player */}
+            {/* Video Player - Platform Specific */}
             <div className="w-full h-full">
-                <VideoPlayer
-                    streamUrl={playback?.url || ''}
-                    platform={platform}
-                    autoPlay={true}
-                    muted={isMuted}
-                    className="pointer-events-none" // Disable interactions with player so we can handle clicks on the slot
-                // We might want to enable interactions if focused? 
-                // Actually, VideoPlayer has its own controls which we might want to use.
-                // If we disable pointer events, we can't use the player controls.
-                // Let's remove pointer-events-none and handle clicks carefully.
-                />
+                {platform === 'kick' ? (
+                    <KickVideoPlayer
+                        streamUrl={playback?.url || ''}
+                        autoPlay={true}
+                        muted={isMuted}
+                        className="pointer-events-none"
+                    />
+                ) : (
+                    <TwitchVideoPlayer
+                        streamUrl={playback?.url || ''}
+                        autoPlay={true}
+                        muted={isMuted}
+                        className="pointer-events-none"
+                    />
+                )}
 
                 {/* Loading / Error States */}
                 {isLoading && !playback && (
