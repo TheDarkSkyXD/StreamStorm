@@ -2,9 +2,11 @@
  * Player Components Index
  *
  * Exports all video player-related UI components.
- * The player component works with both Twitch and Kick streams.
+ * The base player component works with both Twitch and Kick streams.
+ * Platform-specific players are available in their respective subfolders.
  */
 
+// Base/Generic Player (for backward compatibility)
 export { VideoPlayer } from './video-player';
 export { PlayerControls } from './player-controls';
 export { QualitySelector } from './quality-selector';
@@ -13,6 +15,13 @@ export { SettingsMenu } from './settings-menu';
 export { ProgressBar } from './progress-bar';
 export { PlayPauseButton } from './play-pause-button';
 export { HlsPlayer } from './hls-player';
+
+// Platform-Specific Players
+// Kick - with green progress bar
+export { KickVideoPlayer, KickPlayerControls, KickProgressBar } from './kick';
+
+// Twitch - without progress bar for live streams  
+export { TwitchVideoPlayer, TwitchPlayerControls } from './twitch';
 
 // Hooks
 export { useFullscreen } from './use-fullscreen';

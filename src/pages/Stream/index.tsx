@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { useChannelByUsername } from '@/hooks/queries/useChannels';
 import { useStreamByChannel } from '@/hooks/queries/useStreams';
 import { Platform } from '@/shared/auth-types';
-import { VideoPlayer } from '@/components/player';
+import { KickVideoPlayer } from '@/components/player/kick';
+import { TwitchVideoPlayer } from '@/components/player/twitch';
 import { PlayerError } from '@/components/player/types';
 import { useStreamPlayback } from '@/hooks/useStreamPlayback';
 import { StreamInfo } from '@/components/stream/stream-info';
@@ -87,16 +88,28 @@ export function StreamPage() {
         <div className={`flex-1 overflow-y-auto ${isTheater ? 'flex flex-col' : ''}`}>
           {/* Video Player Area */}
           <div className={`${isTheater ? 'flex-1 min-h-0' : 'aspect-video'} bg-black flex items-center justify-center shrink-0 w-full relative transition-all duration-300`}>
-            <VideoPlayer
-              streamUrl={playback?.url || ''}
-              platform={platform as Platform}
-              autoPlay={true}
-              muted={false}
-              onReady={() => console.log('Player ready')}
-              onError={handlePlayerError}
-              isTheater={isTheater}
-              onToggleTheater={() => setIsTheater(prev => !prev)}
-            />
+            {/* Platform-specific players */}
+            {platform === 'kick' ? (
+              <KickVideoPlayer
+                streamUrl={playback?.url || ''}
+                autoPlay={true}
+                muted={false}
+                onReady={() => console.log('Kick Player ready')}
+                onError={handlePlayerError}
+                isTheater={isTheater}
+                onToggleTheater={() => setIsTheater(prev => !prev)}
+              />
+            ) : (
+              <TwitchVideoPlayer
+                streamUrl={playback?.url || ''}
+                autoPlay={true}
+                muted={false}
+                onReady={() => console.log('Twitch Player ready')}
+                onError={handlePlayerError}
+                isTheater={isTheater}
+                onToggleTheater={() => setIsTheater(prev => !prev)}
+              />
+            )}
             {isPlaybackLoading && !playback && !playerError && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 pointer-events-none">
                 <span className="text-white text-sm">Loading stream...</span>

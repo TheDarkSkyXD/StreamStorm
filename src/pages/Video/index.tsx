@@ -2,7 +2,8 @@ import { useParams, useSearch, Link } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Heart, HeartCrack, AlertCircle } from 'lucide-react';
-import { VideoPlayer } from '@/components/player/video-player';
+import { KickVideoPlayer } from '@/components/player/kick';
+import { TwitchVideoPlayer } from '@/components/player/twitch';
 
 interface VideoMetadata {
     id: string;
@@ -181,14 +182,23 @@ export function VideoPage() {
             <div className="flex-1 flex flex-col overflow-y-auto">
                 <div className="aspect-video bg-black flex items-center justify-center shrink-0 text-white relative group">
                     {streamUrl ? (
-                        <VideoPlayer
-                            streamUrl={streamUrl}
-                            platform={platform as any}
-                            autoPlay={true}
-                            className="size-full"
-                            videoId={videoId}
-                            title={videoTitle}
-                        />
+                        platform === 'kick' ? (
+                            <KickVideoPlayer
+                                streamUrl={streamUrl}
+                                autoPlay={true}
+                                className="size-full"
+                                videoId={videoId}
+                                title={videoTitle}
+                            />
+                        ) : (
+                            <TwitchVideoPlayer
+                                streamUrl={streamUrl}
+                                autoPlay={true}
+                                className="size-full"
+                                videoId={videoId}
+                                title={videoTitle}
+                            />
+                        )
                     ) : error ? (
                         <div className="text-center text-red-500">
                             <AlertCircle className="w-8 h-8 mx-auto mb-2" />
