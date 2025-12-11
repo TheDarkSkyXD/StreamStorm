@@ -51,19 +51,23 @@ export function formatRelativeTime(dateString: string): string {
 }
 
 /**
- * Format duration in seconds to H:MM:SS or MM:SS
+ * Format duration in seconds to HH:MM:SS or MM:SS
+ * Shows HH:MM:SS when duration is 1 hour or more (e.g. 04:21:10)
+ * Shows MM:SS for shorter durations (e.g. 05:30)
  */
 export function formatDuration(seconds: number): string {
-  if (isNaN(seconds) || seconds < 0) return '0:00';
+  if (isNaN(seconds) || seconds < 0) return '00:00';
 
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
   const s = Math.floor(seconds % 60);
 
   if (h > 0) {
-    return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    // Format as HH:MM:SS with padded hours for long streams
+    return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   }
-  return `${m}:${s.toString().padStart(2, '0')}`;
+  // Format as MM:SS for shorter durations
+  return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
 }
 
 /**

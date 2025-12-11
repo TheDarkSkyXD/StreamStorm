@@ -3,6 +3,7 @@ import Hls from 'hls.js';
 import { Play, Pause, Maximize, Minimize, Volume2, Volume1, VolumeX } from 'lucide-react';
 import { formatDuration } from '@/lib/utils';
 import { ClipPlayerProps } from './types';
+import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
 
 /**
  * Custom clip player component with volume control on the left
@@ -231,10 +232,10 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
                 playsInline
             />
 
-            {/* Loading indicator */}
+            {/* Loading indicator - Twitch Purple circle */}
             {!isReady && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="animate-spin w-8 h-8 border-4 border-white border-t-transparent rounded-full" />
+                    <TwitchLoadingSpinner />
                 </div>
             )}
 

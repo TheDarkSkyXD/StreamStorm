@@ -2,8 +2,8 @@ import { useParams, useSearch, Link } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Heart, HeartCrack, AlertCircle } from 'lucide-react';
-import { KickVideoPlayer } from '@/components/player/kick';
-import { TwitchVideoPlayer } from '@/components/player/twitch';
+import { KickVodPlayer } from '@/components/player/kick';
+import { TwitchVodPlayer } from '@/components/player/twitch';
 
 interface VideoMetadata {
     id: string;
@@ -183,7 +183,7 @@ export function VideoPage() {
                 <div className="aspect-video bg-black flex items-center justify-center shrink-0 text-white relative group">
                     {streamUrl ? (
                         platform === 'kick' ? (
-                            <KickVideoPlayer
+                            <KickVodPlayer
                                 streamUrl={streamUrl}
                                 autoPlay={true}
                                 className="size-full"
@@ -191,7 +191,7 @@ export function VideoPage() {
                                 title={videoTitle}
                             />
                         ) : (
-                            <TwitchVideoPlayer
+                            <TwitchVodPlayer
                                 streamUrl={streamUrl}
                                 autoPlay={true}
                                 className="size-full"

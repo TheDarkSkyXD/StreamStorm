@@ -17,11 +17,29 @@ export { PlayPauseButton } from './play-pause-button';
 export { HlsPlayer } from './hls-player';
 
 // Platform-Specific Players
-// Kick - with green progress bar
-export { KickVideoPlayer, KickPlayerControls, KickProgressBar } from './kick';
+// Kick - Live (no progress bar) and VOD (with green progress bar)
+export {
+    KickLivePlayer,
+    KickLivePlayerControls,
+    KickVodPlayer,
+    KickVodPlayerControls,
+    KickProgressBar,
+    // Legacy exports
+    KickVideoPlayer,
+    KickPlayerControls
+} from './kick';
 
-// Twitch - with purple progress bar
-export { TwitchVideoPlayer, TwitchPlayerControls, TwitchProgressBar } from './twitch';
+// Twitch - Live (no progress bar) and VOD (with purple progress bar)
+export {
+    TwitchLivePlayer,
+    TwitchLivePlayerControls,
+    TwitchVodPlayer,
+    TwitchVodPlayerControls,
+    TwitchProgressBar,
+    // Legacy exports
+    TwitchVideoPlayer,
+    TwitchPlayerControls
+} from './twitch';
 
 // Hooks
 export { useFullscreen } from './use-fullscreen';

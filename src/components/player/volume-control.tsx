@@ -17,9 +17,9 @@ export function VolumeControl({ volume, muted, onVolumeChange, onMuteToggle, cla
     const sliderRef = useRef<HTMLDivElement>(null);
 
     const getIcon = () => {
-        if (muted || volume === 0) return <VolumeX className="w-5 h-5" />;
-        if (volume < 50) return <Volume1 className="w-5 h-5" />;
-        return <Volume2 className="w-5 h-5" />;
+        if (muted || volume === 0) return <VolumeX className="w-5 h-5 fill-current" />;
+        if (volume < 50) return <Volume1 className="w-5 h-5 fill-current" />;
+        return <Volume2 className="w-5 h-5 fill-current" />;
     };
 
     const displayVolume = muted ? 0 : volume;
@@ -35,7 +35,7 @@ export function VolumeControl({ volume, muted, onVolumeChange, onMuteToggle, cla
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="text-white hover:bg-white/20 select-none z-10"
+                        className="text-white hover:bg-white/20 rounded-full select-none z-10"
                         onClick={(e) => {
                             e.stopPropagation();
                             onMuteToggle();

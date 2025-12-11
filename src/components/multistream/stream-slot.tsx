@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { useStreamPlayback } from '@/hooks/useStreamPlayback';
-import { KickVideoPlayer } from '@/components/player/kick';
-import { TwitchVideoPlayer } from '@/components/player/twitch';
+import { KickLivePlayer } from '@/components/player/kick';
+import { TwitchLivePlayer } from '@/components/player/twitch';
 import { useMultiStreamStore } from '@/store/multistream-store';
 import { Button } from '@/components/ui/button';
 import { X, MessageSquare, Volume2, VolumeX, GripVertical } from 'lucide-react';
@@ -108,17 +108,17 @@ export function StreamSlot({
                 </Button>
             </div>
 
-            {/* Video Player - Platform Specific */}
+            {/* Video Player - Platform Specific Live Players */}
             <div className="w-full h-full">
                 {platform === 'kick' ? (
-                    <KickVideoPlayer
+                    <KickLivePlayer
                         streamUrl={playback?.url || ''}
                         autoPlay={true}
                         muted={isMuted}
                         className="pointer-events-none"
                     />
                 ) : (
-                    <TwitchVideoPlayer
+                    <TwitchLivePlayer
                         streamUrl={playback?.url || ''}
                         autoPlay={true}
                         muted={isMuted}

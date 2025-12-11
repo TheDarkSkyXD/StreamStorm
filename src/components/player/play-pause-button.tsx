@@ -1,5 +1,5 @@
 import React from 'react';
-import { Play, Pause, Loader2 } from 'lucide-react';
+import { Play, Pause } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 
@@ -17,16 +17,13 @@ export function PlayPauseButton({ isPlaying, isLoading, onToggle, className }: P
                 <Button
                     variant="ghost"
                     size="icon"
-                    className={`text-white hover:bg-white/20 select-none ${className || ''}`}
+                    className={`text-white hover:bg-white/20 rounded-full select-none ${className || ''}`}
                     onClick={(e) => {
                         e.stopPropagation();
                         onToggle();
                     }}
-                    disabled={isLoading}
                 >
-                    {isLoading ? (
-                        <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : isPlaying ? (
+                    {isPlaying ? (
                         <Pause className="w-5 h-5 fill-current" />
                     ) : (
                         <Play className="w-5 h-5 fill-current" />
@@ -39,3 +36,4 @@ export function PlayPauseButton({ isPlaying, isLoading, onToggle, className }: P
         </Tooltip>
     );
 }
+

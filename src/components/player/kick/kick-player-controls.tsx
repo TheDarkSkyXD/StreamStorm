@@ -112,7 +112,7 @@ export function KickPlayerControls(props: KickPlayerControlsProps) {
             {/* VOD Progress Bar - Kick Green */}
             {
                 duration > 0 && onSeek && (
-                    <div className="w-full px-4 mb-2">
+                    <div className="w-full mb-2">
                         <KickProgressBar
                             currentTime={currentTime}
                             duration={duration}
@@ -123,7 +123,7 @@ export function KickPlayerControls(props: KickPlayerControlsProps) {
                 )
             }
 
-            <div className="flex items-center justify-between w-full max-w-screen-2xl mx-auto">
+            <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-2">
                     <PlayPauseButton
                         isPlaying={isPlaying}
@@ -148,7 +148,7 @@ export function KickPlayerControls(props: KickPlayerControlsProps) {
                             Live
                         </div>
                     ) : (
-                        <div className="text-white text-xs font-mono ml-2 select-none">
+                        <div className="text-white text-2xl font-bold ml-2 select-none">
                             {formatDuration(currentTime)} / {formatDuration(duration)}
                         </div>
                     )}

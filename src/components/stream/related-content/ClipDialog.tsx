@@ -14,6 +14,9 @@ import { Platform } from '@/shared/auth-types';
 import { UnifiedChannel } from '@/backend/api/unified/platform-types';
 import { ClipPlayer } from './ClipPlayer';
 import { VideoOrClip } from './types';
+import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
+import { TwitchVodPlayer } from '@/components/player/twitch';
+import { KickVodPlayer } from '@/components/player/kick';
 
 interface ClipDialogProps {
     selectedClip: VideoOrClip | null;
@@ -51,8 +54,10 @@ export function ClipDialog({
                         <div className="flex-1 bg-black flex flex-col justify-center relative">
                             <div className="aspect-video w-full flex items-center justify-center">
                                 {clipLoading ? (
-                                    <div className="text-center text-white/50">
-                                        <div className="animate-spin w-8 h-8 border-4 border-white border-t-transparent rounded-full mx-auto mb-2" />
+                                    <div className="text-center text-white">
+                                        <div className="mb-3 flex justify-center">
+                                            <TwitchLoadingSpinner />
+                                        </div>
                                         <p>Loading clip...</p>
                                     </div>
                                 ) : clipError ? (
@@ -61,12 +66,24 @@ export function ClipDialog({
                                         <p className="text-sm text-[var(--color-foreground-muted)]">{clipError}</p>
                                     </div>
                                 ) : clipPlaybackUrl ? (
-                                    // Custom clip player with volume on the left
-                                    <ClipPlayer
-                                        src={clipPlaybackUrl}
-                                        autoPlay
-                                        onError={onPlaybackError}
-                                    />
+                                    // Platform-specific VOD player for clips
+                                    platform === 'twitch' ? (
+                                        <TwitchVodPlayer
+                                            streamUrl={clipPlaybackUrl}
+                                            autoPlay
+                                            className="w-full h-full"
+                                            videoId={selectedClip.id}
+                                            title={selectedClip.title}
+                                        />
+                                    ) : (
+                                        <KickVodPlayer
+                                            streamUrl={clipPlaybackUrl}
+                                            autoPlay
+                                            className="w-full h-full"
+                                            videoId={selectedClip.id}
+                                            title={selectedClip.title}
+                                        />
+                                    )
                                 ) : platform === 'twitch' ? (
                                     // Twitch iframe fallback when direct MP4 fails
                                     <iframe

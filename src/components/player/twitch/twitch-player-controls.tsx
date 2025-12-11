@@ -109,21 +109,19 @@ export function TwitchPlayerControls(props: TwitchPlayerControlsProps) {
                 }
             }}
         >
-            {/* VOD Progress Bar - Twitch Purple */}
-            {
-                duration > 0 && onSeek && (
-                    <div className="w-full px-4 mb-2">
-                        <TwitchProgressBar
-                            currentTime={currentTime}
-                            duration={duration}
-                            onSeek={onSeek}
-                            buffered={buffered}
-                        />
-                    </div>
-                )
-            }
+            {/* VOD Progress Bar - Only for videos, not live streams */}
+            {duration > 0 && duration !== Infinity && onSeek && (
+                <div className="w-full mb-2">
+                    <TwitchProgressBar
+                        currentTime={currentTime}
+                        duration={duration}
+                        onSeek={onSeek}
+                        buffered={buffered}
+                    />
+                </div>
+            )}
 
-            <div className="flex items-center justify-between w-full max-w-screen-2xl mx-auto">
+            <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-2">
                     <PlayPauseButton
                         isPlaying={isPlaying}
@@ -145,7 +143,7 @@ export function TwitchPlayerControls(props: TwitchPlayerControlsProps) {
                             Live
                         </div>
                     ) : (
-                        <div className="text-white text-xs font-mono ml-2 select-none">
+                        <div className="text-white text-2xl font-bold ml-2 select-none">
                             {formatDuration(currentTime)} / {formatDuration(duration)}
                         </div>
                     )}

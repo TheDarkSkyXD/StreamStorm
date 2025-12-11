@@ -55,28 +55,6 @@ export function KickProgressBar({
         >
             {/* Background Track */}
             <div className="relative w-full h-1 bg-white/20 rounded-full overflow-hidden">
-                {/* Buffered Regions */}
-                {buffered && Array.from({ length: buffered.length }).map((_, i) => {
-                    const start = buffered.start(i);
-                    const end = buffered.end(i);
-                    const widthPct = ((end - start) / duration) * 100;
-                    const startPct = (start / duration) * 100;
-
-                    if (!isFinite(widthPct) || !isFinite(startPct)) return null;
-
-                    return (
-                        <div
-                            key={i}
-                            className="absolute top-0 bottom-0 h-full"
-                            style={{
-                                left: `${startPct}%`,
-                                width: `${widthPct}%`,
-                                backgroundColor: `${kickGreen}40` // 40 = 25% opacity in hex
-                            }}
-                        />
-                    )
-                })}
-
                 {/* Current Progress - Kick Green */}
                 <div
                     className="absolute top-0 bottom-0 left-0 h-full"

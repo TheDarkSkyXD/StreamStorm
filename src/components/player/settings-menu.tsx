@@ -90,7 +90,7 @@ export function SettingsMenu({
                                     onClick={() => setActiveSubMenu('quality')}
                                 >
                                     <span>Quality</span>
-                                    <div className="flex items-center text-white/50">
+                                    <div className="flex items-center text-white">
                                         <span className="mr-2">
                                             {currentQualityLabel}
                                         </span>
@@ -105,7 +105,7 @@ export function SettingsMenu({
                                         onClick={() => setActiveSubMenu('speed')}
                                     >
                                         <span>Speed</span>
-                                        <div className="flex items-center text-white/50">
+                                        <div className="flex items-center text-white">
                                             <span className="mr-2">
                                                 {playbackRate}x
                                             </span>

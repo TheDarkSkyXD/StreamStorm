@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { PlayPauseButton } from './play-pause-button';
-import { VolumeControl } from './volume-control';
-import { SettingsMenu } from './settings-menu';
-import { QualityLevel } from './types';
-import { Maximize, Minimize, Monitor } from 'lucide-react';
-import { Button } from '../ui/button';
-import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
-import { ProgressBar } from './progress-bar';
+import { PlayPauseButton } from '../play-pause-button';
+import { VolumeControl } from '../volume-control';
+import { SettingsMenu } from '../settings-menu';
+import { QualityLevel } from '../types';
+import { Maximize, Minimize, Monitor, Radio } from 'lucide-react';
+import { Button } from '../../ui/button';
+import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip';
+import { KickProgressBar } from './kick-progress-bar';
 import { formatDuration } from '@/lib/utils';
 
-interface PlayerControlsProps {
+interface KickLivePlayerControlsProps {
     // Playback state
     isPlaying: boolean;
     isLoading?: boolean;
@@ -34,18 +34,20 @@ interface PlayerControlsProps {
     onToggleFullscreen: () => void;
     onToggleTheater?: () => void;
     onTogglePip?: () => void;
-    // VOD specific
+
+    // DVR/Seek support for live streams
     currentTime?: number;
     duration?: number;
     onSeek?: (time: number) => void;
     buffered?: TimeRanges;
+    onGoLive?: () => void;
 
     // Playback Speed
     playbackRate?: number;
     onPlaybackRateChange?: (rate: number) => void;
 }
 
-export function PlayerControls(props: PlayerControlsProps) {
+export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
     const {
         isPlaying,
         isLoading,
@@ -66,12 +68,30 @@ export function PlayerControls(props: PlayerControlsProps) {
         duration = 0,
         onSeek,
         buffered,
+        onGoLive,
         playbackRate,
         onPlaybackRateChange
     } = props;
 
     const [isVisible, setIsVisible] = useState(true);
     const hideTimeoutRef = useRef<NodeJS.Timeout>(null);
+
+    // Kick brand green color
+    const kickGreen = '#53fc18';
+
+    // Check if we're at the live edge (within 10 seconds of duration)
+    const isAtLiveEdge = duration > 0 ? (duration - currentTime) < 10 : true;
+    const isBehindLive = duration > 0 && !isAtLiveEdge;
+
+    // Handle go live click
+    const handleGoLive = () => {
+        if (onGoLive) {
+            onGoLive();
+        } else if (onSeek && duration > 0) {
+            // Seek to live edge
+            onSeek(duration);
+        }
+    };
 
     // Auto-hide controls logic
     useEffect(() => {
@@ -82,32 +102,11 @@ export function PlayerControls(props: PlayerControlsProps) {
             if (isPlaying) {
                 hideTimeoutRef.current = setTimeout(() => {
                     setIsVisible(false);
-                }, 3000); // Hide after 3 seconds of inactivity
+                }, 3000);
             }
         };
 
-        // Initial trigger
         showControls();
-
-        const handleMouseMove = () => showControls();
-
-        // Attach listener to parent container if possible, creating context needed.
-        // For now we assume this component is inside the container that captures events,
-        // OR this component fills the container. 
-        // Since this component is an overly, we'll let parent handle the mouse movement logic 
-        // or assume parent renders this conditionally/passes visible prop?
-        // 
-        // Actually, Phase 3.2.5 says "Implement auto-hide controls". 
-        // It's cleaner if the container handles mouse move. 
-        // But let's add listeners to document or window if this is fullscreen?
-        // Let's implement simpler: Parent `VideoPlayer` should probably handle visibility state 
-        // and pass it down, OR `PlayerControls` wraps the interactive area.
-        // Let's make `PlayerControls` self-managing for now by listening to window mousemove when mounted?
-        // Better: listen to mousemove on the parent container.
-        //
-        // For now, let's keep it visible if paused, and use a prop `visible` from parent if we want strict control.
-        // But since I'm implementing it here:
-        // If not playing, always visible.
     }, [isPlaying]);
 
     return (
@@ -127,21 +126,19 @@ export function PlayerControls(props: PlayerControlsProps) {
                 }
             }}
         >
-            {/* VOD Progress Bar */}
-            {
-                duration > 0 && onSeek && (
-                    <div className="w-full px-4 mb-2">
-                        <ProgressBar
-                            currentTime={currentTime}
-                            duration={duration}
-                            onSeek={onSeek}
-                            buffered={buffered}
-                        />
-                    </div>
-                )
-            }
+            {/* DVR Progress Bar - Kick Green (only show when DVR is available) */}
+            {duration > 0 && onSeek && (
+                <div className="w-full mb-2">
+                    <KickProgressBar
+                        currentTime={currentTime}
+                        duration={duration}
+                        onSeek={onSeek}
+                        buffered={buffered}
+                    />
+                </div>
+            )}
 
-            <div className="flex items-center justify-between w-full max-w-screen-2xl mx-auto">
+            <div className="flex items-center justify-between w-full">
                 <div className="flex items-center gap-2">
                     <PlayPauseButton
                         isPlaying={isPlaying}
@@ -156,16 +153,42 @@ export function PlayerControls(props: PlayerControlsProps) {
                         onMuteToggle={onToggleMute}
                     />
 
-                    {/* Live Badge or Timestamp */}
-                    {(!duration || duration === Infinity) ? (
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-red-600 rounded text-xs font-bold uppercase tracking-wider text-white ml-2 select-none">
-                            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                            Live
+                    {/* Show LIVE badge when at live edge */}
+                    {isAtLiveEdge && (
+                        <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-black/60 ml-2 select-none">
+                            <span
+                                className="w-2.5 h-2.5 rounded-full"
+                                style={{ backgroundColor: kickGreen }}
+                            />
+                            <span className="text-white text-sm font-bold uppercase tracking-wider">
+                                LIVE
+                            </span>
                         </div>
-                    ) : (
-                        <div className="text-white text-2xl font-bold ml-2 select-none">
-                            {formatDuration(currentTime)} / {formatDuration(duration)}
-                        </div>
+                    )}
+
+                    {/* Show timestamp and Go Back Live button when behind live */}
+                    {isBehindLive && (
+                        <>
+                            {/* How far behind we are */}
+                            <div className="text-white text-2xl font-bold ml-2 select-none">
+                                -{formatDuration(duration - currentTime)}
+                            </div>
+
+                            {/* Go Back Live Button */}
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="ml-2 text-black font-bold text-xs uppercase tracking-wider px-3 py-1 rounded hover:opacity-90"
+                                style={{ backgroundColor: kickGreen }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleGoLive();
+                                }}
+                            >
+                                <Radio className="w-4 h-4 mr-1" />
+                                Go Live
+                            </Button>
+                        </>
                     )}
                 </div>
 
@@ -189,6 +212,7 @@ export function PlayerControls(props: PlayerControlsProps) {
                                     size="icon"
                                     className={`text-white hover:bg-white/20 ${isTheater ? 'text-primary' : ''}`}
                                     onClick={onToggleTheater}
+                                    style={isTheater ? { color: kickGreen } : undefined}
                                 >
                                     <Monitor className="w-5 h-5" />
                                 </Button>
@@ -220,6 +244,6 @@ export function PlayerControls(props: PlayerControlsProps) {
                     </Tooltip>
                 </div>
             </div>
-        </div >
+        </div>
     );
 }

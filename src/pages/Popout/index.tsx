@@ -1,8 +1,8 @@
 
 import React from 'react';
 import { useParams } from '@tanstack/react-router';
-import { KickVideoPlayer } from '@/components/player/kick';
-import { TwitchVideoPlayer } from '@/components/player/twitch';
+import { KickLivePlayer } from '@/components/player/kick';
+import { TwitchLivePlayer } from '@/components/player/twitch';
 import { useStreamPlayback } from '@/hooks/useStreamPlayback';
 import { Platform } from '@/shared/auth-types';
 
@@ -26,14 +26,14 @@ export function PopoutPage() {
     return (
         <div className="w-screen h-screen bg-black overflow-hidden">
             {platform === 'kick' ? (
-                <KickVideoPlayer
+                <KickLivePlayer
                     streamUrl={playback?.url || ''}
                     autoPlay={true}
                     muted={false}
                     className="w-full h-full"
                 />
             ) : (
-                <TwitchVideoPlayer
+                <TwitchLivePlayer
                     streamUrl={playback?.url || ''}
                     autoPlay={true}
                     muted={false}
@@ -43,4 +43,5 @@ export function PopoutPage() {
         </div>
     );
 }
+
 
