@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { Link } from '@tanstack/react-router';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlatformAvatar } from '@/components/ui/platform-avatar';
 import { FollowButton } from '@/components/ui/follow-button';
@@ -79,9 +80,22 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                 </h1>
                 <p className="text-white font-bold truncate pr-4">{stream?.title || channel.bio || "No title set"}</p>
                 <p className="text-[var(--color-foreground-muted)] text-sm capitalize flex items-center gap-1.5 mt-1">
-                    <span className={channel.platform === 'twitch' ? 'text-[#9146FF]' : 'text-[#53FC18]'}>
-                        {stream?.categoryName || "Variety"}
-                    </span>
+                    {stream?.categoryId ? (
+                        <Link
+                            to="/categories/$platform/$categoryId"
+                            params={{
+                                platform: channel.platform,
+                                categoryId: stream.categoryId
+                            }}
+                            className={`${channel.platform === 'twitch' ? 'text-[#9146FF] hover:text-[#9146FF]/80' : 'text-[#53FC18] hover:text-[#53FC18]/80'} font-semibold hover:underline cursor-pointer transition-colors`}
+                        >
+                            {stream?.categoryName || "Variety"}
+                        </Link>
+                    ) : (
+                        <span className={channel.platform === 'twitch' ? 'text-[#9146FF]' : 'text-[#53FC18]'}>
+                            {stream?.categoryName || "Variety"}
+                        </span>
+                    )}
                 </p>
             </div>
 
