@@ -39,16 +39,17 @@ export async function searchChannels(
     }
 
     // 2. Try public search endpoint (Unofficial - Works for offline & fuzzy)
-    // Endpoint: https://kick.com/api/search/channel?term=query
+    // Endpoint: https://kick.com/api/search?searched_word=query
     // Use Electron's net module to bypass CORS and some bot protections
+    // Note: Kick API may return 400 for very short queries (1-2 chars), but we still try
     try {
         console.log(`[KickSearch] Step 2: Querying public search endpoint for "${normalizedQuery}"`);
 
-        const data = await new Promise<any[]>((resolve, reject) => {
+        const data = await new Promise<any>((resolve, reject) => {
             const { net } = require('electron');
             const request = net.request({
                 method: 'GET',
-                url: `https://kick.com/api/search/channel?term=${encodeURIComponent(normalizedQuery)}`,
+                url: `https://kick.com/api/search?searched_word=${encodeURIComponent(normalizedQuery)}`,
             });
 
             request.setHeader('Accept', 'application/json');
@@ -73,10 +74,18 @@ export async function searchChannels(
                             } else {
                                 console.warn(`[KickSearch] Step 2: Failed to parse JSON. Body start: ${body.substring(0, 100)}`);
                             }
-                            resolve([]);
+                            resolve(null);
                         }
                     } else {
-                        reject(new Error(`Status ${response.statusCode}`));
+                        // Handle 4xx errors gracefully - don't throw, just log and continue
+                        // Kick API returns 400 for short queries (less than 3 chars)
+                        if (response.statusCode >= 400 && response.statusCode < 500) {
+                            console.log(`[KickSearch] Step 2: Received ${response.statusCode} (expected for short queries)`);
+                            resolve(null);
+                        } else {
+                            console.warn(`[KickSearch] Step 2: Received status ${response.statusCode}`);
+                            reject(new Error(`Status ${response.statusCode}`));
+                        }
                     }
                 });
             });
@@ -88,23 +97,61 @@ export async function searchChannels(
             request.end();
         });
 
-        if (Array.isArray(data)) {
-            console.log(`[KickSearch] Step 2: Found ${data.length} results`);
-            for (const item of data) {
-                if (item.slug && item.id) {
-                    const channelId = item.id.toString();
+        // Handle different response formats:
+        // - Direct array of results
+        // - Object with 'channels' array
+        // - Object with 'data' array
+        let channelsArray: any[] = [];
+        if (data) {
+            if (Array.isArray(data)) {
+                channelsArray = data;
+            } else if (data.channels && Array.isArray(data.channels)) {
+                channelsArray = data.channels;
+            } else if (data.data && Array.isArray(data.data)) {
+                channelsArray = data.data;
+            } else {
+                console.log(`[KickSearch] Step 2: Unknown response structure, keys:`, Object.keys(data));
+            }
+        }
+
+        if (channelsArray.length > 0) {
+            console.log(`[KickSearch] Step 2: Found ${channelsArray.length} results`);
+
+            for (const item of channelsArray) {
+
+                // Try different possible ID and slug fields
+                const channelId = (item.id || item.user_id || item.channel_id)?.toString();
+                const channelSlug = item.slug || item.channel_slug || item.username;
+
+                if (channelSlug && channelId) {
                     if (!results.has(channelId)) {
-                        console.log(`[KickSearch] Step 2: Found channel "${item.slug}"`);
                         results.set(channelId, {
                             id: channelId,
                             platform: 'kick',
-                            username: item.slug,
-                            displayName: item.username || item.user?.username || item.slug,
-                            avatarUrl: item.type === 'livestream' ? (item.thumbnail?.url || item.thumbnail_url) : (item.user?.profile_pic || item.profile_pic || ''),
+                            username: channelSlug,
+                            displayName: item.username || item.user?.username || item.display_name || channelSlug,
+                            avatarUrl: item.profile_pic || item.user?.profile_pic || item.thumbnail?.url || item.thumbnail_url || '',
                             bannerUrl: '',
                             bio: '',
-                            isLive: item.is_live || false,
-                            isVerified: item.verified || false,
+                            isLive: item.is_live || item.livestream !== null || false,
+                            isVerified: item.verified || item.is_verified || false,
+                            isPartner: false,
+                        });
+                    }
+                } else if (channelSlug) {
+                    // If we have slug but no ID, generate an ID from slug
+                    const fallbackId = `kick-${channelSlug}`;
+                    if (!results.has(fallbackId)) {
+                        results.set(fallbackId, {
+                            id: fallbackId,
+                            platform: 'kick',
+                            username: channelSlug,
+                            displayName: item.username || item.user?.username || item.display_name || channelSlug,
+                            avatarUrl: item.profile_pic || item.user?.profile_pic || item.thumbnail?.url || item.thumbnail_url || '',
+                            bannerUrl: '',
+                            bio: '',
+                            isLive: item.is_live || item.livestream !== null || false,
+                            isVerified: item.verified || item.is_verified || false,
                             isPartner: false,
                         });
                     }

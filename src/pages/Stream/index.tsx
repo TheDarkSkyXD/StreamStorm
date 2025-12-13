@@ -46,6 +46,11 @@ export function StreamPage() {
     setPlayerError(null);
   }, [playback?.url]);
 
+  // Determine if stream is truly live - only pass URL to player if we have confirmed stream data
+  // This prevents 404 errors from attempting to load stale/invalid playback URLs
+  const isStreamLive = Boolean(streamData?.startedAt);
+  const effectiveStreamUrl = isStreamLive && playback?.url ? playback.url : '';
+
   const startResizing = useCallback(() => {
     setIsResizing(true);
     // Disable iframe pointer events globally to prevent capturing mouse events during drag
@@ -91,7 +96,7 @@ export function StreamPage() {
             {/* Platform-specific live stream players */}
             {platform === 'kick' ? (
               <KickLivePlayer
-                streamUrl={playback?.url || ''}
+                streamUrl={effectiveStreamUrl}
                 autoPlay={true}
                 muted={false}
                 onReady={() => console.log('Kick Live Player ready')}
@@ -102,7 +107,7 @@ export function StreamPage() {
               />
             ) : (
               <TwitchLivePlayer
-                streamUrl={playback?.url || ''}
+                streamUrl={effectiveStreamUrl}
                 autoPlay={true}
                 muted={false}
                 onReady={() => console.log('Twitch Live Player ready')}
@@ -111,7 +116,8 @@ export function StreamPage() {
                 onToggleTheater={() => setIsTheater(prev => !prev)}
               />
             )}
-            {isPlaybackLoading && !playback && !playerError && (
+            {/* Show loading only when fetching data */}
+            {(isPlaybackLoading || isChannelLoading) && !effectiveStreamUrl && !playerError && (
               <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 pointer-events-none">
                 <span className="text-white text-sm">Loading stream...</span>
               </div>
@@ -167,7 +173,8 @@ export function StreamPage() {
                 </div>
               </div>
             )}
-            {!isPlaybackLoading && !playback && !playerError && (
+            {/* Show offline screen when stream is confirmed offline (data loaded but not live) */}
+            {!isPlaybackLoading && !isChannelLoading && !isStreamLive && !playerError && (
               <div className="absolute inset-0 z-20 overflow-hidden">
                 {/* Background: Offline banner if available, otherwise blurred avatar or gradient */}
                 {channelData?.bannerUrl ? (

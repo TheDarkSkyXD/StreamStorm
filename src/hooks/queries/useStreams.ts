@@ -68,5 +68,6 @@ export function useStreamByChannel(username: string, platform: Platform) {
         enabled: !!username && !!platform,
         refetchInterval: 30000, // Refetch every 30 seconds for real-time viewer count updates
         refetchIntervalInBackground: false, // Don't refetch when tab is not active
+        retry: false, // Don't retry - stream might simply be offline
     });
 }

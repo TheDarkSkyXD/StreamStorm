@@ -136,32 +136,63 @@ export async function getStreamBySlug(client: KickRequestor, slug: string): Prom
 
 /**
  * Get top streams using the legacy public API
+ * Uses Electron's net module to bypass CORS and Cloudflare protection
  */
 export async function getPublicTopStreams(
     options: PaginationOptions & { categoryId?: string; language?: string } = {}
 ): Promise<PaginatedResult<UnifiedStream>> {
     try {
-        // Fallback method: Use the internal/web endpoint which often bypasses API locks
-        // Format: https://kick.com/stream/livestreams/en
+        // Use Electron's net module to bypass CORS and Cloudflare
         const language = options.language || 'en';
         const url = `https://kick.com/stream/livestreams/${language}`;
 
-        const response = await fetch(url, {
-            headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                // Important headers for internal endpoints
-                'X-Requested-With': 'XMLHttpRequest',
-                'Referer': 'https://kick.com/'
-            }
+        const data = await new Promise<any>((resolve, reject) => {
+            const { net } = require('electron');
+            const request = net.request({
+                method: 'GET',
+                url: url,
+            });
+
+            request.setHeader('Accept', 'application/json');
+            request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            request.setHeader('Referer', 'https://kick.com/');
+            request.setHeader('X-Requested-With', 'XMLHttpRequest');
+
+            request.on('response', (response: any) => {
+                let body = '';
+                response.on('data', (chunk: Buffer) => {
+                    body += chunk.toString();
+                });
+                response.on('end', () => {
+                    if (response.statusCode === 200) {
+                        try {
+                            const parsed = JSON.parse(body);
+                            resolve(parsed);
+                        } catch (e) {
+                            if (body.trim().startsWith('<')) {
+                                console.warn(`[KickStreams] Top streams endpoint returned HTML (likely bot protection)`);
+                            }
+                            resolve(null);
+                        }
+                    } else {
+                        console.warn(`[KickStreams] Top streams fetch failed: ${response.statusCode}`);
+                        resolve(null);
+                    }
+                });
+            });
+
+            request.on('error', (error: Error) => {
+                console.warn('[KickStreams] Top streams request error:', error);
+                resolve(null);
+            });
+
+            request.end();
         });
 
-        if (!response.ok) {
-            console.warn(`Kick public web fetch failed: ${response.status}`);
+        if (!data) {
             return { data: [] };
         }
 
-        const data = await response.json();
         const streams: UnifiedStream[] = [];
 
         // internal endpoint usually returns data array directly or wrapped

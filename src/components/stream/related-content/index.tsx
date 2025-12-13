@@ -20,7 +20,7 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
     const [error, setError] = useState<string | null>(null);
     const [debugInfo, setDebugInfo] = useState<string | null>(null);
 
-    // Fetch data
+    // Fetch data - wait for channelData to be loaded to get the channelId
     useEffect(() => {
         const fetchData = async () => {
             setIsLoading(true);
@@ -36,7 +36,6 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
                 const targetTab = activeTab || 'videos';
 
                 if (targetTab === 'videos') {
-                    console.log(`[RelatedContent] Requesting videos for ${platform}/${channelName} (ID: ${channelData?.id})`);
                     const result = await api.videos.getByChannel({
                         platform,
                         channelName,
@@ -44,7 +43,6 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
                         limit: 12
                     });
                     if (result.success) {
-                        console.log(`[RelatedContent] Received ${result.data?.length ?? 0} videos`);
                         setVideos(result.data || []);
                         setDebugInfo(result.debug || null);
                     } else {
@@ -52,7 +50,6 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
                         setError(result.error || "Failed to fetch videos");
                     }
                 } else if (targetTab === 'clips') {
-                    console.log(`[RelatedContent] Requesting clips for ${platform}/${channelName} (ID: ${channelData?.id})`);
                     const result = await api.clips.getByChannel({
                         platform,
                         channelName,
@@ -60,7 +57,6 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
                         limit: 12
                     });
                     if (result.success) {
-                        console.log(`[RelatedContent] Received ${result.data?.length ?? 0} clips`);
                         setClips(result.data || []);
                     } else {
                         console.error("Failed to fetch clips:", result.error);
@@ -75,10 +71,11 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
             }
         };
 
-        if (platform && channelName) {
+        // Only fetch when we have both channel name and channel data (with id)
+        if (platform && channelName && channelData?.id) {
             fetchData();
         }
-    }, [activeTab, platform, channelName, channelData?.id]); // Re-run when channelData loads to provide channelId
+    }, [activeTab, platform, channelName, channelData?.id]);
 
     // Fetch clip playback URL when a clip is selected
     useEffect(() => {
