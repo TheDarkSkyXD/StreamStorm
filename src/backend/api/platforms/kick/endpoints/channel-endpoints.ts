@@ -163,7 +163,7 @@ export async function getPublicChannel(slug: string): Promise<UnifiedChannel | n
             username: data.slug,
             displayName: user.username || data.slug,
             avatarUrl: user.profile_pic || '',
-            bannerUrl: data.banner_image?.url || undefined,
+            bannerUrl: data.offline_banner_image?.src || data.offline_banner_image?.url || (typeof data.offline_banner_image === 'string' ? data.offline_banner_image : undefined),
             bio: user.bio || '',
             isLive: data.livestream !== null,
             isVerified: data.verified?.id !== undefined || false,

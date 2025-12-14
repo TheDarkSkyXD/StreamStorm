@@ -49,7 +49,7 @@ export function transformKickChannel(channel: KickApiChannel): UnifiedChannel {
         username: channel.slug,
         displayName: channel.slug,
         avatarUrl: '', // Not provided in official API
-        bannerUrl: channel.banner_picture || undefined,
+        bannerUrl: (channel as any).offline_banner_image?.src || (channel as any).offline_banner_image?.url || (typeof (channel as any).offline_banner_image === 'string' ? (channel as any).offline_banner_image : undefined),
         bio: channel.channel_description || undefined,
         isLive: channel.stream?.is_live || false,
         isVerified: false, // Not provided in official API
