@@ -1,7 +1,7 @@
 import { useParams, useSearch, Link } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Heart, HeartCrack, AlertCircle } from 'lucide-react';
+import { Heart, HeartCrack, AlertCircle, Lock } from 'lucide-react';
 import { KickVodPlayer } from '@/components/player/kick';
 import { TwitchVodPlayer } from '@/components/player/twitch';
 
@@ -58,8 +58,12 @@ export function VideoPage() {
         views: passedViews,
         date: passedDate,
         category: passedCategory,
-        duration: passedDuration
+        duration: passedDuration,
+        isSubOnly: passedIsSubOnly
     } = searchParams;
+
+    // Check if this is a subscriber-only VOD
+    const isSubOnly = passedIsSubOnly === true;
 
     const [isFollowing, setIsFollowing] = useState(false);
     const [isHoveringFollow, setIsHoveringFollow] = useState(false);
@@ -77,6 +81,31 @@ export function VideoPage() {
             try {
                 if (!window.electronAPI) {
                     throw new Error("Electron API not found");
+                }
+
+                // Case 0: Subscriber-only VODs - don't try to fetch playback URL
+                if (isSubOnly) {
+                    // Still set metadata for display purposes
+                    if (passedTitle && passedChannelName) {
+                        setVideoMetadata({
+                            id: videoId,
+                            title: passedTitle,
+                            channelId: '',
+                            channelName: passedChannelName,
+                            channelDisplayName: passedChannelDisplayName || passedChannelName,
+                            channelAvatar: passedChannelAvatar || null,
+                            views: passedViews ? parseInt(passedViews, 10) : 0,
+                            duration: passedDuration || '0:00',
+                            createdAt: passedDate || new Date().toISOString(),
+                            thumbnailUrl: '',
+                            description: '',
+                            type: 'archive',
+                            platform: platform,
+                            category: passedCategory
+                        });
+                    }
+                    setIsLoading(false);
+                    return;
                 }
 
                 // Case 1: If we have a direct source URL (from video list), use it directly
@@ -156,7 +185,7 @@ export function VideoPage() {
             }
         };
         if (platform && videoId) fetchVideoData();
-    }, [platform, videoId, directSourceUrl, passedTitle, passedChannelName, passedChannelDisplayName, passedChannelAvatar, passedViews, passedDate, passedCategory, passedDuration]);
+    }, [platform, videoId, directSourceUrl, passedTitle, passedChannelName, passedChannelDisplayName, passedChannelAvatar, passedViews, passedDate, passedCategory, passedDuration, isSubOnly]);
 
     // Use fetched data or passed data or fallbacks
     const videoTitle = videoMetadata?.title || passedTitle || "Loading...";
@@ -181,7 +210,18 @@ export function VideoPage() {
             {/* Video Player Area */}
             <div className="flex-1 flex flex-col overflow-y-auto">
                 <div className="aspect-video bg-black flex items-center justify-center shrink-0 text-white relative group">
-                    {streamUrl ? (
+                    {isSubOnly ? (
+                        <div className="text-center">
+                            <div className="w-16 h-16 rounded-full bg-purple-600/20 flex items-center justify-center mx-auto mb-4">
+                                <Lock className="w-8 h-8 text-purple-400" />
+                            </div>
+                            <h3 className="text-xl font-semibold text-white mb-2">Subscriber Only VOD</h3>
+                            <p className="text-white/60 max-w-md mx-auto">
+                                This VOD is only available to subscribers of this channel.
+                                Subscribe on Kick to watch this content.
+                            </p>
+                        </div>
+                    ) : streamUrl ? (
                         platform === 'kick' ? (
                             <KickVodPlayer
                                 streamUrl={streamUrl}

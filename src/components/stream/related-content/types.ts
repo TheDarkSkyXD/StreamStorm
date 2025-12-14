@@ -12,6 +12,7 @@ export interface VideoOrClip {
     source?: string; // HLS m3u8 URL for VODs (especially Kick)
     gameName?: string;
     isLive?: boolean;
+    isSubOnly?: boolean; // Whether the VOD is subscriber-only content
     // Additional metadata for passing to video page
     channelSlug?: string;
     channelName?: string;

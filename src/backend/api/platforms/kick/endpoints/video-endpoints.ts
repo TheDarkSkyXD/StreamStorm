@@ -81,26 +81,33 @@ export async function getVideosByChannelSlug(
         }
 
         return {
-            data: videos.map((v: any) => ({
-                id: v.id.toString(),
-                uuid: v.uuid || v.video?.uuid || '', // UUID needed for api/v1/video/{uuid} endpoint
-                slug: v.slug || '', // Video slug for URL construction
-                title: v.session_title || v.title || `Stream ${v.id}`,
-                duration: v.duration ? formatDuration(v.duration) : '0:00',
-                views: (v.views || v.view_count || '0').toString(),
-                date: new Date(v.created_at).toISOString(),
-                thumbnailUrl: v.thumbnail?.src || v.thumbnail?.url || v.thumbnail_url || v.thumb || v.video?.thumb || '',
-                source: v.source || '', // Direct HLS m3u8 URL - this is the most reliable way to play VODs
-                url: v.source || `https://kick.com/video/${v.slug}`,
-                platform: 'kick',
-                isLive: v.is_live,
-                // Include channel info for metadata
-                channelSlug: v.channel?.slug || v.livestream?.channel?.slug || '',
-                channelName: v.channel?.user?.username || v.livestream?.channel?.user?.username || '',
-                channelAvatar: v.channel?.user?.profile_pic || v.livestream?.channel?.user?.profile_pic || null,
-                // Category info - check multiple possible locations
-                category: v.categories?.[0]?.name || v.category?.name || v.livestream?.categories?.[0]?.name || v.livestream?.session_title || ''
-            })),
+            data: videos.map((v: any) => {
+                // A VOD without a source URL is subscriber-only content
+                const hasSource = Boolean(v.source);
+                const isSubOnly = !hasSource && !v.is_live;
+
+                return {
+                    id: v.id.toString(),
+                    uuid: v.uuid || v.video?.uuid || '', // UUID needed for api/v1/video/{uuid} endpoint
+                    slug: v.slug || '', // Video slug for URL construction
+                    title: v.session_title || v.title || `Stream ${v.id}`,
+                    duration: v.duration ? formatDuration(v.duration) : '0:00',
+                    views: (v.views || v.view_count || '0').toString(),
+                    date: new Date(v.created_at).toISOString(),
+                    thumbnailUrl: v.thumbnail?.src || v.thumbnail?.url || v.thumbnail_url || v.thumb || v.video?.thumb || '',
+                    source: v.source || '', // Direct HLS m3u8 URL - this is the most reliable way to play VODs
+                    url: v.source || `https://kick.com/video/${v.slug}`,
+                    platform: 'kick',
+                    isLive: v.is_live,
+                    isSubOnly, // Flag for subscriber-only VODs
+                    // Include channel info for metadata
+                    channelSlug: v.channel?.slug || v.livestream?.channel?.slug || '',
+                    channelName: v.channel?.user?.username || v.livestream?.channel?.user?.username || '',
+                    channelAvatar: v.channel?.user?.profile_pic || v.livestream?.channel?.user?.profile_pic || null,
+                    // Category info - check multiple possible locations
+                    category: v.categories?.[0]?.name || v.category?.name || v.livestream?.categories?.[0]?.name || v.livestream?.session_title || ''
+                };
+            }),
             cursor: nextCursor
         };
 

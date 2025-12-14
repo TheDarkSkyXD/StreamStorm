@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { Card, CardContent } from '@/components/ui/card';
-import { Play } from 'lucide-react';
+import { Play, Lock } from 'lucide-react';
 import { VideoOrClip } from './types';
 import { formatTimeAgo, formatViews } from './utils';
 import { Platform } from '@/shared/auth-types';
@@ -35,7 +35,8 @@ export function VideoCard({ video, platform, channelName, channelData }: VideoCa
                 views: video.views,
                 date: video.date,
                 category: video.category || video.gameName || undefined,
-                duration: video.duration
+                duration: video.duration,
+                isSubOnly: video.isSubOnly || undefined
             } : undefined}
             className="block group"
             onClick={(e) => {
@@ -61,6 +62,14 @@ export function VideoCard({ video, platform, channelName, channelData }: VideoCa
                         {video.isLive ? 'LIVE' : video.duration}
                     </div>
 
+                    {/* Sub Only Badge: Top Right */}
+                    {video.isSubOnly && (
+                        <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-xs font-medium bg-purple-600 text-white flex items-center gap-1">
+                            <Lock className="w-3 h-3" />
+                            SUB ONLY
+                        </div>
+                    )}
+
                     {/* Views: Bottom Left */}
                     <div className="absolute bottom-2 left-2 bg-black/80 px-1.5 py-0.5 rounded text-xs text-white font-medium">
                         {formatViews(video.views)} views
@@ -71,9 +80,14 @@ export function VideoCard({ video, platform, channelName, channelData }: VideoCa
                         {video.isLive ? 'Today' : formatTimeAgo(video.date)}
                     </div>
 
+                    {/* Hover overlay - show lock for sub-only, play for regular */}
                     <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                            <Play className="w-5 h-5 text-white fill-white" />
+                            {video.isSubOnly ? (
+                                <Lock className="w-5 h-5 text-white" />
+                            ) : (
+                                <Play className="w-5 h-5 text-white fill-white" />
+                            )}
                         </div>
                     </div>
                 </div>
