@@ -69,44 +69,71 @@ class KickClient implements KickRequestor {
             ...options.headers as Record<string, string>,
         };
 
-        try {
-            const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
-            const response = await fetch(url, {
-                ...options,
-                headers,
-            });
+        const maxRetries = 3;
+        let attempt = 0;
 
-            if (!response.ok) {
-                if (response.status === 403) {
-                    console.warn('⚠️ Kick API forbidden - may need additional scopes or User Token');
-                }
+        while (attempt <= maxRetries) {
+            try {
+                const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
+                const response = await fetch(url, {
+                    ...options,
+                    headers,
+                });
 
-                if (response.status === 401) {
-                    console.log(`🔄 Kick ${isAppToken ? 'App' : 'User'} token expired, refreshing...`);
-                    // Force refresh
-                    if (isAppToken) {
-                        // storageService.isAppTokenExpired will be checked next call, 
-                        // but we might need to force clear/re-fetch here? 
-                        // For now, let's rely on retry.
-                        // Actually, handle retry logic:
-                        // Simple retry not implemented safely without inf loop risk. 
-                        // relying on ensureValidAppToken check next time.
-                    } else {
-                        const refreshed = await kickAuthService.refreshToken();
-                        if (refreshed) {
-                            return this.request<T>(endpoint, options);
+                if (!response.ok) {
+                    if (response.status === 429) {
+                        attempt++;
+                        if (attempt > maxRetries) {
+                            throw new Error(`Kick API error: 429 (Max retries exceeded)`);
+                        }
+
+                        // Calculate backoff: 1s, 2s, 4s...
+                        // Use Retry-After header if available
+                        const retryHeader = response.headers.get('Retry-After');
+                        const backoff = retryHeader
+                            ? parseInt(retryHeader, 10) * 1000
+                            : 1000 * Math.pow(2, attempt - 1);
+
+                        console.warn(`⚠️ Kick API 429 Too Many Requests. Retrying in ${backoff}ms (Attempt ${attempt}/${maxRetries})...`);
+                        await new Promise(resolve => setTimeout(resolve, backoff));
+                        continue;
+                    }
+
+                    if (response.status === 403) {
+                        console.warn('⚠️ Kick API forbidden - may need additional scopes or User Token');
+                    }
+
+                    if (response.status === 401) {
+                        console.log(`🔄 Kick ${isAppToken ? 'App' : 'User'} token expired, refreshing...`);
+
+                        if (!isAppToken) {
+                            // Only attempt refresh for user tokens for now
+                            // App tokens are handled by ensureValidAppToken check at start of next call
+                            const refreshed = await kickAuthService.refreshToken();
+                            if (refreshed) {
+                                // Recursive call with fresh token (count as new attempt set)
+                                return this.request<T>(endpoint, options);
+                            }
                         }
                     }
+
+                    throw new Error(`Kick API error: ${response.status}`);
                 }
 
-                throw new Error(`Kick API error: ${response.status}`);
-            }
+                return (await response.json()) as T;
+            } catch (error: any) {
+                // If it's a 429 error we deliberately threw above, re-throw it
+                if (error.message && error.message.includes('429')) {
+                    throw error;
+                }
 
-            return (await response.json()) as T;
-        } catch (error) {
-            console.error(`❌ Kick API request failed: ${endpoint}`, error);
-            throw error;
+                // Network errors (fetch failed) logic could go here, but for now just log
+                console.error(`❌ Kick API request failed: ${endpoint}`, error);
+                throw error;
+            }
         }
+
+        throw new Error('Kick API request failed after retries');
     }
 
     /**

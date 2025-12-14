@@ -109,7 +109,12 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
         const video = videoRef.current;
         if (!video) return;
         if (video.paused) {
-            video.play().catch(console.error);
+            video.play().catch((e) => {
+                // Ignore AbortError (interrupted by load) and NotAllowedError (autoplay policy)
+                if (e.name !== 'AbortError' && e.name !== 'NotAllowedError') {
+                    console.error('Play error:', e);
+                }
+            });
         } else {
             video.pause();
         }
@@ -187,7 +192,9 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
                     currentLevel={currentQualityId}
                     onQualityLevels={handleQualityLevels}
                     onError={(error) => {
+                        console.error('[TwitchPlayer] Player error:', error);
                         setHasError(true);
+                        setIsLoading(false);
                         onError?.(error);
                     }}
                     className="size-full object-contain cursor-pointer"

@@ -57,32 +57,37 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
         const video = videoRef.current;
         if (!video || !src) return;
 
-        // Reset mounted flag for this effect instance
+        // Scoped active flag to handle rapid stream switching robustly
+        let isEffectActive = true;
         isMountedRef.current = true;
 
         let hls: Hls | null = null;
 
         // Safe play helper that handles interruption gracefully
         const safePlay = () => {
-            if (!isMountedRef.current || !video) return;
+            if (!isEffectActive || !video) return;
 
-            // Cancel any pending play promise tracking (the promise itself can't be cancelled)
+            // Cancel any pending play promise tracking
             pendingPlayRef.current = video.play();
             pendingPlayRef.current
                 .then(() => {
-                    pendingPlayRef.current = null;
+                    if (isEffectActive) pendingPlayRef.current = null;
                 })
                 .catch((e: Error) => {
-                    pendingPlayRef.current = null;
-                    // AbortError: play() was interrupted by a new load request - this is expected during rapid source changes
+                    if (isEffectActive) pendingPlayRef.current = null;
+
+                    // If effect is inactive (stream switched), fully ignore errors
+                    if (!isEffectActive) return;
+
+                    // AbortError: play() was interrupted by a new load request
                     // NotAllowedError: autoplay was prevented by browser policy
                     if (e.name === 'AbortError') {
-                        // Silently ignore - this is expected when source changes rapidly
-                        console.debug('[HLS] Play request was interrupted by new load, this is normal during navigation');
+                        // Log this even if expected, to help debug "stuck" states
+                        console.warn('[HLS] Play request interrupted by new load or pause (AbortError)', e);
                     } else if (e.name === 'NotAllowedError') {
-                        console.warn('[HLS] Autoplay blocked by browser policy');
+                        console.error('[HLS] Autoplay blocked by browser policy (NotAllowedError)', e);
                     } else {
-                        console.warn('[HLS] Autoplay failed:', e);
+                        console.error('[HLS] Playback failed with unexpected error:', e);
                     }
                 });
         };
@@ -156,19 +161,32 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             hls.on(Hls.Events.ERROR, (event, data) => {
                 // Completely ignore innocuous errors that resolve themselves automatically
                 // - bufferStalledError: temporary buffer underrun, HLS.js recovers automatically
-                // - levelSwitchError: ABR quality switching hiccup, HLS.js handles internally
-                const silentErrors = ['bufferStalledError', 'levelSwitchError'];
+                // Reporting all errors for debugging robust stream handling
+                const silentErrors: string[] = []; // Was ['bufferStalledError', 'levelSwitchError'];
 
-                // Expected stream-ending errors (403/404 on manifest/fragment) - don't log as errors
+                // Check for 404/403 on manifest load - indicates stream is definitely gone
+                // Stop retrying immediately to prevent console noise
+                // @ts-ignore - response exists on ErrorData for network errors
+                const statusCode = data.response?.code;
+                if (data.details === 'manifestLoadError' && (statusCode === 404 || statusCode === 403)) {
+                    console.debug(`[HLS] Critical network error ${statusCode}, stopping retries`);
+                    hls?.destroy();
+                    onErrorRef.current?.({
+                        code: 'STREAM_OFFLINE',
+                        message: 'Stream offline or unavailable',
+                        fatal: true,
+                        originalError: data
+                    });
+                    return;
+                }
+
+                // Log all errors for now to debug the "stuck in loading" issue
+                console.log(`[HLS] Error details: ${data.details}, fatal: ${data.fatal}, type: ${data.type}`, data);
+
                 const isStreamEndingError =
                     data.details === 'manifestLoadError' ||
                     data.details === 'levelLoadError' ||
                     data.details === 'fragLoadError';
-
-                // Log non-silent, non-stream-ending errors for debugging
-                if (!silentErrors.includes(data.details) && !isStreamEndingError) {
-                    console.log(`[HLS] Error: ${data.details}, fatal: ${data.fatal}, type: ${data.type}`);
-                }
 
                 if (data.fatal) {
                     // Fatal error means all internal retries have been exhausted
@@ -248,7 +266,8 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
         }
 
         return () => {
-            // Mark as unmounted first to prevent any pending play attempts
+            // Mark as inactive to filter out stale errors
+            isEffectActive = false;
             isMountedRef.current = false;
             pendingPlayRef.current = null;
 
