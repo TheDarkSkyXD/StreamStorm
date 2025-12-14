@@ -124,10 +124,38 @@ export async function getPublicChannel(slug: string): Promise<UnifiedChannel | n
             request.end();
         });
 
+
         if (!data) return null;
 
         // Map the public API response to UnifiedChannel
         const user = data.user || {};
+
+        // Extract the most recent category - try recent_categories first, then livestream categories
+        let categoryId: string | undefined;
+        let categoryName: string | undefined;
+
+        if (data.recent_categories && data.recent_categories.length > 0) {
+            // recent_categories is an array of categories the channel has recently streamed in
+            const recentCategory = data.recent_categories[0];
+            categoryId = recentCategory?.id?.toString();
+            categoryName = recentCategory?.name;
+        } else if (data.livestream?.categories && data.livestream.categories.length > 0) {
+            // If channel is live or has livestream data, use that category
+            const liveCategory = data.livestream.categories[0];
+            categoryId = liveCategory?.id?.toString();
+            categoryName = liveCategory?.name;
+        }
+
+        // Extract the last stream title - try livestream first, then previous_livestreams
+        let lastStreamTitle: string | undefined;
+
+        if (data.livestream?.session_title) {
+            // Current or most recent livestream title
+            lastStreamTitle = data.livestream.session_title;
+        } else if (data.previous_livestreams && data.previous_livestreams.length > 0) {
+            // Previous livestream title
+            lastStreamTitle = data.previous_livestreams[0]?.session_title;
+        }
 
         return {
             id: data.user_id.toString(),
@@ -140,9 +168,13 @@ export async function getPublicChannel(slug: string): Promise<UnifiedChannel | n
             isLive: data.livestream !== null,
             isVerified: data.verified?.id !== undefined || false,
             isPartner: false, // Can't easily tell from this endpoint
+            categoryId,
+            categoryName,
+            lastStreamTitle,
         };
     } catch (error) {
         console.warn(`Failed to fetch public Kick channel ${slug}:`, error);
         return null; // Return null on error so fallback can happen if we had one
     }
 }
+

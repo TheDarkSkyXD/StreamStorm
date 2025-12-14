@@ -93,7 +93,7 @@ export function transformTwitchCategory(game: TwitchApiGame): UnifiedCategory {
  */
 export function transformTwitchChannel(
     channel: TwitchApiChannel,
-    user?: { id: string; login: string; display_name: string; profile_image_url: string; broadcaster_type: string; offline_image_url?: string }
+    user?: { id: string; login: string; display_name: string; profile_image_url: string; broadcaster_type: string; offline_image_url?: string; description?: string }
 ): UnifiedChannel {
     return {
         id: channel.broadcaster_id,
@@ -102,10 +102,15 @@ export function transformTwitchChannel(
         displayName: channel.broadcaster_name,
         avatarUrl: user?.profile_image_url || '',
         bannerUrl: user?.offline_image_url || undefined,
-        bio: channel.title || undefined,
+        bio: user?.description || undefined,
         isLive: false, // Need to check streams endpoint for live status
         isVerified: user?.broadcaster_type === 'partner',
         isPartner: user?.broadcaster_type === 'partner',
+        // Include category info from channel data - this is the last set category
+        categoryId: channel.game_id || undefined,
+        categoryName: channel.game_name || undefined,
+        // Include stream title from channel data - this is the last set title
+        lastStreamTitle: channel.title || undefined,
     };
 }
 

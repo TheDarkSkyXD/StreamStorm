@@ -45,6 +45,11 @@ export interface UnifiedChannel {
     viewCount?: number;
     createdAt?: string;
     socialLinks?: SocialLink[];
+    // Category info - represents the last set category for the channel
+    categoryId?: string;
+    categoryName?: string;
+    // Stream title - represents the last set stream title
+    lastStreamTitle?: string;
 }
 
 export interface SocialLink {

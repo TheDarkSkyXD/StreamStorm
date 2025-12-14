@@ -78,22 +78,24 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                         </span>
                     )}
                 </h1>
-                <p className="text-white font-bold truncate pr-4">{stream?.title || channel.bio || "No title set"}</p>
+                {/* Use stream title if live, otherwise fall back to channel's last stream title */}
+                <p className="text-white font-bold truncate pr-4">{stream?.title || channel.lastStreamTitle || channel.bio || "No title set"}</p>
                 <p className="text-[var(--color-foreground-muted)] text-sm capitalize flex items-center gap-1.5 mt-1">
-                    {stream?.categoryId ? (
+                    {/* Use stream category if live, otherwise fall back to channel's last known category */}
+                    {(stream?.categoryId || channel.categoryId) ? (
                         <Link
                             to="/categories/$platform/$categoryId"
                             params={{
                                 platform: channel.platform,
-                                categoryId: stream.categoryId
+                                categoryId: (stream?.categoryId || channel.categoryId)!
                             }}
                             className={`${channel.platform === 'twitch' ? 'text-[#9146FF] hover:text-[#9146FF]/80' : 'text-[#53FC18] hover:text-[#53FC18]/80'} font-semibold hover:underline cursor-pointer transition-colors`}
                         >
-                            {stream?.categoryName || "Variety"}
+                            {stream?.categoryName || channel.categoryName || "Variety"}
                         </Link>
                     ) : (
                         <span className={channel.platform === 'twitch' ? 'text-[#9146FF]' : 'text-[#53FC18]'}>
-                            {stream?.categoryName || "Variety"}
+                            {stream?.categoryName || channel.categoryName || "Variety"}
                         </span>
                     )}
                 </p>
