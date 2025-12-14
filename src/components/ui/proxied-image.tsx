@@ -111,6 +111,7 @@ export function ProxiedImage({
             src={imageSrc}
             alt={alt}
             className={className}
+            onError={() => setError(true)}
         />
     );
 }

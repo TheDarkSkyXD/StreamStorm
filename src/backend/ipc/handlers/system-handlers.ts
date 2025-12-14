@@ -84,13 +84,30 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
                 return null;
             }
 
+            // Determine the appropriate headers based on the domain
+            // Twitch CDN requires a browser User-Agent, others are more permissive
+            const isTwitchCDN = parsedUrl.hostname.includes('jtvnw.net') ||
+                parsedUrl.hostname.includes('twitch.tv');
+            const isKickCDN = parsedUrl.hostname.includes('kick.com') ||
+                parsedUrl.hostname.includes('images.kick.com');
+
+            const headers: Record<string, string> = {
+                'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
+                // Use a real browser User-Agent - CDNs reject fake/minimal user agents
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            };
+
+            // Add referer for specific platforms that might require it
+            if (isTwitchCDN) {
+                headers['Referer'] = 'https://www.twitch.tv/';
+                headers['Origin'] = 'https://www.twitch.tv';
+            } else if (isKickCDN) {
+                headers['Referer'] = 'https://kick.com/';
+                headers['Origin'] = 'https://kick.com';
+            }
+
             // Fetch image from main process (no CORS restrictions)
-            const response = await fetch(url, {
-                headers: {
-                    'Accept': 'image/*',
-                    'User-Agent': 'StreamStorm/1.0',
-                },
-            });
+            const response = await fetch(url, { headers });
 
             if (!response.ok) {
                 console.warn(`⚠️ Image proxy: Failed to fetch ${url}: ${response.status}`);

@@ -208,7 +208,7 @@ export function SearchPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {topMatches.map((channel) => (
               <Link
-                key={channel.id}
+                key={`${channel.platform}-${channel.id}`}
                 to="/stream/$platform/$channel"
                 params={{ platform: channel.platform, channel: channel.username }}
                 search={{ tab: 'videos' }}
@@ -255,7 +255,7 @@ export function SearchPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
             {otherMatches.map((channel) => (
               <Link
-                key={channel.id}
+                key={`${channel.platform}-${channel.id}`}
                 to="/stream/$platform/$channel"
                 params={{ platform: channel.platform, channel: channel.username }}
                 search={{ tab: 'videos' }}
@@ -346,7 +346,7 @@ export function SearchPage() {
               <Link
                 to="/video/$platform/$videoId"
                 params={{ platform: video.platform, videoId: video.id }}
-                key={video.id}
+                key={`${video.platform}-${video.id}`}
                 className="group block rounded-xl overflow-hidden bg-[var(--color-background-secondary)] transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-[var(--color-storm-primary)]/10"
               >
                 <div className="relative aspect-video">
@@ -381,7 +381,7 @@ export function SearchPage() {
             {filteredClips.map((clip: UnifiedClip) => (
               <div
                 onClick={() => setSelectedClip(clip)}
-                key={clip.id}
+                key={`${clip.platform}-${clip.id}`}
                 className="group cursor-pointer rounded-xl overflow-hidden bg-[var(--color-background-secondary)] transition-all hover:-translate-y-1 hover:shadow-lg hover:shadow-[var(--color-storm-primary)]/10"
               >
                 <div className="relative aspect-video">

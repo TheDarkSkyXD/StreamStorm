@@ -137,79 +137,121 @@ export async function getStreamBySlug(client: KickRequestor, slug: string): Prom
 /**
  * Get top streams using the legacy public API
  * Uses Electron's net module to bypass CORS and Cloudflare protection
+ * Tries multiple endpoints for better coverage
  */
 export async function getPublicTopStreams(
     options: PaginationOptions & { categoryId?: string; language?: string } = {}
 ): Promise<PaginatedResult<UnifiedStream>> {
     try {
-        // Use Electron's net module to bypass CORS and Cloudflare
+        const { net } = require('electron');
         const language = options.language || 'en';
-        const url = `https://kick.com/stream/livestreams/${language}`;
 
-        const data = await new Promise<any>((resolve, reject) => {
-            const { net } = require('electron');
-            const request = net.request({
-                method: 'GET',
-                url: url,
-            });
+        // Try multiple endpoints - some may be blocked or return limited data
+        const endpoints = [
+            `https://kick.com/stream/livestreams/${language}`,
+            `https://kick.com/stream/featured-livestreams/${language}`,
+            `https://api.kick.com/private/v1/livestreams`,
+        ];
 
-            request.setHeader('Accept', 'application/json');
-            request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-            request.setHeader('Referer', 'https://kick.com/');
-            request.setHeader('X-Requested-With', 'XMLHttpRequest');
+        let bestData: any = null;
+        let bestCount = 0;
 
-            request.on('response', (response: any) => {
-                let body = '';
-                response.on('data', (chunk: Buffer) => {
-                    body += chunk.toString();
-                });
-                response.on('end', () => {
-                    if (response.statusCode === 200) {
-                        try {
-                            const parsed = JSON.parse(body);
-                            resolve(parsed);
-                        } catch (e) {
-                            if (body.trim().startsWith('<')) {
-                                console.warn(`[KickStreams] Top streams endpoint returned HTML (likely bot protection)`);
-                            }
-                            resolve(null);
-                        }
-                    } else {
-                        console.warn(`[KickStreams] Top streams fetch failed: ${response.statusCode}`);
+        for (const url of endpoints) {
+            try {
+                const data = await new Promise<any>((resolve) => {
+                    const request = net.request({
+                        method: 'GET',
+                        url: url,
+                    });
+
+                    request.setHeader('Accept', 'application/json');
+                    request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+                    request.setHeader('Referer', 'https://kick.com/');
+                    request.setHeader('Origin', 'https://kick.com');
+                    request.setHeader('X-Requested-With', 'XMLHttpRequest');
+
+                    // Timeout after 5 seconds
+                    const timeout = setTimeout(() => {
+                        request.abort();
                         resolve(null);
-                    }
+                    }, 5000);
+
+                    request.on('response', (response: any) => {
+                        let body = '';
+                        response.on('data', (chunk: Buffer) => {
+                            body += chunk.toString();
+                        });
+                        response.on('end', () => {
+                            clearTimeout(timeout);
+                            if (response.statusCode === 200) {
+                                try {
+                                    const parsed = JSON.parse(body);
+                                    resolve(parsed);
+                                } catch (e) {
+                                    if (body.trim().startsWith('<')) {
+                                        console.warn(`[KickStreams] ${url} returned HTML (bot protection)`);
+                                    }
+                                    resolve(null);
+                                }
+                            } else {
+                                console.log(`[KickStreams] ${url} returned ${response.statusCode}`);
+                                resolve(null);
+                            }
+                        });
+                    });
+
+                    request.on('error', (error: Error) => {
+                        clearTimeout(timeout);
+                        console.log(`[KickStreams] ${url} error:`, error.message);
+                        resolve(null);
+                    });
+
+                    request.end();
                 });
-            });
 
-            request.on('error', (error: Error) => {
-                console.warn('[KickStreams] Top streams request error:', error);
-                resolve(null);
-            });
+                if (data) {
+                    // Check how many items this endpoint returned
+                    const rawList = Array.isArray(data) ? data : (data.data || data.livestreams || []);
+                    console.log(`[KickStreams] ${url} returned ${rawList.length} streams`);
 
-            request.end();
-        });
+                    if (rawList.length > bestCount) {
+                        bestData = data;
+                        bestCount = rawList.length;
+                    }
 
-        if (!data) {
+                    // If we got a good number of streams, stop trying
+                    if (rawList.length >= 50) {
+                        break;
+                    }
+                }
+            } catch (e) {
+                console.log(`[KickStreams] Error fetching ${url}`);
+            }
+        }
+
+        if (!bestData) {
+            console.log('[KickStreams] All endpoints failed, returning empty');
             return { data: [] };
         }
 
         const streams: UnifiedStream[] = [];
 
-        // internal endpoint usually returns data array directly or wrapped
-        // Common structure: { data: [...] } or just [...]
-        const rawList = Array.isArray(data) ? data : (data.data || []);
+        // Handle different response formats
+        const rawList = Array.isArray(bestData) ? bestData : (bestData.data || bestData.livestreams || []);
+        console.log(`[KickStreams] Processing ${rawList.length} streams from best endpoint`);
 
         for (const item of rawList) {
-            // Basic validation
-            if (!item || !item.slug) continue;
+            // Basic validation - handle different response structures
+            const slug = item.slug || item.channel?.slug || item.broadcaster_username;
+            if (!item || !slug) continue;
 
             streams.push({
                 id: (item.id || item.session_id || '').toString(),
                 platform: 'kick',
-                channelId: (item.channel_id || item.user_id || '').toString(),
-                channelName: item.slug,
-                channelDisplayName: item.user?.username || item.slug,
-                channelAvatar: item.user?.profile_pic || '',
+                channelId: (item.channel_id || item.broadcaster_user_id || item.user_id || '').toString(),
+                channelName: slug,
+                channelDisplayName: item.user?.username || item.channel?.user?.username || item.broadcaster_username || slug,
+                channelAvatar: item.user?.profile_pic || item.channel?.user?.profile_pic || '',
                 title: item.session_title || item.title || '',
                 viewerCount: item.viewer_count ?? item.viewers ?? 0,
                 thumbnailUrl: item.thumbnail?.url || item.thumbnail_url || '',
@@ -217,10 +259,12 @@ export async function getPublicTopStreams(
                 startedAt: item.created_at || item.start_time || new Date().toISOString(),
                 language: item.language || language,
                 tags: item.tags || [],
-                categoryId: (item.category_id || '').toString(),
+                categoryId: (item.category_id || item.category?.id || '').toString(),
                 categoryName: item.category?.name || '',
             });
         }
+
+        console.log(`[KickStreams] Parsed ${streams.length} valid streams`);
 
         // Manual filter and sort since this endpoint is a "dump"
         if (options.limit && streams.length > options.limit) {

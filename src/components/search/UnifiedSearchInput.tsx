@@ -7,6 +7,7 @@ import { useSearchHistory } from '@/hooks/useSearchHistory';
 import { UnifiedChannel, UnifiedCategory } from '@/backend/api/unified/platform-types';
 import { Platform } from '@/shared/auth-types';
 import { Link } from '@tanstack/react-router';
+import { ProxiedImage } from '@/components/ui/proxied-image';
 
 interface UnifiedSearchInputProps {
     /**
@@ -85,8 +86,8 @@ export function UnifiedSearchInput({
 
     const shouldFetch = debouncedQuery.length > 0;
 
-    // Pass platform to hooks
-    const { data: channels, isLoading: channelsLoading } = useSearchChannels(debouncedQuery, platform, 6);
+    // Pass platform to hooks - higher limit to show results from both platforms
+    const { data: channels, isLoading: channelsLoading } = useSearchChannels(debouncedQuery, platform, 20);
     const { data: categories, isLoading: categoriesLoading } = useSearchCategories(debouncedQuery, platform, 4);
 
     // Filter history based on query and platform?
@@ -100,7 +101,7 @@ export function UnifiedSearchInput({
         );
     }, [searchQuery, history]);
 
-    // Split channels into exact matches and others
+    // Split channels into exact matches and others, sort by live status
     const { topMatches, otherMatches } = React.useMemo(() => {
         if (!channels || !searchQuery) return { topMatches: [], otherMatches: [] };
 
@@ -120,8 +121,15 @@ export function UnifiedSearchInput({
             }
         });
 
-        // Sort exact matches to put the most relevant one first if needed
-        // For now, just splitting is fine
+        // Sort both arrays to show live channels first
+        const sortByLive = (a: UnifiedChannel, b: UnifiedChannel) => {
+            if (a.isLive && !b.isLive) return -1;
+            if (!a.isLive && b.isLive) return 1;
+            return 0;
+        };
+
+        top.sort(sortByLive);
+        others.sort(sortByLive);
 
         return { topMatches: top, otherMatches: others };
     }, [channels, searchQuery]);
@@ -199,6 +207,13 @@ export function UnifiedSearchInput({
             search: { tab: 'videos' }
         };
 
+        // Fallback for when avatar fails to load
+        const avatarFallback = (
+            <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center">
+                <span className="text-xs font-bold text-white uppercase">{channel.displayName.slice(0, 1)}</span>
+            </div>
+        );
+
         return (
             // @ts-ignore - Link props vs div props complexity
             <Wrapper
@@ -208,11 +223,14 @@ export function UnifiedSearchInput({
             >
                 <div className="relative">
                     {channel.avatarUrl ? (
-                        <img src={channel.avatarUrl} alt={channel.displayName} className="w-8 h-8 rounded-full object-cover" />
+                        <ProxiedImage
+                            src={channel.avatarUrl}
+                            alt={channel.displayName}
+                            className="w-8 h-8 rounded-full object-cover"
+                            fallback={avatarFallback}
+                        />
                     ) : (
-                        <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center">
-                            <span className="text-xs font-bold text-white uppercase">{channel.displayName.slice(0, 1)}</span>
-                        </div>
+                        avatarFallback
                     )}
                     {channel.isLive && (
                         <div className="absolute -bottom-1 -right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-[#0F0F12]" />
@@ -309,7 +327,7 @@ export function UnifiedSearchInput({
                                 <Sparkles size={12} /> Best Match
                             </h3>
                             {topMatches.map((channel) => (
-                                <ChannelItem key={channel.id} channel={channel} onClick={handleChannelClick} />
+                                <ChannelItem key={`${channel.platform}-${channel.id}`} channel={channel} onClick={handleChannelClick} />
                             ))}
                         </div>
                     )}
@@ -321,7 +339,7 @@ export function UnifiedSearchInput({
                                 <User size={12} /> Channels
                             </h3>
                             {otherMatches.map((channel) => (
-                                <ChannelItem key={channel.id} channel={channel} onClick={handleChannelClick} />
+                                <ChannelItem key={`${channel.platform}-${channel.id}`} channel={channel} onClick={handleChannelClick} />
                             ))}
                         </div>
                     )}
@@ -342,7 +360,7 @@ export function UnifiedSearchInput({
                                 return (
                                     // @ts-ignore
                                     <Wrapper
-                                        key={category.id}
+                                        key={`${category.platform}-${category.id}`}
                                         {...linkProps}
                                         onClick={(e: React.MouseEvent) => handleCategoryClick(category, e)}
                                         className="flex items-center gap-3 px-4 py-2 hover:bg-[var(--color-background-secondary)] transition-colors group cursor-pointer"
