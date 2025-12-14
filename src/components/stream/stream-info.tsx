@@ -64,7 +64,11 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                 alt={channel.displayName}
                 platform={channel.platform}
                 size="w-16 h-16"
-                className="shrink-0 text-xl font-bold shadow-lg ring-2 ring-offset-2 ring-offset-[var(--color-background)]"
+                className={`shrink-0 text-xl font-bold shadow-lg ring-offset-2 ring-offset-[var(--color-background)] ${channel.platform === 'twitch' ? 'ring-2 ring-[#9146FF]' : 'ring-[3px] ring-[#53FC18]'
+                    }`}
+                isLive={stream?.isLive}
+                liveStatusType={channel.platform === 'kick' ? 'badge' : 'dot'}
+                disablePlatformBorder={true}
             />
             <div className="flex-1 min-w-0">
                 <h1 className="text-2xl font-bold flex items-center gap-2 truncate">

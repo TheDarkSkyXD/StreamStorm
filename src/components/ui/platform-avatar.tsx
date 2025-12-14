@@ -10,7 +10,8 @@ interface PlatformAvatarProps {
     className?: string;
     showBadge?: boolean;
     isLive?: boolean;
-    ringColor?: string; // Optional override
+    liveStatusType?: 'dot' | 'badge';
+    disablePlatformBorder?: boolean;
 }
 
 export function PlatformAvatar({
@@ -21,6 +22,8 @@ export function PlatformAvatar({
     className,
     showBadge = true,
     isLive = false,
+    liveStatusType = 'dot',
+    disablePlatformBorder = false,
 }: PlatformAvatarProps) {
     // Platform specific styles
     const styles = {
@@ -54,8 +57,9 @@ export function PlatformAvatar({
     return (
         <div className={cn("relative shrink-0 rounded-full", size, className)}>
             <div className={cn(
-                "w-full h-full rounded-full p-0.5",
-                platform === 'twitch' ? 'bg-[#9146FF]' : 'bg-[#53FC18]'
+                "w-full h-full rounded-full",
+                !disablePlatformBorder && "p-0.5",
+                !disablePlatformBorder && (platform === 'twitch' ? 'bg-[#9146FF]' : 'bg-[#53FC18]')
             )}>
                 <ProxiedImage
                     src={src}
@@ -63,7 +67,7 @@ export function PlatformAvatar({
                     className={cn(
                         "w-full h-full rounded-full object-cover",
                         "bg-[var(--color-background-tertiary)]", // Background while loading
-                        "border-2 border-[var(--color-background)]" // Inner border to separate image from platform color
+                        !disablePlatformBorder && "border-2 border-[var(--color-background)]" // Inner border to separate image from platform color
                     )}
                     fallback={
                         <div className={cn(
@@ -83,11 +87,20 @@ export function PlatformAvatar({
                 In StreamCard: "LIVE" text top-left (on thumbnail).
             */}
             {isLive ? (
-                <div className={cn(
-                    "absolute bg-red-500 rounded-full border-[2px] border-[var(--color-background)]",
-                    badgeOffset,
-                    isLarge ? "w-4 h-4" : "w-3 h-3"
-                )} />
+                liveStatusType === 'badge' ? (
+                    <div className={cn(
+                        "absolute -bottom-2.5 left-1/2 -translate-x-1/2 rounded border-[3px] flex items-center justify-center font-bold px-1.5 py-0.5 text-[10px] leading-none",
+                        platform === 'twitch' ? 'bg-[#9146FF] text-white border-[var(--color-background)]' : 'bg-[#53FC18] text-black !border-[#53FC18]'
+                    )}>
+                        LIVE
+                    </div>
+                ) : (
+                    <div className={cn(
+                        "absolute bg-red-500 rounded-full border-[2px] border-[var(--color-background)]",
+                        badgeOffset,
+                        isLarge ? "w-4 h-4" : "w-3 h-3"
+                    )} />
+                )
             ) : showBadge && platform !== 'twitch' && (
                 <div className={cn(
                     "absolute rounded-full border-[var(--color-background)] flex items-center justify-center font-bold select-none",
