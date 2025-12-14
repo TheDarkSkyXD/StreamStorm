@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { useStreamPlayback } from '@/hooks/useStreamPlayback';
+import { useChannelByUsername } from '@/hooks/queries/useChannels';
 import { KickLivePlayer } from '@/components/player/kick';
 import { TwitchLivePlayer } from '@/components/player/twitch';
 import { useMultiStreamStore } from '@/store/multistream-store';
@@ -33,6 +34,9 @@ export function StreamSlot({
     const { toggleMute, setChatStream, chatStreamId } = useMultiStreamStore();
     const { playback, isLoading, reload } = useStreamPlayback(platform, channelName);
 
+    // Fetch channel data to get offline banner, avatar, and display name
+    const { data: channelData } = useChannelByUsername(channelName, platform);
+
     const isChatActive = chatStreamId === streamId;
 
     return (
@@ -51,7 +55,7 @@ export function StreamSlot({
                 )}>
                     {platform}
                 </span>
-                {channelName}
+                {channelData?.displayName || channelName}
             </div>
 
             {/* Slot Controls (Top Right) */}
@@ -108,39 +112,100 @@ export function StreamSlot({
                 </Button>
             </div>
 
-            {/* Video Player - Platform Specific Live Players */}
+            {/* Video Player - Only render when we have a valid playback URL */}
             <div className="w-full h-full">
-                {platform === 'kick' ? (
-                    <KickLivePlayer
-                        streamUrl={playback?.url || ''}
-                        autoPlay={true}
-                        muted={isMuted}
-                        className="pointer-events-none"
-                    />
+                {playback?.url ? (
+                    // Stream is live - render the player
+                    platform === 'kick' ? (
+                        <KickLivePlayer
+                            streamUrl={playback.url}
+                            autoPlay={true}
+                            muted={isMuted}
+                            className="pointer-events-none"
+                        />
+                    ) : (
+                        <TwitchLivePlayer
+                            streamUrl={playback.url}
+                            autoPlay={true}
+                            muted={isMuted}
+                            className="pointer-events-none"
+                        />
+                    )
                 ) : (
-                    <TwitchLivePlayer
-                        streamUrl={playback?.url || ''}
-                        autoPlay={true}
-                        muted={isMuted}
-                        className="pointer-events-none"
-                    />
-                )}
+                    // No playback URL - show loading or offline state
+                    <div className="absolute inset-0 z-10 overflow-hidden">
+                        {isLoading ? (
+                            // Loading state with gradient background
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-black/60 to-black">
+                                <div
+                                    className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin"
+                                    style={{
+                                        borderColor: platform === 'kick' ? '#53FC18' : '#9146FF',
+                                        borderTopColor: 'transparent'
+                                    }}
+                                />
+                                <span className="text-white/70 text-sm mt-3">Loading stream...</span>
+                            </div>
+                        ) : (
+                            // Offline state with banner/avatar background
+                            <>
+                                {/* Background: Offline banner if available, otherwise blurred avatar or gradient */}
+                                {channelData?.bannerUrl ? (
+                                    <img
+                                        src={channelData.bannerUrl}
+                                        alt=""
+                                        className="absolute inset-0 w-full h-full object-cover"
+                                    />
+                                ) : channelData?.avatarUrl ? (
+                                    <>
+                                        {/* Blurred, scaled-up avatar as background */}
+                                        <img
+                                            src={channelData.avatarUrl}
+                                            alt=""
+                                            className="absolute inset-0 w-full h-full object-cover blur-3xl scale-150 opacity-40"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/80 to-black" />
+                                    </>
+                                ) : (
+                                    <div
+                                        className="absolute inset-0"
+                                        style={{
+                                            background: platform === 'twitch'
+                                                ? 'linear-gradient(to bottom, rgba(145, 70, 255, 0.3), rgb(0, 0, 0))'
+                                                : 'linear-gradient(to bottom, rgba(83, 252, 24, 0.2), rgb(0, 0, 0))'
+                                        }}
+                                    />
+                                )}
 
-                {/* Loading / Error States */}
-                {isLoading && !playback && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10 pointer-events-none">
-                        <span className="text-white text-sm">Loading...</span>
-                    </div>
-                )}
-
-                {!isLoading && !playback && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
-                        <div className="text-center">
-                            <p className="text-white mb-2 text-sm">Offline</p>
-                            <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); reload(); }}>
-                                Retry
-                            </Button>
-                        </div>
+                                {/* Content overlay */}
+                                <div className="absolute inset-0 flex flex-col items-center justify-center">
+                                    {/* Avatar (if available and no banner) */}
+                                    {channelData?.avatarUrl && !channelData?.bannerUrl && (
+                                        <div className="mb-4">
+                                            <img
+                                                src={channelData.avatarUrl}
+                                                alt={channelData.displayName || channelName}
+                                                className="w-16 h-16 rounded-full border-2 border-white/20 shadow-xl"
+                                            />
+                                        </div>
+                                    )}
+                                    <div className="text-center">
+                                        <p className="text-white text-lg font-bold mb-1 drop-shadow-lg">
+                                            {channelData?.displayName || channelName}
+                                        </p>
+                                        <p className="text-white/70 text-sm mb-4">is currently offline</p>
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="bg-white/10 border-white/30 hover:bg-white/20 backdrop-blur-sm"
+                                            onClick={(e) => { e.stopPropagation(); reload(); }}
+                                        >
+                                            Retry
+                                        </Button>
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </div>
                 )}
             </div>

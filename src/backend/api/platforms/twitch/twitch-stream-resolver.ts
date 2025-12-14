@@ -12,9 +12,19 @@ export class TwitchStreamResolver {
 
     /**
      * Get playback URL for a live stream
+     * IMPORTANT: First checks if the channel is actually live to avoid 404 errors
      */
     async getStreamPlaybackUrl(channelLogin: string): Promise<StreamPlayback> {
         try {
+            // First, check if the channel is actually live using the Twitch API
+            // This prevents returning a URL for offline channels which would cause 404 errors
+            const { twitchClient } = await import('./twitch-client');
+            const stream = await twitchClient.getStreamByLogin(channelLogin);
+
+            if (!stream) {
+                throw new Error('Channel is offline');
+            }
+
             const token = await this.getPlaybackAccessToken(channelLogin, false);
             const url = this.constructHlsUrl(channelLogin, token.value, token.signature);
             return {
@@ -22,7 +32,11 @@ export class TwitchStreamResolver {
                 format: 'hls'
             };
         } catch (error) {
-            console.error('Failed to resolve Twitch stream URL for:', channelLogin, error);
+            // Don't log "offline" errors as they're expected behavior
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (!errorMessage.toLowerCase().includes('offline')) {
+                console.error('Failed to resolve Twitch stream URL for:', channelLogin, error);
+            }
             throw error;
         }
     }
