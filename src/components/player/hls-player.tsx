@@ -151,13 +151,21 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 }
             });
 
-            // Log non-fatal errors (these are retries in progress)
+            // Handle HLS errors - distinguish between expected stream-ending scenarios and actual errors
             hls.on(Hls.Events.ERROR, (event, data) => {
-                // Ignore innocuous errors that resolve themselves automatically
+                // Completely ignore innocuous errors that resolve themselves automatically
                 // - bufferStalledError: temporary buffer underrun, HLS.js recovers automatically
                 // - levelSwitchError: ABR quality switching hiccup, HLS.js handles internally
-                const ignoredErrors = ['bufferStalledError', 'levelSwitchError'];
-                if (!ignoredErrors.includes(data.details)) {
+                const silentErrors = ['bufferStalledError', 'levelSwitchError'];
+
+                // Expected stream-ending errors (403/404 on manifest/fragment) - don't log as errors
+                const isStreamEndingError =
+                    data.details === 'manifestLoadError' ||
+                    data.details === 'levelLoadError' ||
+                    data.details === 'fragLoadError';
+
+                // Log non-silent, non-stream-ending errors for debugging
+                if (!silentErrors.includes(data.details) && !isStreamEndingError) {
                     console.log(`[HLS] Error: ${data.details}, fatal: ${data.fatal}, type: ${data.type}`);
                 }
 
@@ -165,7 +173,9 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                     // Fatal error means all internal retries have been exhausted
                     switch (data.type) {
                         case Hls.ErrorTypes.NETWORK_ERROR:
-                            console.log('[HLS] Fatal network error - all retries exhausted, stream likely offline');
+                            // Stream likely ended - this is expected behavior, not an error
+                            // Log as debug instead of error to reduce console noise
+                            console.debug('[HLS] Stream ended or became unavailable (network error after retries)');
                             onErrorRef.current?.({
                                 code: 'STREAM_OFFLINE',
                                 message: 'Stream offline or unavailable',
@@ -192,13 +202,13 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 } else {
                     // Non-fatal error - HLS.js is handling this internally (retrying)
                     if (data.details === 'bufferStalledError') {
-                        console.warn('[HLS] Buffer stalled, attempting to recover...');
-                        // Nudge playhead if stuck
+                        // Don't log as warning - this is handled automatically
                         if (videoRef.current && !videoRef.current.paused) {
                             hls?.recoverMediaError();
                         }
-                    } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                        console.log(`[HLS] Network error (will retry automatically): ${data.details}`);
+                    } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR && !isStreamEndingError) {
+                        // Only log network retries for non-stream-ending errors
+                        console.debug(`[HLS] Network error (will retry automatically): ${data.details}`);
                     }
                 }
             });

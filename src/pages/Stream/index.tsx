@@ -37,7 +37,12 @@ export function StreamPage() {
   const [playerError, setPlayerError] = useState<PlayerError | null>(null);
 
   const handlePlayerError = useCallback((error: PlayerError) => {
-    console.error('Player error', error);
+    // STREAM_OFFLINE is expected when a stream ends - use debug logging
+    if (error.code === 'STREAM_OFFLINE') {
+      console.debug('Stream ended or went offline');
+    } else {
+      console.error('Player error', error);
+    }
     setPlayerError(error);
   }, []);
 
