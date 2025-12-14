@@ -7,6 +7,7 @@ export interface QualityLevel {
     bitrate: number;
     frameRate?: number;
     isAuto?: boolean;
+    name?: string;
 }
 
 export interface PlayerError {

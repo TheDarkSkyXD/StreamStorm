@@ -5,6 +5,7 @@ import { TwitchLivePlayerControls } from './twitch-live-player-controls';
 import { usePlayerKeyboard } from '../use-player-keyboard';
 import { usePictureInPicture } from '../use-picture-in-picture';
 import { useFullscreen } from '../use-fullscreen';
+import { useDefaultQuality } from '../use-default-quality';
 import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
 
 export interface TwitchLivePlayerProps {
@@ -53,6 +54,9 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [playbackRate, setPlaybackRate] = useState(1);
     const [hasError, setHasError] = useState(false);
+
+    // Apply user's default quality preference
+    useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
 
     // Reset error state when streamUrl changes
     useEffect(() => {

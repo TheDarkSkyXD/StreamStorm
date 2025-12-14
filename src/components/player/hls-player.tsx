@@ -141,7 +141,8 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                         height: level.height,
                         bitrate: level.bitrate,
                         frameRate: level.frameRate,
-                        isAuto: false
+                        isAuto: false,
+                        name: level.name
                     }));
                     // Add Auto level
                     onQualityLevelsRef.current([

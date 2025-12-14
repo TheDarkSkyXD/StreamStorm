@@ -7,6 +7,7 @@ import { usePlayerKeyboard } from './use-player-keyboard';
 import { usePictureInPicture } from './use-picture-in-picture';
 import { useFullscreen } from './use-fullscreen';
 import { useResumePlayback } from './use-resume-playback';
+import { useDefaultQuality } from './use-default-quality';
 
 export interface VideoPlayerProps {
     streamUrl: string;
@@ -76,6 +77,9 @@ export function VideoPlayer(props: VideoPlayerProps) {
     const [buffered, setBuffered] = useState<TimeRanges | undefined>(undefined);
     const [playbackRate, setPlaybackRate] = useState(1);
     const [hasError, setHasError] = useState(false); // Track if player has errored
+
+    // Apply user's default quality preference
+    useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
 
     // Reset error state when streamUrl changes
     useEffect(() => {

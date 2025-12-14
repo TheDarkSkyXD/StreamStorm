@@ -46,6 +46,7 @@ export { useFullscreen } from './use-fullscreen';
 export { usePictureInPicture } from './use-picture-in-picture';
 export { usePlayerKeyboard } from './use-player-keyboard';
 export { useResumePlayback } from './use-resume-playback';
+export { useDefaultQuality } from './use-default-quality';
 
 // Types
 export * from './types';

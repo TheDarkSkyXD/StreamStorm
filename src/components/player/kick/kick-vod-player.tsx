@@ -6,6 +6,7 @@ import { usePlayerKeyboard } from '../use-player-keyboard';
 import { usePictureInPicture } from '../use-picture-in-picture';
 import { useFullscreen } from '../use-fullscreen';
 import { useResumePlayback } from '../use-resume-playback';
+import { useDefaultQuality } from '../use-default-quality';
 import { KickLoadingSpinner } from '@/components/ui/loading-spinner';
 
 export interface KickVodPlayerProps {
@@ -74,6 +75,9 @@ export function KickVodPlayer(props: KickVodPlayerProps) {
     const [buffered, setBuffered] = useState<TimeRanges | undefined>(undefined);
     const [playbackRate, setPlaybackRate] = useState(1);
     const [hasError, setHasError] = useState(false);
+
+    // Apply user's default quality preference
+    useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
 
     // Reset error state when streamUrl changes
     useEffect(() => {

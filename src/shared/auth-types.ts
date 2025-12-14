@@ -84,7 +84,7 @@ export interface KickFollow {
 // ========== Preferences Types ==========
 
 export type Theme = 'light' | 'dark' | 'system';
-export type VideoQuality = 'auto' | '1080p' | '720p' | '480p' | '360p';
+export type VideoQuality = 'auto' | '1080p' | '720p' | '480p' | '360p' | '160p';
 export type ChatPosition = 'right' | 'left' | 'hidden';
 export type ChatSize = 'small' | 'medium' | 'large';
 

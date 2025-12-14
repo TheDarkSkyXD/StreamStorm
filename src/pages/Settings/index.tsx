@@ -12,6 +12,9 @@ import {
 } from '@/components/ui/select';
 import { useAppVersion } from '@/hooks';
 import { useAuthError } from '@/hooks/useAuth';
+import { useAuthStore } from '@/store/auth-store';
+import { VideoQuality } from '@/shared/auth-types';
+import { useState } from 'react';
 
 
 export function SettingsPage() {
@@ -20,6 +23,27 @@ export function SettingsPage() {
 
   // Get auth state
   const { error, clearError } = useAuthError();
+  const preferences = useAuthStore(state => state.preferences);
+  const updatePreferences = useAuthStore(state => state.updatePreferences);
+
+  const [saved, setSaved] = useState(false);
+
+  const handleQualityChange = async (value: string) => {
+    // Cast string to VideoQuality since we know the values are valid
+    const quality = value as VideoQuality;
+
+    // Update store
+    await updatePreferences({
+      playback: {
+        ...preferences?.playback!,
+        defaultQuality: quality
+      }
+    });
+
+    // Show saved indicator
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  };
 
   return (
     <div className="p-6 max-w-4xl">
@@ -78,17 +102,29 @@ export function SettingsPage() {
                   Preferred stream quality when available
                 </p>
               </div>
-              <Select defaultValue="auto">
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Select quality" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="auto">Auto</SelectItem>
-                  <SelectItem value="1080p">1080p</SelectItem>
-                  <SelectItem value="720p">720p</SelectItem>
-                  <SelectItem value="480p">480p</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="flex items-center gap-3">
+                {saved && (
+                  <span className="text-sm text-green-500 font-medium animate-in fade-in slide-in-from-right-2 duration-300">
+                    Saved
+                  </span>
+                )}
+                <Select
+                  value={preferences?.playback?.defaultQuality || 'auto'}
+                  onValueChange={handleQualityChange}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select quality" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="auto">Auto</SelectItem>
+                    <SelectItem value="1080p">1080p60</SelectItem>
+                    <SelectItem value="720p">720p60</SelectItem>
+                    <SelectItem value="480p">480p</SelectItem>
+                    <SelectItem value="360p">360p</SelectItem>
+                    <SelectItem value="160p">160p</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
