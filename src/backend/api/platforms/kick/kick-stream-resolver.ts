@@ -6,7 +6,7 @@ export class KickStreamResolver {
     /**
      * Make a request using Electron's net module to bypass Cloudflare
      */
-    private async netRequest<T>(url: string): Promise<T> {
+    private async netRequest<T>(url: string, context?: string): Promise<T> {
         const { net } = require('electron');
 
         return new Promise<T>((resolve, reject) => {
@@ -22,7 +22,8 @@ export class KickStreamResolver {
 
             request.on('response', (response: any) => {
                 if (response.statusCode === 404) {
-                    reject(new Error('Not found'));
+                    const contextInfo = context ? ` for ${context}` : '';
+                    reject(new Error(`Channel not found${contextInfo} - the channel may not exist or has been renamed`));
                     return;
                 }
 
@@ -62,38 +63,54 @@ export class KickStreamResolver {
      * when HLS.js tries to load the manifest.
      */
     async getStreamPlaybackUrl(channelSlug: string): Promise<StreamPlayback> {
-        try {
-            const data = await this.netRequest<any>(`${KICK_LEGACY_API_V1_BASE}/channels/${channelSlug}`);
+        // Normalize slug to lowercase - Kick API is case-sensitive
+        const normalizedSlug = channelSlug.toLowerCase();
 
-            // First, verify the stream is actually live
-            // The livestream object contains is_live field that indicates current status
-            const isLive = data.livestream?.is_live === true;
+        // Retry logic for transient failures
+        const maxRetries = 2;
+        let lastError: Error | null = null;
 
-            if (!isLive) {
-                throw new Error('Channel is offline');
+        for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const data = await this.netRequest<any>(`${KICK_LEGACY_API_V1_BASE}/channels/${normalizedSlug}`, normalizedSlug);
+
+                // Verify the stream is actually live
+                const isLive = data.livestream?.is_live === true;
+
+                if (!isLive) {
+                    throw new Error('Channel is offline');
+                }
+
+                // The playback URL is usually in data.playback_url
+                const playbackUrl = data.playback_url || data.livestream?.source || null;
+
+                if (!playbackUrl) {
+                    throw new Error('No playback URL found in response');
+                }
+
+                return {
+                    url: playbackUrl,
+                    format: 'hls'
+                };
+
+            } catch (error) {
+                lastError = error instanceof Error ? error : new Error(String(error));
+
+                // Don't retry for expected errors
+                if (lastError.message.toLowerCase().includes('offline') ||
+                    lastError.message.toLowerCase().includes('not found')) {
+                    throw lastError;
+                }
+
+                // Wait before retrying (exponential backoff)
+                if (attempt < maxRetries) {
+                    await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+                }
             }
-
-            // The playback URL is usually in data.playback_url
-            // Some responses might place it inside livestream object, but usually root for this endpoint
-            const playbackUrl = data.playback_url || data.livestream?.source || null;
-
-            if (!playbackUrl) {
-                throw new Error('No playback URL found in response');
-            }
-
-            return {
-                url: playbackUrl,
-                format: 'hls'
-            };
-
-        } catch (error) {
-            // "Channel is offline" is expected behavior - don't log as error
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            if (!errorMessage.toLowerCase().includes('offline')) {
-                console.error('Failed to resolve Kick stream URL for:', channelSlug, error);
-            }
-            throw error;
         }
+
+        // All retries exhausted
+        throw lastError || new Error('Failed to get stream playback URL');
     }
 
     /**
