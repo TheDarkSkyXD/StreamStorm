@@ -7,8 +7,8 @@ import { FollowButton } from '@/components/ui/follow-button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
 import { formatViewerCount, formatUptime } from '@/lib/utils';
-import { PopoutManager } from '@/lib/popout-manager';
-import { ExternalLink, Users, Clock } from 'lucide-react';
+
+import { Users, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface StreamInfoProps {
@@ -104,14 +104,6 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
             {/* Right side: Follow button and live stats */}
             <div className="flex flex-col items-end gap-3">
                 <div className="flex items-center gap-2">
-                    <Button
-                        variant="secondary"
-                        size="icon"
-                        title="Popout Player"
-                        onClick={() => PopoutManager.openStreamPopout(channel.platform, channel.username || channel.id)}
-                    >
-                        <ExternalLink className="w-4 h-4" />
-                    </Button>
                     <FollowButton channel={channel} size="default" />
                 </div>
 

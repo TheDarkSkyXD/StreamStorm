@@ -17,7 +17,6 @@ import {
   VideoPage,
   SettingsPage,
   ClipPage,
-  PopoutPage,
   MultiStreamPage,
 } from '@/pages';
 
@@ -38,11 +37,7 @@ const appLayoutRoute = createRoute({
 });
 
 // Popout Route (Minimal layout)
-const popoutRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/popout/$platform/$channel',
-  component: PopoutPage,
-});
+
 
 // Home/Browse page
 const homeRoute = createRoute({
@@ -157,7 +152,6 @@ const routeTree = rootRoute.addChildren([
     settingsRoute,
     multiStreamRoute,
   ]),
-  popoutRoute,
 ]);
 
 // Create and export the router

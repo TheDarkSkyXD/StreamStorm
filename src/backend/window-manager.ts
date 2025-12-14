@@ -1,7 +1,7 @@
 /**
  * Window Manager
  * 
- * Manages the main window and pop-out windows for multi-stream viewing.
+ * Manages the main window.
  * Handles window state persistence, bounds, and lifecycle.
  */
 
@@ -61,7 +61,7 @@ function ensureWindowIsVisible(bounds: WindowBounds): WindowBounds {
 
 class WindowManager {
   private mainWindow: BrowserWindow | null = null;
-  private popoutWindows: Map<string, BrowserWindow> = new Map();
+
 
   /**
    * Create the main application window
@@ -140,62 +140,7 @@ class WindowManager {
     return this.mainWindow;
   }
 
-  /**
-   * Create a popout window for stream viewing
-   */
-  createPopoutWindow(streamId: string): BrowserWindow {
-    const popout = new BrowserWindow({
-      width: 800,
-      height: 600,
-      minWidth: 400,
-      minHeight: 300,
-      backgroundColor: '#0f0f0f',
-      frame: false,
-      webPreferences: {
-        preload: path.join(__dirname, 'index.js'),
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: true,
-        webSecurity: false, // Allow CORS for video streams
-      },
-    });
 
-    // Load with stream URL parameter
-    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-      popout.loadURL(`${MAIN_WINDOW_VITE_DEV_SERVER_URL}#/popout/${streamId}`);
-    } else {
-      popout.loadFile(
-        path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
-        { hash: `/popout/${streamId}` }
-      );
-    }
-
-    // Track the popout window
-    this.popoutWindows.set(streamId, popout);
-
-    popout.on('closed', () => {
-      this.popoutWindows.delete(streamId);
-    });
-
-    return popout;
-  }
-
-  /**
-   * Get a popout window by stream ID
-   */
-  getPopoutWindow(streamId: string): BrowserWindow | undefined {
-    return this.popoutWindows.get(streamId);
-  }
-
-  /**
-   * Close all popout windows
-   */
-  closeAllPopouts(): void {
-    this.popoutWindows.forEach((window) => {
-      window.close();
-    });
-    this.popoutWindows.clear();
-  }
 }
 
 // Singleton instance
