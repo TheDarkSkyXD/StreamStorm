@@ -167,17 +167,43 @@ export function registerVideoHandlers(): void {
                 });
                 console.log(`[TwitchVideo] Fetched ${videos.data.length} videos for ${params.channelName} (User ID: ${userId})`);
 
-                return {
-                    success: true,
-                    data: videos.data.map(v => ({
+                // Resolve Game Info via GQL (since Helix videos endpoint doesn't return game_id)
+                const videoIds = videos.data.map(v => v.id);
+                let gameMap: Record<string, { id: string, name: string }> = {};
+
+                if (videoIds.length > 0) {
+                    try {
+                        gameMap = await twitchClient.getVideosGameData(videoIds);
+                    } catch (err) {
+                        console.error('[TwitchVideo] Failed to resolve game data via GQL:', err);
+                    }
+                }
+
+                // Fallback logic for game IDs if they somehow exist (e.g. from a different endpoint in future)
+                // This preserves the previous logic just in case, but prefers GQL result
+
+                const mappedData = videos.data.map(v => {
+                    const gqlGame = gameMap[v.id];
+                    const gameName = gqlGame?.name || v.game_name;
+                    const gameId = gqlGame?.id || v.game_id;
+
+                    return {
                         id: v.id,
                         title: v.title,
                         duration: formatTwitchDuration(v.duration),
                         views: v.view_count.toString(),
                         date: new Date(v.created_at).toISOString(),
                         thumbnailUrl: v.thumbnail_url.replace('%{width}', '320').replace('%{height}', '180'),
-                        platform: 'twitch'
-                    })),
+                        platform: 'twitch',
+                        gameName: gameName,
+                        category: gameName
+                    };
+                });
+
+
+                return {
+                    success: true,
+                    data: mappedData,
                     cursor: videos.cursor,
                     debug: `User ID: ${userId}, Count: ${videos.data.length}`
                 };

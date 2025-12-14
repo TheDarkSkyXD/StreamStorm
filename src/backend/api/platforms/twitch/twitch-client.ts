@@ -23,6 +23,7 @@ import * as CategoryEndpoints from './endpoints/category-endpoints';
 import * as VideoEndpoints from './endpoints/video-endpoints';
 import * as ClipEndpoints from './endpoints/clip-endpoints';
 import * as SearchEndpoints from './endpoints/search-endpoints';
+import { fetchGamesForVideos } from './twitch-gql-helpers';
 
 // Re-export types for backward compatibility
 export type { PaginationOptions, PaginatedResult, TwitchClientError };
@@ -177,8 +178,18 @@ class TwitchClient extends TwitchRequestor {
     /**
      * Get a single video by ID
      */
+    /**
+     * Get a single video by ID
+     */
     async getVideoById(videoId: string): Promise<TwitchApiVideo | null> {
         return VideoEndpoints.getVideoById(this, videoId);
+    }
+
+    /**
+     * Get game/category data for videos via GQL
+     */
+    async getVideosGameData(videoIds: string[]): Promise<Record<string, { id: string; name: string }>> {
+        return fetchGamesForVideos(videoIds);
     }
 
     // ========== Clips ==========

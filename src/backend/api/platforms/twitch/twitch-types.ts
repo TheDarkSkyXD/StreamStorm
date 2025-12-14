@@ -101,6 +101,8 @@ export interface TwitchApiVideo {
     type: 'archive' | 'highlight' | 'upload';
     duration: string; // e.g., "3h8m32s"
     muted_segments: { duration: number; offset: number }[] | null;
+    game_id?: string;
+    game_name?: string;
 }
 
 // ========== Twitch Clip ==========
