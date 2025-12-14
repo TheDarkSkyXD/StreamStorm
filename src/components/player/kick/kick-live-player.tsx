@@ -205,7 +205,6 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         const video = videoRef.current;
         if (video) {
             video.muted = initialMuted;
-            video.volume = 1;
         }
     }, [initialMuted]);
 

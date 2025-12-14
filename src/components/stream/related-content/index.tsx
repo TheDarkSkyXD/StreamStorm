@@ -8,7 +8,7 @@ import { VideoCard } from './VideoCard';
 import { ClipCard } from './ClipCard';
 import { ClipDialog } from './ClipDialog';
 
-export function RelatedContent({ platform, channelName, channelData }: RelatedContentProps) {
+export function RelatedContent({ platform, channelName, channelData, onClipSelectionChange }: RelatedContentProps) {
     const { tab: activeTab } = useSearch({ from: '/_app/stream/$platform/$channel' });
     const [isLoading, setIsLoading] = useState(true);
     const [videos, setVideos] = useState<VideoOrClip[]>([]);
@@ -19,6 +19,11 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
     const [clipError, setClipError] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [debugInfo, setDebugInfo] = useState<string | null>(null);
+
+    // Notify parent about clip selection state (for muting main player)
+    useEffect(() => {
+        onClipSelectionChange?.(!!selectedClip);
+    }, [selectedClip, onClipSelectionChange]);
 
     // Fetch data - wait for channelData to be loaded to get the channelId
     useEffect(() => {

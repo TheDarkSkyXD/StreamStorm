@@ -30,4 +30,5 @@ export interface RelatedContentProps {
     platform: Platform;
     channelName: string;
     channelData: import('@/backend/api/unified/platform-types').UnifiedChannel | null | undefined;
+    onClipSelectionChange?: (isOpen: boolean) => void;
 }

@@ -37,6 +37,9 @@ export function StreamPage() {
   // Player error state (e.g., stream offline even though URL was provided)
   const [playerError, setPlayerError] = useState<PlayerError | null>(null);
 
+  // Track clip dialog state to mute main player
+  const [isClipDialogOpen, setIsClipDialogOpen] = useState(false);
+
   const handlePlayerError = useCallback((error: PlayerError) => {
     // STREAM_OFFLINE is expected when a stream ends - use debug logging
     if (error.code === 'STREAM_OFFLINE') {
@@ -104,7 +107,7 @@ export function StreamPage() {
               <KickLivePlayer
                 streamUrl={effectiveStreamUrl}
                 autoPlay={true}
-                muted={false}
+                muted={isClipDialogOpen}
                 onReady={() => console.log('Kick Live Player ready')}
                 onError={handlePlayerError}
                 isTheater={isTheater}
@@ -115,7 +118,7 @@ export function StreamPage() {
               <TwitchLivePlayer
                 streamUrl={effectiveStreamUrl}
                 autoPlay={true}
-                muted={false}
+                muted={isClipDialogOpen}
                 onReady={() => console.log('Twitch Live Player ready')}
                 onError={handlePlayerError}
                 isTheater={isTheater}
@@ -246,6 +249,7 @@ export function StreamPage() {
               platform={platform as Platform}
               channelName={channelName}
               channelData={channelData}
+              onClipSelectionChange={setIsClipDialogOpen}
             />
           </div>
         </div>

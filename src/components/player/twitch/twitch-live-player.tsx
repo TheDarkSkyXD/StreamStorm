@@ -100,7 +100,6 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
         const video = videoRef.current;
         if (video) {
             video.muted = initialMuted;
-            video.volume = 1;
         }
     }, [initialMuted]);
 
