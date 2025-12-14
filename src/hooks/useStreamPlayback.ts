@@ -11,9 +11,18 @@ interface UseStreamPlaybackResult {
 
 export function useStreamPlayback(platform: Platform, identifier: string): UseStreamPlaybackResult {
     const [playback, setPlayback] = useState<StreamPlayback | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(!!identifier);
     const [error, setError] = useState<Error | null>(null);
     const [reloadKey, setReloadKey] = useState(0);
+    const currentKey = `${platform}-${identifier}`;
+    const [prevKey, setPrevKey] = useState(currentKey);
+
+    if (currentKey !== prevKey) {
+        setPrevKey(currentKey);
+        setPlayback(null);
+        setIsLoading(!!identifier);
+        setError(null);
+    }
 
     useEffect(() => {
         if (!identifier) return;

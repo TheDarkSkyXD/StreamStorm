@@ -11,6 +11,7 @@ import { PlayerError } from '@/components/player/types';
 import { useStreamPlayback } from '@/hooks/useStreamPlayback';
 import { StreamInfo } from '@/components/stream/stream-info';
 import { RelatedContent } from '@/components/stream/related-content';
+import { KickLoadingSpinner, TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
 
 export function StreamPage() {
   const { platform, channel: channelName } = useParams({ from: '/_app/stream/$platform/$channel' });
@@ -24,7 +25,7 @@ export function StreamPage() {
 
   // Real data fetching
   const { data: channelData, isLoading: isChannelLoading } = useChannelByUsername(channelName, platform as Platform);
-  const { data: streamData } = useStreamByChannel(channelName, platform as Platform);
+  const { data: streamData, isLoading: isStreamLoading } = useStreamByChannel(channelName, platform as Platform);
 
   // Chat Resizing Logic
   const [chatWidth, setChatWidth] = useState(350);
@@ -122,9 +123,11 @@ export function StreamPage() {
               />
             )}
             {/* Show loading only when fetching data */}
-            {(isPlaybackLoading || isChannelLoading) && !effectiveStreamUrl && !playerError && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-20 pointer-events-none">
-                <span className="text-white text-sm">Loading stream...</span>
+            {(isPlaybackLoading || isChannelLoading || isStreamLoading) && !effectiveStreamUrl && !playerError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black z-20 pointer-events-none">
+                <div className="flex flex-col items-center gap-2">
+                  {platform === 'kick' ? <KickLoadingSpinner /> : <TwitchLoadingSpinner />}
+                </div>
               </div>
             )}
             {playerError && (
@@ -179,7 +182,7 @@ export function StreamPage() {
               </div>
             )}
             {/* Show offline screen when stream is confirmed offline (data loaded but not live) */}
-            {!isPlaybackLoading && !isChannelLoading && !isStreamLive && !playerError && (
+            {!isPlaybackLoading && !isChannelLoading && !isStreamLoading && !isStreamLive && !playerError && (
               <div className="absolute inset-0 z-20 overflow-hidden">
                 {/* Background: Offline banner if available, otherwise blurred avatar or gradient */}
                 {channelData?.bannerUrl ? (
