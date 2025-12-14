@@ -101,7 +101,7 @@ export function SidebarFollows({ collapsed }: SidebarFollowsProps) {
     return (
         <div className="flex flex-col h-full overflow-hidden">
             {!collapsed && (
-                <div className="px-3 py-2 text-xs font-semibold text-[var(--color-foreground-muted)] uppercase tracking-wider flex justify-between items-center">
+                <div className="px-3 py-2 text-xs font-bold text-white uppercase tracking-wider flex justify-between items-center">
                     <span>Following</span>
                     <span className="bg-[var(--color-background-tertiary)] text-[var(--color-foreground)] px-1.5 py-0.5 rounded text-[10px]">
                         {liveChannels.length + offlineChannels.length}
@@ -149,14 +149,16 @@ export function SidebarFollows({ collapsed }: SidebarFollowsProps) {
                             {!collapsed && (
                                 <div className="flex flex-col min-w-0 flex-1">
                                     <div className="flex justify-between items-center gap-1">
-                                        <span className="truncate font-medium text-sm text-[var(--color-foreground)] group-hover:text-[var(--color-primary)] transition-colors">
+                                        <span className="truncate font-bold text-sm text-white group-hover:text-[var(--color-primary)] transition-colors">
                                             {stream.channelDisplayName}
                                         </span>
-                                        <span className="flex h-2 w-2 rounded-full bg-red-500 shrink-0" />
+                                        <div className="flex items-center gap-1.5 shrink-0">
+                                            <span className={cn("flex h-2 w-2 rounded-full shrink-0", stream.platform === 'kick' ? "bg-[#53FC18]" : "bg-red-500")} />
+                                            <span className="text-xs font-bold text-white">{formatViewerCount(stream.viewerCount)}</span>
+                                        </div>
                                     </div>
-                                    <div className="flex justify-between items-center gap-2 text-xs text-[var(--color-foreground-muted)]">
-                                        <span className="truncate max-w-[80px]" title={stream.categoryName}>{stream.categoryName}</span>
-                                        <span className="shrink-0">{formatViewerCount(stream.viewerCount)}</span>
+                                    <div className="flex items-center text-xs text-[#b2b2b2] font-bold">
+                                        <span className="truncate" title={stream.categoryName}>{stream.categoryName}</span>
                                     </div>
                                 </div>
                             )}
@@ -186,7 +188,7 @@ export function SidebarFollows({ collapsed }: SidebarFollowsProps) {
 
                             {!collapsed && (
                                 <div className="min-w-0 flex-1">
-                                    <span className="truncate font-medium text-sm text-[var(--color-foreground-secondary)] group-hover:text-[var(--color-foreground)] transition-colors block">
+                                    <span className="truncate font-bold text-sm text-white group-hover:text-[var(--color-foreground)] transition-colors block">
                                         {channel.displayName}
                                     </span>
                                     <span className="text-xs text-[var(--color-foreground-muted)] truncate block">
