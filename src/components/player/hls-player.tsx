@@ -123,8 +123,11 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
 
             // Log non-fatal errors (these are retries in progress)
             hls.on(Hls.Events.ERROR, (event, data) => {
-                // Ignore innocuous buffer stalls that resolve themselves, unless user is debugging
-                if (data.details !== 'bufferStalledError') {
+                // Ignore innocuous errors that resolve themselves automatically
+                // - bufferStalledError: temporary buffer underrun, HLS.js recovers automatically
+                // - levelSwitchError: ABR quality switching hiccup, HLS.js handles internally
+                const ignoredErrors = ['bufferStalledError', 'levelSwitchError'];
+                if (!ignoredErrors.includes(data.details)) {
                     console.log(`[HLS] Error: ${data.details}, fatal: ${data.fatal}, type: ${data.type}`);
                 }
 
