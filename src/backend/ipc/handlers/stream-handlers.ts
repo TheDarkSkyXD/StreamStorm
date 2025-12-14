@@ -303,7 +303,11 @@ export function registerStreamHandlers(): void {
             }
             throw new Error(`Unsupported platform: ${params.platform}`);
         } catch (error) {
-            console.error('❌ Failed to get stream playback URL:', error);
+            // "Channel is offline" is expected behavior - don't log as error
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (!errorMessage.toLowerCase().includes('offline')) {
+                console.error('❌ Failed to get stream playback URL:', error);
+            }
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to resolve stream URL'

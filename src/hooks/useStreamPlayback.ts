@@ -47,8 +47,13 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
                 }
             } catch (err) {
                 if (isMounted) {
-                    console.error(`Failed to load stream playback for ${platform}/${identifier}`, err);
-                    setError(err instanceof Error ? err : new Error(String(err)));
+                    const error = err instanceof Error ? err : new Error(String(err));
+                    // "Channel is offline" is expected behavior, not an error - don't log it
+                    const isOfflineError = error.message.toLowerCase().includes('offline');
+                    if (!isOfflineError) {
+                        console.error(`Failed to load stream playback for ${platform}/${identifier}`, err);
+                    }
+                    setError(error);
                     setIsLoading(false);
                 }
             }

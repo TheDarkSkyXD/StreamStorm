@@ -56,14 +56,21 @@ export class KickStreamResolver {
     /**
      * Get playback URL for a Kick live stream
      * Uses the public v1 channel endpoint which typically includes the HLS playback URL
+     * 
+     * IMPORTANT: We must verify the stream is actually LIVE before returning a URL.
+     * Kick's API returns a playback_url even for offline channels, which causes 404 errors
+     * when HLS.js tries to load the manifest.
      */
     async getStreamPlaybackUrl(channelSlug: string): Promise<StreamPlayback> {
         try {
             const data = await this.netRequest<any>(`${KICK_LEGACY_API_V1_BASE}/channels/${channelSlug}`);
 
-            // Check if livestream exists
-            if (!data.livestream && !data.playback_url) {
-                throw new Error('Channel is offline or restricted');
+            // First, verify the stream is actually live
+            // The livestream object contains is_live field that indicates current status
+            const isLive = data.livestream?.is_live === true;
+
+            if (!isLive) {
+                throw new Error('Channel is offline');
             }
 
             // The playback URL is usually in data.playback_url
@@ -80,7 +87,11 @@ export class KickStreamResolver {
             };
 
         } catch (error) {
-            console.error('Failed to resolve Kick stream URL for:', channelSlug, error);
+            // "Channel is offline" is expected behavior - don't log as error
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            if (!errorMessage.toLowerCase().includes('offline')) {
+                console.error('Failed to resolve Kick stream URL for:', channelSlug, error);
+            }
             throw error;
         }
     }
