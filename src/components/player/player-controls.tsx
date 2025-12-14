@@ -125,6 +125,8 @@ export function PlayerControls(props: PlayerControlsProps) {
         // If not playing, always visible.
     }, [isPlaying]);
 
+    const isLive = !duration || duration === Infinity;
+
     return (
         <div
             className={`
@@ -144,7 +146,7 @@ export function PlayerControls(props: PlayerControlsProps) {
         >
             {/* VOD Progress Bar */}
             {
-                duration > 0 && onSeek && (
+                !isLive && onSeek && (
                     <div className="w-full px-4 mb-2">
                         <ProgressBar
                             currentTime={currentTime}
@@ -172,7 +174,7 @@ export function PlayerControls(props: PlayerControlsProps) {
                     />
 
                     {/* Live Badge or Timestamp */}
-                    {(!duration || duration === Infinity) ? (
+                    {isLive ? (
                         <div className="flex items-center gap-1.5 px-2 py-1 bg-red-600 rounded text-xs font-bold uppercase tracking-wider text-white ml-2 select-none">
                             <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
                             Live
@@ -193,7 +195,7 @@ export function PlayerControls(props: PlayerControlsProps) {
                         onToggleTheater={onToggleTheater}
                         isTheater={isTheater}
                         playbackRate={playbackRate}
-                        onPlaybackRateChange={onPlaybackRateChange}
+                        onPlaybackRateChange={isLive ? undefined : onPlaybackRateChange}
                     />
 
                     {onToggleTheater && !isFullscreen && (

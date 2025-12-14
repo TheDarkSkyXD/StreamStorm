@@ -85,8 +85,7 @@ export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
         buffered,
         seekableRange,
         onGoLive,
-        playbackRate,
-        onPlaybackRateChange
+
     } = props;
 
     const [isVisible, setIsVisible] = useState(true);
@@ -223,8 +222,6 @@ export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
                         onTogglePip={onTogglePip}
                         onToggleTheater={onToggleTheater}
                         isTheater={isTheater}
-                        playbackRate={playbackRate}
-                        onPlaybackRateChange={onPlaybackRateChange}
                     />
 
                     {onToggleTheater && !isFullscreen && (

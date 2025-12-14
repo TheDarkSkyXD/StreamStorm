@@ -70,8 +70,7 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
         onToggleFullscreen,
         onToggleTheater,
         onTogglePip,
-        playbackRate,
-        onPlaybackRateChange
+
     } = props;
 
     const [isVisible, setIsVisible] = useState(true);
@@ -145,8 +144,6 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
                         onTogglePip={onTogglePip}
                         onToggleTheater={onToggleTheater}
                         isTheater={isTheater}
-                        playbackRate={playbackRate}
-                        onPlaybackRateChange={onPlaybackRateChange}
                     />
 
                     {onToggleTheater && !isFullscreen && (
