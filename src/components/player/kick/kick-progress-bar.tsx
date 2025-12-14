@@ -25,30 +25,24 @@ export function KickProgressBar({
     const [hoverPosition, setHoverPosition] = useState(0); // 0 to 1
 
     const progress = useMemo(() => {
-        return 100;
-        // DISABLED DVR UPTIME CALCULATION
-        /*
+        // For live streams, show full progress (DVR not fully supported)
         if (isLive) return 100;
+        // For VODs, show actual progress based on current time
         if (!duration || duration === 0) return 0;
         return Math.min(100, (currentTime / duration) * 100);
-        */
     }, [currentTime, duration, isLive]);
 
     // Calculate seekable bar styles
     const seekableStyle = useMemo(() => {
-        return { left: '0%', width: '0%' };
-
-        /* DISABLED SEEKABLE RANGE CALC
         if (!duration || !seekableRange) return { left: '0%', width: '0%' };
-        
+
         const startPct = Math.max(0, (seekableRange.start / duration) * 100);
         const endPct = Math.min(100, (seekableRange.end / duration) * 100);
-        
+
         return {
             left: `${startPct}%`,
             width: `${Math.max(0, endPct - startPct)}%`
         };
-        */
     }, [duration, seekableRange]);
 
     const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
@@ -61,6 +55,10 @@ export function KickProgressBar({
 
     const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         if (!containerRef.current || !duration || !onSeek) return;
+
+        // For live streams, seeking is disabled (DVR not fully supported)
+        if (isLive) return;
+
         const rect = containerRef.current.getBoundingClientRect();
         if (rect.width === 0) return;
         const pos = (e.clientX - rect.left) / rect.width;
@@ -72,9 +70,9 @@ export function KickProgressBar({
             if (time > seekableRange.end) time = seekableRange.end;
         }
 
-        // Disabled per user request (Kick streams don't support full DVR seeking yet)
-        // onSeek(time);
-    }, [duration, onSeek, seekableRange]);
+        // Seek to the clicked position
+        onSeek(time);
+    }, [duration, onSeek, seekableRange, isLive]);
 
     // Kick brand green color
     const kickGreen = '#53fc18';
