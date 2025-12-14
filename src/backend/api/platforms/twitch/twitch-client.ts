@@ -155,6 +155,13 @@ class TwitchClient extends TwitchRequestor {
         return CategoryEndpoints.getCategoryById(this, id);
     }
 
+    /**
+     * Get categories/games by multiple IDs
+     */
+    async getCategoriesByIds(ids: string[]): Promise<UnifiedCategory[]> {
+        return CategoryEndpoints.getCategoriesByIds(this, ids);
+    }
+
     // ========== Videos ==========
 
     /**

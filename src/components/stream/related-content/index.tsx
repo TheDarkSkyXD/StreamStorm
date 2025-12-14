@@ -194,6 +194,9 @@ export function RelatedContent({ platform, channelName, channelData }: RelatedCo
                                         key={clip.id}
                                         clip={clip}
                                         onClick={() => setSelectedClip(clip)}
+                                        platform={platform}
+                                        channelName={channelName}
+                                        channelData={channelData}
                                     />
                                 ))
                             ) : (

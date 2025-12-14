@@ -49,3 +49,30 @@ export async function getCategoryById(
     }
     return null;
 }
+
+/**
+ * Get categories/games by multiple IDs
+ */
+export async function getCategoriesByIds(
+    client: TwitchRequestor,
+    ids: string[]
+): Promise<UnifiedCategory[]> {
+    if (ids.length === 0) return [];
+
+    // Twitch API supports up to 100 IDs per request
+    // For now, assuming we won't exceed this for a single page of clips (12 clips)
+    // If we do, we might need chunking, but for this use case it's fine.
+
+    // Construct query string with multiple id parameters
+    const params = new URLSearchParams();
+    ids.forEach(id => params.append('id', id));
+
+    const data = await client.request<TwitchApiResponse<TwitchApiGame>>(
+        `/games?${params.toString()}`
+    );
+
+    if (data.data) {
+        return data.data.map(transformTwitchCategory);
+    }
+    return [];
+}

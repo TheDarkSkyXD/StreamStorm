@@ -237,6 +237,22 @@ export function registerVideoHandlers(): void {
                 });
                 console.log(`[TwitchClip] Fetched ${clips.data.length} clips for ${params.channelName}`);
 
+                // Resolve Game IDs to Names
+                const gameIds = [...new Set(clips.data.map(c => c.game_id).filter(id => id))];
+                let gameMap: Record<string, string> = {};
+
+                if (gameIds.length > 0) {
+                    try {
+                        const games = await twitchClient.getCategoriesByIds(gameIds);
+                        gameMap = games.reduce((acc, game) => {
+                            acc[game.id] = game.name;
+                            return acc;
+                        }, {} as Record<string, string>);
+                    } catch (err) {
+                        console.error('[TwitchClip] Failed to resolve game names:', err);
+                    }
+                }
+
                 return {
                     success: true,
                     data: clips.data.map(c => ({
@@ -249,7 +265,7 @@ export function registerVideoHandlers(): void {
                         embedUrl: c.embed_url,
                         url: c.url,
                         platform: 'twitch',
-                        gameName: c.game_id
+                        gameName: gameMap[c.game_id] || c.game_id || ''
                     })),
                     cursor: clips.cursor
                 };
