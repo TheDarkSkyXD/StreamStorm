@@ -1,1 +1,0 @@
-Clean up all the console logs before release after phase 8
