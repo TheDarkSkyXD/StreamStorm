@@ -22,6 +22,8 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
 }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
+    const isMountedRef = useRef(true);
+    const pendingPlayRef = useRef<Promise<void> | null>(null);
 
     // Expose video ref to parent
     useImperativeHandle(ref, () => videoRef.current as HTMLVideoElement);
@@ -55,7 +57,35 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
         const video = videoRef.current;
         if (!video || !src) return;
 
+        // Reset mounted flag for this effect instance
+        isMountedRef.current = true;
+
         let hls: Hls | null = null;
+
+        // Safe play helper that handles interruption gracefully
+        const safePlay = () => {
+            if (!isMountedRef.current || !video) return;
+
+            // Cancel any pending play promise tracking (the promise itself can't be cancelled)
+            pendingPlayRef.current = video.play();
+            pendingPlayRef.current
+                .then(() => {
+                    pendingPlayRef.current = null;
+                })
+                .catch((e: Error) => {
+                    pendingPlayRef.current = null;
+                    // AbortError: play() was interrupted by a new load request - this is expected during rapid source changes
+                    // NotAllowedError: autoplay was prevented by browser policy
+                    if (e.name === 'AbortError') {
+                        // Silently ignore - this is expected when source changes rapidly
+                        console.debug('[HLS] Play request was interrupted by new load, this is normal during navigation');
+                    } else if (e.name === 'NotAllowedError') {
+                        console.warn('[HLS] Autoplay blocked by browser policy');
+                    } else {
+                        console.warn('[HLS] Autoplay failed:', e);
+                    }
+                });
+        };
 
         const isHls = src.includes('.m3u8') || src.includes('usher.ttvnw.net');
 
@@ -93,8 +123,8 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
                 console.log('[HLS] Manifest parsed, levels:', data.levels.length);
 
-                if (autoPlay) {
-                    video.play().catch(e => console.warn('Autoplay failed', e));
+                if (autoPlay && isMountedRef.current) {
+                    safePlay();
                 }
 
                 // Restore current level if set
@@ -178,7 +208,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             console.log('Using native HLS');
             video.src = src;
             video.addEventListener('loadedmetadata', () => {
-                if (autoPlay) video.play();
+                if (autoPlay && isMountedRef.current) safePlay();
             });
             video.addEventListener('error', (e) => {
                 onErrorRef.current?.({
@@ -193,7 +223,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             console.log('Using standard native playback');
             video.src = src;
             video.addEventListener('loadedmetadata', () => {
-                if (autoPlay) video.play().catch(e => console.warn('Autoplay failed', e));
+                if (autoPlay && isMountedRef.current) safePlay();
             });
             video.addEventListener('error', (e) => {
                 // Only report error if we really fail
@@ -207,6 +237,10 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
         }
 
         return () => {
+            // Mark as unmounted first to prevent any pending play attempts
+            isMountedRef.current = false;
+            pendingPlayRef.current = null;
+
             if (hls) {
                 hls.destroy();
             }
