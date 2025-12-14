@@ -52,10 +52,10 @@ export function StreamPage() {
     setPlayerError(null);
   }, [playback?.url]);
 
-  // Determine if stream is truly live - only pass URL to player if we have confirmed stream data
-  // This prevents 404 errors from attempting to load stale/invalid playback URLs
+  // Determine if stream is truly live - allow playback if URL exists (optimistic) or confirmed live
+  // This allows the player to start buffering while metadata is still fetching
   const isStreamLive = Boolean(streamData?.startedAt);
-  const effectiveStreamUrl = isStreamLive && playback?.url ? playback.url : '';
+  const effectiveStreamUrl = playback?.url || (isStreamLive && playback?.url ? playback.url : '');
 
   const startResizing = useCallback(() => {
     setIsResizing(true);

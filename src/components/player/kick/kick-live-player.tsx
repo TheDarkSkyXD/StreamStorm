@@ -307,10 +307,14 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         setAvailableQualities(levels);
         if (!isReady) {
             setIsReady(true);
-            setIsLoading(false);
+            // Only stop loading immediately if we are NOT auto-playing
+            // If auto-playing, wait for the actual 'playing' event to clear the spinner
+            if (!autoPlay) {
+                setIsLoading(false);
+            }
             onReady?.();
         }
-    }, [isReady, onReady]);
+    }, [isReady, onReady, autoPlay]);
 
     const handleQualitySet = useCallback((id: string) => {
         setCurrentQualityId(id);

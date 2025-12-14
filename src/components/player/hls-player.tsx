@@ -36,7 +36,8 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 hls.currentLevel = -1;
             } else {
                 const levelIndex = parseInt(currentLevel, 10);
-                if (!isNaN(levelIndex) && levelIndex >= 0) {
+                // Validate level index exists to prevent levelSwitchError
+                if (!isNaN(levelIndex) && levelIndex >= 0 && hls.levels && levelIndex < hls.levels.length) {
                     hls.currentLevel = levelIndex;
                 }
             }
@@ -98,6 +99,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             hls = new Hls({
                 enableWorker: true,
                 lowLatencyMode: true,
+                startFragPrefetch: true, // Start fetching fragment immediately for faster start
                 backBufferLength: 90,
                 // Refined for stability to prevent bufferStalledError
                 liveSyncDurationCount: 2, // Closer to live edge (was 3)
@@ -220,9 +222,9 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                     }
                 } else {
                     // Non-fatal error - HLS.js is handling this internally (retrying)
-                    if (data.details === 'bufferStalledError') {
+                    if (data.details === 'bufferStalledError' || data.details === 'levelSwitchError') {
                         // Don't log as warning - this is handled automatically
-                        if (videoRef.current && !videoRef.current.paused) {
+                        if (data.details === 'bufferStalledError' && videoRef.current && !videoRef.current.paused) {
                             hls?.recoverMediaError();
                         }
                     } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR && !isStreamEndingError) {
