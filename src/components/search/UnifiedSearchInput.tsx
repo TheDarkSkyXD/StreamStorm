@@ -108,8 +108,45 @@ export function UnifiedSearchInput({
         const normalizedQuery = searchQuery.toLowerCase().trim();
         const top: UnifiedChannel[] = [];
         const others: UnifiedChannel[] = [];
+        const seenIds = new Set<string>();
 
-        channels.forEach(channel => {
+        // Pre-sort channels to ensure we keep the "best" version when deduplicating
+        // Priority: Live > Exact Match > Has Avatar
+        const sortedChannels = [...channels].sort((a, b) => {
+            // 1. Live status
+            if (a.isLive && !b.isLive) return -1;
+            if (!a.isLive && b.isLive) return 1;
+
+            // 2. Exact match
+            const aName = a.username?.toLowerCase() || '';
+            const bName = b.username?.toLowerCase() || '';
+            const aDisp = a.displayName?.toLowerCase() || '';
+            const bDisp = b.displayName?.toLowerCase() || '';
+
+            const aExact = aName === normalizedQuery || aDisp === normalizedQuery;
+            const bExact = bName === normalizedQuery || bDisp === normalizedQuery;
+
+            if (aExact && !bExact) return -1;
+            if (!aExact && bExact) return 1;
+
+            // 3. Has Avatar (prefer one with avatar)
+            const aHasAvatar = !!a.avatarUrl;
+            const bHasAvatar = !!b.avatarUrl;
+            if (aHasAvatar && !bHasAvatar) return -1;
+            if (!aHasAvatar && bHasAvatar) return 1;
+
+            return 0;
+        });
+
+        sortedChannels.forEach(channel => {
+            // Deduplicate by Platform + DisplayName to catch visual duplicates
+            // We use DisplayName because sometimes the backend might return slightly different usernames/slugs 
+            // for the same actual channel (e.g. ghost records from search API), resulting in visual duplicates.
+            const uniqueKey = `${channel.platform}-${channel.displayName?.toLowerCase() || channel.username?.toLowerCase()}`;
+
+            if (seenIds.has(uniqueKey)) return;
+            seenIds.add(uniqueKey);
+
             const username = channel.username?.toLowerCase() || '';
             const displayName = channel.displayName?.toLowerCase() || '';
             const isExact = username === normalizedQuery || displayName === normalizedQuery;
@@ -121,7 +158,7 @@ export function UnifiedSearchInput({
             }
         });
 
-        // Sort both arrays to show live channels first
+        // Sort both arrays to show live channels first (redundant but ensures consistency)
         const sortByLive = (a: UnifiedChannel, b: UnifiedChannel) => {
             if (a.isLive && !b.isLive) return -1;
             if (!a.isLive && b.isLive) return 1;
