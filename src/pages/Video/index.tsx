@@ -1,5 +1,5 @@
 import { useParams, useSearch, Link } from '@tanstack/react-router';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Heart, HeartCrack, AlertCircle, Lock } from 'lucide-react';
 import { KickVodPlayer } from '@/components/player/kick';
@@ -7,6 +7,7 @@ import { TwitchVodPlayer } from '@/components/player/twitch';
 import { VideoCard } from '@/components/stream/related-content/VideoCard';
 import { VideoOrClip } from '@/components/stream/related-content/types';
 import { Platform } from '@/shared/auth-types';
+import { useFollowStore } from '@/store/follow-store';
 
 interface VideoMetadata {
     id: string;
@@ -74,8 +75,8 @@ export function VideoPage() {
     // Check if this is a subscriber-only VOD
     const isSubOnly = passedIsSubOnly === true;
 
-    const [isFollowing, setIsFollowing] = useState(false);
     const [isHoveringFollow, setIsHoveringFollow] = useState(false);
+    const { isFollowing: checkIsFollowing, toggleFollow } = useFollowStore();
     const [streamUrl, setStreamUrl] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [videoMetadata, setVideoMetadata] = useState<VideoMetadata | null>(null);
@@ -208,6 +209,21 @@ export function VideoPage() {
     const date = videoMetadata ? formatRelativeDate(videoMetadata.createdAt) : (passedDate ? formatRelativeDate(passedDate) : "—");
     const category = videoMetadata?.category || passedCategory;
 
+    // Create channel object for follow store
+    const channelForFollow = useMemo(() => ({
+        id: channelName, // Use username as ID to match follow store format
+        platform: platform as Platform,
+        username: channelName,
+        displayName: channelDisplayName,
+        avatarUrl: channelAvatar || '',
+        isLive: false,
+        isVerified: false,
+        isPartner: false
+    }), [platform, channelName, channelDisplayName, channelAvatar]);
+
+    // Check if channel is being followed using the store
+    const isFollowing = checkIsFollowing(channelForFollow.id);
+
     // Fetch related videos based on channelName
     useEffect(() => {
         const fetchRelated = async () => {
@@ -325,7 +341,7 @@ export function VideoPage() {
                                 {category && (
                                     <>
                                         <span>•</span>
-                                        <span className="text-[var(--color-foreground-muted)]">{category}</span>
+                                        <span className="text-[#adadad]">{category}</span>
                                     </>
                                 )}
                                 <span>•</span>
@@ -373,7 +389,7 @@ export function VideoPage() {
                             <Button
                                 className={`rounded-full font-bold transition-all gap-2 ${isFollowing ? 'w-10 h-10 p-0' : 'min-w-[100px]'} ${getFollowButtonStyles()}`}
                                 size="sm"
-                                onClick={() => setIsFollowing(!isFollowing)}
+                                onClick={() => toggleFollow(channelForFollow)}
                                 onMouseEnter={() => setIsHoveringFollow(true)}
                                 onMouseLeave={() => setIsHoveringFollow(false)}
                             >

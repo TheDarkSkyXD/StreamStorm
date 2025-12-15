@@ -76,7 +76,14 @@ export const useFollowStore = create<FollowState>()(
             }
         },
         isFollowing: (channelId) => {
-            return get().localFollows.some((c) => c.id === channelId);
+            const follows = get().localFollows;
+            return follows.some((c) =>
+                c.id === channelId ||
+                c.username === channelId ||
+                c.username?.toLowerCase() === channelId?.toLowerCase() ||
+                `${c.platform}-${c.username}` === channelId ||
+                `${c.platform}-${c.username?.toLowerCase()}` === channelId?.toLowerCase()
+            );
         },
         toggleFollow: (channel) => {
             const { isFollowing, followChannel, unfollowChannel } = get();
