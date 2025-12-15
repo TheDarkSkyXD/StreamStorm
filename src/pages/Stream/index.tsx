@@ -12,6 +12,7 @@ import { useStreamPlayback } from '@/hooks/useStreamPlayback';
 import { StreamInfo } from '@/components/stream/stream-info';
 import { RelatedContent } from '@/components/stream/related-content';
 import { KickLoadingSpinner, TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
+import { usePipStore } from '@/store/pip-store';
 
 export function StreamPage() {
   const { platform, channel: channelName } = useParams({ from: '/_app/stream/$platform/$channel' });
@@ -59,6 +60,42 @@ export function StreamPage() {
   // This allows the player to start buffering while metadata is still fetching
   const isStreamLive = Boolean(streamData?.startedAt);
   const effectiveStreamUrl = playback?.url || (isStreamLive && playback?.url ? playback.url : '');
+
+  // PiP Store Integration - Track when viewing a live stream
+  const { setCurrentStream, setIsOnStreamPage } = usePipStore();
+
+  // Mark that we're on the stream page when component mounts
+  useEffect(() => {
+    setIsOnStreamPage(true);
+    return () => {
+      // When leaving stream page, mark as not on stream page (triggers PiP if stream was active)
+      setIsOnStreamPage(false);
+    };
+  }, [setIsOnStreamPage]);
+
+  // Update PiP store with current stream info when we have a live stream
+  useEffect(() => {
+    if (isStreamLive && effectiveStreamUrl && channelData) {
+      setCurrentStream({
+        platform: platform as Platform,
+        channelName: channelName,
+        channelDisplayName: channelData.displayName || channelName,
+        channelAvatar: channelData.avatarUrl,
+        streamUrl: effectiveStreamUrl,
+        title: streamData?.title,
+        categoryName: streamData?.categoryName,
+        viewerCount: streamData?.viewerCount,
+      });
+    }
+  }, [
+    isStreamLive,
+    effectiveStreamUrl,
+    platform,
+    channelName,
+    channelData,
+    streamData,
+    setCurrentStream,
+  ]);
 
   const startResizing = useCallback(() => {
     setIsResizing(true);

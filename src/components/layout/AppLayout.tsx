@@ -9,6 +9,7 @@ import { useAppStore } from '@/store/app-store';
 import { TitleBar } from './TitleBar';
 import { TopNavBar } from '../TopNavBar';
 import { SidebarFollows } from './SidebarFollows';
+import { MiniPlayer } from '@/components/player/mini-player';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -85,6 +86,10 @@ export function AppLayout({ children }: AppLayoutProps) {
           {children}
         </main>
       </div>
+
+      {/* Picture-in-Picture Mini Player - persists across route changes */}
+      <MiniPlayer />
     </div>
   );
 }
+
