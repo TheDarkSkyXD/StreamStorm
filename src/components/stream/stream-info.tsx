@@ -118,15 +118,28 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                                 18+
                             </span>
                         )}
-                        {/* Custom Tags from API */}
-                        {stream.tags && stream.tags.length > 0 && stream.tags.map((tag, index) => (
-                            <span
-                                key={`${tag}-${index}`}
-                                className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default"
-                            >
-                                {tag}
-                            </span>
-                        ))}
+                        {/* Custom Tags from API - filter out language duplicates */}
+                        {stream.tags && stream.tags.length > 0 && (() => {
+                            // Get the display name of the stream's language to filter duplicates
+                            const languageDisplayName = stream.language
+                                ? new Intl.DisplayNames(['en'], { type: 'language' }).of(stream.language)?.toLowerCase()
+                                : null;
+
+                            return stream.tags
+                                .filter(tag => {
+                                    // Filter out tags that match the language display name (case insensitive)
+                                    const tagLower = tag.toLowerCase();
+                                    return tagLower !== languageDisplayName;
+                                })
+                                .map((tag, index) => (
+                                    <span
+                                        key={`${tag}-${index}`}
+                                        className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default"
+                                    >
+                                        {tag}
+                                    </span>
+                                ));
+                        })()}
                     </div>
                 )}
             </div>
