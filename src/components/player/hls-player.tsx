@@ -24,6 +24,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
     const hlsRef = useRef<Hls | null>(null);
     const isMountedRef = useRef(true);
     const pendingPlayRef = useRef<Promise<void> | null>(null);
+    const playRequestIdRef = useRef(0); // Track play request to cancel stale ones
 
     // Expose video ref to parent
     useImperativeHandle(ref, () => videoRef.current as HTMLVideoElement);
@@ -68,29 +69,46 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
         const safePlay = () => {
             if (!isEffectActive || !video) return;
 
-            // Cancel any pending play promise tracking
-            pendingPlayRef.current = video.play();
-            pendingPlayRef.current
-                .then(() => {
-                    if (isEffectActive) pendingPlayRef.current = null;
-                })
-                .catch((e: Error) => {
-                    if (isEffectActive) pendingPlayRef.current = null;
+            // Increment request ID to invalidate previous play attempts
+            const currentRequestId = ++playRequestIdRef.current;
 
-                    // If effect is inactive (stream switched), fully ignore errors
-                    if (!isEffectActive) return;
+            // Small delay to let the browser settle after load
+            setTimeout(() => {
+                // Check if this request is still valid
+                if (!isEffectActive || currentRequestId !== playRequestIdRef.current) {
+                    return;
+                }
 
-                    // AbortError: play() was interrupted by a new load request
-                    // NotAllowedError: autoplay was prevented by browser policy
-                    if (e.name === 'AbortError') {
-                        // Log this even if expected, to help debug "stuck" states
-                        console.warn('[HLS] Play request interrupted by new load or pause (AbortError)', e);
-                    } else if (e.name === 'NotAllowedError') {
-                        console.error('[HLS] Autoplay blocked by browser policy (NotAllowedError)', e);
-                    } else {
-                        console.error('[HLS] Playback failed with unexpected error:', e);
-                    }
-                });
+                // Don't play if video is already playing
+                if (!video.paused) return;
+
+                pendingPlayRef.current = video.play();
+                pendingPlayRef.current
+                    .then(() => {
+                        if (isEffectActive && currentRequestId === playRequestIdRef.current) {
+                            pendingPlayRef.current = null;
+                        }
+                    })
+                    .catch((e: Error) => {
+                        if (isEffectActive && currentRequestId === playRequestIdRef.current) {
+                            pendingPlayRef.current = null;
+                        }
+
+                        // If effect is inactive (stream switched) or request is stale, fully ignore errors
+                        if (!isEffectActive || currentRequestId !== playRequestIdRef.current) return;
+
+                        // AbortError: play() was interrupted by a new load request
+                        // NotAllowedError: autoplay was prevented by browser policy
+                        if (e.name === 'AbortError') {
+                            // Silently ignore - this is expected during rapid source changes
+                            console.debug('[HLS] Play request interrupted (expected during source change)');
+                        } else if (e.name === 'NotAllowedError') {
+                            console.warn('[HLS] Autoplay blocked by browser policy - user interaction required');
+                        } else {
+                            console.error('[HLS] Playback failed with unexpected error:', e);
+                        }
+                    });
+            }, 50); // 50ms delay helps avoid race conditions
         };
 
         const isHls = src.includes('.m3u8') || src.includes('usher.ttvnw.net');
@@ -164,7 +182,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 // Completely ignore innocuous errors that resolve themselves automatically
                 // - bufferStalledError: temporary buffer underrun, HLS.js recovers automatically
                 // Reporting all errors for debugging robust stream handling
-                const silentErrors: string[] = []; // Was ['bufferStalledError', 'levelSwitchError'];
+                const silentErrors = ['bufferStalledError', 'levelSwitchError'];
 
                 // Check for 404/403 on manifest load - indicates stream is definitely gone
                 // Stop retrying immediately to prevent console noise
@@ -182,8 +200,10 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                     return;
                 }
 
-                // Log all errors for now to debug the "stuck in loading" issue
-                console.log(`[HLS] Error details: ${data.details}, fatal: ${data.fatal}, type: ${data.type}`, data);
+                // Only log fatal or unexpected errors - non-fatal ones are handled automatically
+                if (data.fatal || !silentErrors.includes(data.details)) {
+                    console.debug(`[HLS] Error: ${data.details}, fatal: ${data.fatal}, type: ${data.type}`);
+                }
 
                 const isStreamEndingError =
                     data.details === 'manifestLoadError' ||
@@ -222,11 +242,31 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                     }
                 } else {
                     // Non-fatal error - HLS.js is handling this internally (retrying)
-                    if (data.details === 'bufferStalledError' || data.details === 'levelSwitchError') {
-                        // Don't log as warning - this is handled automatically
-                        if (data.details === 'bufferStalledError' && videoRef.current && !videoRef.current.paused) {
+                    if (data.details === 'bufferStalledError') {
+                        const video = videoRef.current;
+                        if (video && !video.paused) {
+                            // Check if there's a gap at the start - buffer exists but not at position 0
+                            // @ts-ignore - bufferInfo exists on error data for buffer stall errors
+                            const bufferInfo = data.buffer !== undefined ? data : null;
+
+                            if (video.buffered.length > 0) {
+                                const currentTime = video.currentTime;
+                                const bufferStart = video.buffered.start(0);
+
+                                // If we're at position 0 (or very close) and buffer starts later,
+                                // seek to where the buffer actually begins
+                                if (currentTime < 1 && bufferStart > currentTime + 0.5) {
+                                    console.debug(`[HLS] Buffer gap detected at start. Current: ${currentTime.toFixed(2)}s, Buffer starts: ${bufferStart.toFixed(2)}s. Seeking to buffer start.`);
+                                    video.currentTime = bufferStart + 0.1; // Seek slightly into the buffer
+                                    return;
+                                }
+                            }
+
+                            // Otherwise try media recovery
                             hls?.recoverMediaError();
                         }
+                    } else if (data.details === 'levelSwitchError') {
+                        // Don't log - handled automatically
                     } else if (data.type === Hls.ErrorTypes.NETWORK_ERROR && !isStreamEndingError) {
                         // Only log network retries for non-stream-ending errors
                         console.debug(`[HLS] Network error (will retry automatically): ${data.details}`);
