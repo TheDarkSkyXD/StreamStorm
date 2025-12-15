@@ -4,6 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Heart, HeartCrack, AlertCircle, Lock } from 'lucide-react';
 import { KickVodPlayer } from '@/components/player/kick';
 import { TwitchVodPlayer } from '@/components/player/twitch';
+import { VideoCard } from '@/components/stream/related-content/VideoCard';
+import { VideoOrClip } from '@/components/stream/related-content/types';
+import { Platform } from '@/shared/auth-types';
 
 interface VideoMetadata {
     id: string;
@@ -71,6 +74,9 @@ export function VideoPage() {
     const [error, setError] = useState<string | null>(null);
     const [videoMetadata, setVideoMetadata] = useState<VideoMetadata | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+
+    const [relatedVideos, setRelatedVideos] = useState<VideoOrClip[]>([]);
+    const [isRelatedLoading, setIsRelatedLoading] = useState(false);
 
     useEffect(() => {
         const fetchVideoData = async () => {
@@ -195,6 +201,33 @@ export function VideoPage() {
     const views = videoMetadata ? formatViews(videoMetadata.views) : (passedViews ? formatViews(passedViews) : "—");
     const date = videoMetadata ? formatRelativeDate(videoMetadata.createdAt) : (passedDate ? formatRelativeDate(passedDate) : "—");
     const category = videoMetadata?.category || passedCategory;
+
+    // Fetch related videos based on channelName
+    useEffect(() => {
+        const fetchRelated = async () => {
+            if (!platform || !channelName || channelName === 'channel') return;
+
+            setIsRelatedLoading(true);
+            try {
+                const api = (window as any).electronAPI;
+                const result = await api.videos.getByChannel({
+                    platform,
+                    channelName,
+                    limit: 100
+                });
+
+                if (result.success && result.data) {
+                    setRelatedVideos(result.data);
+                }
+            } catch (err) {
+                console.error("Failed to fetch related", err);
+            } finally {
+                setIsRelatedLoading(false);
+            }
+        };
+
+        if (channelName) fetchRelated();
+    }, [platform, channelName, videoId]);
 
     const getFollowButtonStyles = () => {
         if (isFollowing) {
@@ -336,30 +369,41 @@ export function VideoPage() {
                     <div>
                         <h2 className="text-lg font-bold text-white mb-4">More from {channelDisplayName}</h2>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                            {[1, 2, 3, 4].map((i) => (
-                                <Link
-                                    key={i}
-                                    to="/video/$platform/$videoId"
-                                    params={{ platform: platform || 'twitch', videoId: `related-${i}` }}
-                                    className="block group"
-                                >
-                                    <div className="rounded-xl overflow-hidden bg-[var(--color-background-secondary)] border border-[var(--color-border)] hover:border-[var(--color-primary)] transition-all">
-                                        <div className="aspect-video bg-[var(--color-background-tertiary)] relative">
-                                            <div className="absolute bottom-2 right-2 bg-black/70 px-1.5 py-0.5 rounded text-xs text-white">
-                                                3:45:00
-                                            </div>
-                                        </div>
-                                        <div className="p-3">
-                                            <h3 className="font-semibold text-sm text-white line-clamp-2 group-hover:text-[var(--color-primary)] transition-colors">
-                                                Another broadcast from {channelDisplayName} #{i}
-                                            </h3>
-                                            <p className="text-xs text-[var(--color-foreground-muted)] mt-1">
-                                                3 days ago • 12K views
-                                            </p>
+                            {isRelatedLoading ? (
+                                Array.from({ length: 12 }).map((_, i) => (
+                                    <div key={i} className="space-y-3">
+                                        <div className="aspect-video bg-[var(--color-background-tertiary)] rounded-xl animate-pulse" />
+                                        <div className="space-y-2">
+                                            <div className="h-4 bg-[var(--color-background-tertiary)] rounded w-3/4 animate-pulse" />
+                                            <div className="h-3 bg-[var(--color-background-tertiary)] rounded w-1/2 animate-pulse" />
                                         </div>
                                     </div>
-                                </Link>
-                            ))}
+                                ))
+                            ) : relatedVideos.length > 0 ? (
+                                relatedVideos
+                                    .filter(v => v.id !== videoId)
+                                    .map(video => (
+                                        <div key={video.id} className="h-full">
+                                            <VideoCard
+                                                video={video}
+                                                platform={platform as Platform}
+                                                channelName={channelName}
+                                                channelData={{
+                                                    id: '',
+                                                    platform: platform as Platform,
+                                                    username: channelName,
+                                                    displayName: channelDisplayName,
+                                                    avatarUrl: channelAvatar || '',
+                                                    isLive: false,
+                                                    isVerified: false,
+                                                    isPartner: false
+                                                }}
+                                            />
+                                        </div>
+                                    ))
+                            ) : (
+                                <p className="text-[var(--color-foreground-muted)] col-span-full">No other videos found.</p>
+                            )}
                         </div>
                     </div>
                 </div>
