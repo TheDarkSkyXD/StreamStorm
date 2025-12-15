@@ -23,6 +23,9 @@ interface VideoMetadata {
     type: string;
     platform: string;
     category?: string;
+    tags?: string[];
+    language?: string;
+    isMature?: boolean;
 }
 
 function formatViews(views: number | string): string {
@@ -62,7 +65,10 @@ export function VideoPage() {
         date: passedDate,
         category: passedCategory,
         duration: passedDuration,
-        isSubOnly: passedIsSubOnly
+        isSubOnly: passedIsSubOnly,
+        tags: passedTags,
+        language: passedLanguage,
+        isMature: passedIsMature
     } = searchParams;
 
     // Check if this is a subscriber-only VOD
@@ -327,6 +333,41 @@ export function VideoPage() {
                                 <span>•</span>
                                 <span>{date}</span>
                             </div>
+                            {/* Tags */}
+                            {(() => {
+                                const displayLanguage = videoMetadata?.language || passedLanguage;
+                                const displayIsMature = videoMetadata?.isMature || passedIsMature;
+                                const displayTags = videoMetadata?.tags || (passedTags ? (Array.isArray(passedTags) ? passedTags : [passedTags]) : []);
+                                const hasTags = displayLanguage || displayIsMature || displayTags.length > 0;
+
+                                if (!hasTags) return null;
+
+                                return (
+                                    <div className="flex flex-wrap gap-2 mt-3">
+                                        {/* Language Tag */}
+                                        {displayLanguage && (
+                                            <span className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default">
+                                                {new Intl.DisplayNames(['en'], { type: 'language' }).of(displayLanguage) || displayLanguage.toUpperCase()}
+                                            </span>
+                                        )}
+                                        {/* Mature Content Tag */}
+                                        {displayIsMature && (
+                                            <span className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default">
+                                                18+
+                                            </span>
+                                        )}
+                                        {/* Custom Tags */}
+                                        {displayTags.length > 0 && displayTags.map((tag: string, index: number) => (
+                                            <span
+                                                key={`${tag}-${index}`}
+                                                className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default"
+                                            >
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                );
+                            })()}
                         </div>
                         <div className="flex gap-4">
                             <Button

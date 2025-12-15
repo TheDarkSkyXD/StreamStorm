@@ -102,6 +102,9 @@ const videoRoute = createRoute({
     category?: string;
     duration?: string;
     isSubOnly?: boolean;
+    tags?: string[];
+    language?: string;
+    isMature?: boolean;
   } => ({
     src: (search.src as string) || undefined, // Direct HLS URL (for Kick VODs)
     title: (search.title as string) || undefined,
@@ -113,6 +116,9 @@ const videoRoute = createRoute({
     category: (search.category as string) || undefined,
     duration: (search.duration as string) || undefined,
     isSubOnly: search.isSubOnly === true || search.isSubOnly === 'true' || undefined,
+    tags: (search.tags as string[]) || undefined,
+    language: (search.language as string) || undefined,
+    isMature: search.isMature === true || search.isMature === 'true' || undefined,
   }),
   component: VideoPage,
 });

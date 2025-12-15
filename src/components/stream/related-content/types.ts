@@ -18,6 +18,10 @@ export interface VideoOrClip {
     channelName?: string;
     channelAvatar?: string | null;
     category?: string;
+    // Stream tags
+    tags?: string[];
+    language?: string;
+    isMature?: boolean;
 }
 
 export interface ClipPlayerProps {

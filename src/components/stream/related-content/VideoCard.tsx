@@ -35,7 +35,10 @@ export function VideoCard({ video, platform, channelName, channelData }: VideoCa
             date: video.date,
             category: video.category || video.gameName || undefined,
             duration: video.duration,
-            isSubOnly: video.isSubOnly || undefined
+            isSubOnly: video.isSubOnly || undefined,
+            tags: video.tags || undefined,
+            language: video.language || undefined,
+            isMature: video.isMature || undefined
         } : undefined,
         onClick: () => {
             if (video.isLive) {

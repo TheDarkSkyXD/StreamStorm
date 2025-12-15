@@ -196,7 +196,8 @@ export function registerVideoHandlers(): void {
                         thumbnailUrl: v.thumbnail_url.replace('%{width}', '320').replace('%{height}', '180'),
                         platform: 'twitch',
                         gameName: gameName,
-                        category: gameName
+                        category: gameName,
+                        language: v.language
                     };
                 });
 
@@ -291,7 +292,8 @@ export function registerVideoHandlers(): void {
                         embedUrl: c.embed_url,
                         url: c.url,
                         platform: 'twitch',
-                        gameName: gameMap[c.game_id] || c.game_id || ''
+                        gameName: gameMap[c.game_id] || c.game_id || '',
+                        language: c.language
                     })),
                     cursor: clips.cursor
                 };

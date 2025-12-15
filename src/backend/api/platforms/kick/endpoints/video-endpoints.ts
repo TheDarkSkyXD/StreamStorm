@@ -105,7 +105,9 @@ export async function getVideosByChannelSlug(
                     channelName: v.channel?.user?.username || v.livestream?.channel?.user?.username || '',
                     channelAvatar: v.channel?.user?.profile_pic || v.livestream?.channel?.user?.profile_pic || null,
                     // Category info - check multiple possible locations
-                    category: v.categories?.[0]?.name || v.category?.name || v.livestream?.categories?.[0]?.name || v.livestream?.session_title || ''
+                    category: v.categories?.[0]?.name || v.category?.name || v.livestream?.categories?.[0]?.name || v.livestream?.session_title || '',
+                    // Language info
+                    language: v.language || v.livestream?.language || ''
                 };
             }),
             cursor: nextCursor
