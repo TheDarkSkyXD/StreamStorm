@@ -23,6 +23,7 @@ export interface UnifiedStream {
     startedAt: string; // ISO date string
     language: string;
     tags: string[];
+    isMature?: boolean;
     categoryId?: string;
     categoryName?: string;
 }

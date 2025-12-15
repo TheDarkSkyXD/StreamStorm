@@ -84,7 +84,8 @@ export async function getPublicStreamBySlug(slug: string): Promise<UnifiedStream
             isLive: true,
             startedAt: livestream.created_at,
             language: livestream.language || 'en',
-            tags: livestream.tags || [],
+            tags: livestream.tags || livestream.custom_tags || [],
+            isMature: livestream.is_mature ?? false,
             categoryId: livestream.categories?.[0]?.id?.toString() || '',
             categoryName: livestream.categories?.[0]?.name || '',
         };
@@ -258,7 +259,8 @@ export async function getPublicTopStreams(
                 isLive: true,
                 startedAt: item.created_at || item.start_time || new Date().toISOString(),
                 language: item.language || language,
-                tags: item.tags || [],
+                tags: item.tags || item.custom_tags || [],
+                isMature: item.is_mature ?? item.has_mature_content ?? false,
                 categoryId: (item.category_id || item.category?.id || '').toString(),
                 categoryName: item.category?.name || '',
             });

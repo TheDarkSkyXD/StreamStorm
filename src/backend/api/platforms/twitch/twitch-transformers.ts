@@ -64,6 +64,7 @@ export function transformTwitchStream(stream: TwitchApiStream): UnifiedStream {
         startedAt: stream.started_at,
         language: stream.language,
         tags: stream.tags || [],
+        isMature: stream.is_mature,
         categoryId: stream.game_id,
         categoryName: stream.game_name,
     };

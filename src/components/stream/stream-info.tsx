@@ -103,6 +103,32 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                         </span>
                     )}
                 </p>
+                {/* Stream Tags - Language, Mature, and Custom Tags */}
+                {stream?.isLive && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                        {/* Language Tag */}
+                        {stream.language && (
+                            <span className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default">
+                                {new Intl.DisplayNames(['en'], { type: 'language' }).of(stream.language) || stream.language.toUpperCase()}
+                            </span>
+                        )}
+                        {/* Mature Content Tag */}
+                        {stream.isMature && (
+                            <span className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default">
+                                18+
+                            </span>
+                        )}
+                        {/* Custom Tags from API */}
+                        {stream.tags && stream.tags.length > 0 && stream.tags.map((tag, index) => (
+                            <span
+                                key={`${tag}-${index}`}
+                                className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default"
+                            >
+                                {tag}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
 
             {/* Right side: Follow button and live stats */}

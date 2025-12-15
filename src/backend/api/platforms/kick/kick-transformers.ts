@@ -76,6 +76,7 @@ export function transformKickLivestream(livestream: KickApiLivestream): UnifiedS
         startedAt: livestream.started_at,
         language: livestream.language,
         tags: livestream.custom_tags || [],
+        isMature: livestream.has_mature_content,
         categoryId: livestream.category.id.toString(),
         categoryName: livestream.category.name,
     };
