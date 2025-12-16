@@ -37,17 +37,29 @@ export function SidebarFollows({ collapsed }: SidebarFollowsProps) {
 
         const allChannels = Array.from(channelMap.values());
 
-        // Map live streams
-        const streamMap = new Map<string, UnifiedStream>();
+        // Map live streams by both channelId AND channelName for flexible matching
+        // Different API endpoints return different ID formats, so we match by both
+        const streamByIdMap = new Map<string, UnifiedStream>();
+        const streamByNameMap = new Map<string, UnifiedStream>();
         if (liveStreams) {
-            liveStreams.forEach((s) => streamMap.set(s.channelId, s));
+            liveStreams.forEach((s) => {
+                streamByIdMap.set(s.channelId, s);
+                if (s.channelName) {
+                    streamByNameMap.set(s.channelName.toLowerCase(), s);
+                }
+            });
         }
 
         const live: UnifiedStream[] = [];
         const offline: UnifiedChannel[] = [];
 
         allChannels.forEach((c) => {
-            const stream = streamMap.get(c.id);
+            // Try matching by ID first, then by username (slug)
+            let stream = streamByIdMap.get(c.id);
+            if (!stream && c.username) {
+                stream = streamByNameMap.get(c.username.toLowerCase());
+            }
+
             if (stream) {
                 // Hydrate avatar if missing on stream but present on channel
                 if (!stream.channelAvatar && c.avatarUrl) {

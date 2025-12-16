@@ -52,6 +52,14 @@ export function useFollowedStreams(platform?: Platform, limit: number = 20, opti
             return response.data as UnifiedStream[];
         },
         enabled: options.enabled,
+        // Auto-refresh every 60 seconds to detect new live streams
+        refetchInterval: 60000,
+        // Keep refetching in background so data stays fresh
+        refetchIntervalInBackground: false,
+        // Consider data stale after 30 seconds (triggers refetch on window focus)
+        staleTime: 30000,
+        // Keep cached data while refetching (prevents loading spinner on refresh)
+        placeholderData: (previousData) => previousData,
     });
 }
 

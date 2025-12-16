@@ -60,10 +60,17 @@ export function FollowingPage() {
 
     const allChannels = Array.from(channelMap.values());
 
-    // Map of live streams by channelId
-    const streamMap = new Map<string, UnifiedStream>();
+    // Map of live streams by channelId AND channelName for flexible matching
+    // Different API endpoints return different ID formats, so we match by both
+    const streamByIdMap = new Map<string, UnifiedStream>();
+    const streamByNameMap = new Map<string, UnifiedStream>();
     if (liveStreams) {
-      liveStreams.forEach((s) => streamMap.set(s.channelId, s));
+      liveStreams.forEach((s) => {
+        streamByIdMap.set(s.channelId, s);
+        if (s.channelName) {
+          streamByNameMap.set(s.channelName.toLowerCase(), s);
+        }
+      });
     }
 
     const live: UnifiedStream[] = [];
@@ -74,16 +81,20 @@ export function FollowingPage() {
       // Filter by Platform
       if (filter !== 'all' && c.platform !== filter) return;
 
+      // Try matching by ID first, then by username (slug)
+      let stream = streamByIdMap.get(c.id);
+      if (!stream && c.username) {
+        stream = streamByNameMap.get(c.username.toLowerCase());
+      }
+
       // Filter by Search
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         const matchesName = c.displayName.toLowerCase().includes(q) || c.username.toLowerCase().includes(q);
-        const stream = streamMap.get(c.id);
         const matchesGame = stream?.categoryName?.toLowerCase().includes(q) || stream?.title.toLowerCase().includes(q);
         if (!matchesName && !matchesGame) return;
       }
 
-      const stream = streamMap.get(c.id);
       if (stream) {
         // Channel is live
         // Ensure stream has avatar if missing (fallback to channel avatar)
