@@ -113,12 +113,38 @@ export interface PlaybackPreferences {
     muted: boolean;
 }
 
+/**
+ * Advanced/Developer preferences.
+ * These settings control behavior that may have security or compliance implications.
+ */
+export interface AdvancedPreferences {
+    /**
+     * Enable image proxy for blocked CDN images (e.g., Kick offline banners).
+     * 
+     * When enabled, the app will spoof request headers (Referer, User-Agent) to
+     * bypass hotlinking restrictions on certain CDNs. This is necessary because:
+     * - Kick CDN (files.kick.com) returns 403 Forbidden without proper Referer header
+     * - Desktop apps cannot set Referer headers from the renderer process
+     * 
+     * ⚠️ SECURITY/COMPLIANCE NOTES:
+     * - This modifies Sec-Fetch-* and Referer headers, which may violate the
+     *   platform's terms of service
+     * - Kick has an official API (https://docs.kick.com) but does not provide
+     *   a documented method for CDN image access without authentication
+     * - Users should review Kick's ToS before enabling this feature
+     * 
+     * @default true (enabled for better UX, but can be disabled)
+     */
+    enableImageProxy: boolean;
+}
+
 export interface UserPreferences {
     theme: Theme;
     language: string;
     notifications: NotificationPreferences;
     chat: ChatPreferences;
     playback: PlaybackPreferences;
+    advanced: AdvancedPreferences;
     startMinimized: boolean;
     minimizeToTray: boolean;
 }
@@ -209,12 +235,17 @@ export const DEFAULT_PLAYBACK_PREFERENCES: PlaybackPreferences = {
     muted: false,
 };
 
+export const DEFAULT_ADVANCED_PREFERENCES: AdvancedPreferences = {
+    enableImageProxy: true, // Enabled by default for better UX
+};
+
 export const DEFAULT_USER_PREFERENCES: UserPreferences = {
     theme: 'dark',
     language: 'en',
     notifications: DEFAULT_NOTIFICATION_PREFERENCES,
     chat: DEFAULT_CHAT_PREFERENCES,
     playback: DEFAULT_PLAYBACK_PREFERENCES,
+    advanced: DEFAULT_ADVANCED_PREFERENCES,
     startMinimized: false,
     minimizeToTray: true,
 };

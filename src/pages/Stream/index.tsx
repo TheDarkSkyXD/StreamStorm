@@ -2,6 +2,7 @@
 import { useParams } from '@tanstack/react-router';
 import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
+import { ProxiedImage } from '@/components/ui/proxied-image';
 import { useChannelByUsername } from '@/hooks/queries/useChannels';
 import { useStreamByChannel } from '@/hooks/queries/useStreams';
 import { Platform } from '@/shared/auth-types';
@@ -174,9 +175,9 @@ export function StreamPage() {
               <div className="absolute inset-0 z-20 overflow-hidden">
                 {/* Background: Offline banner if available, otherwise blurred avatar or gradient */}
                 {channelData?.bannerUrl ? (
-                  <img
+                  <ProxiedImage
                     src={channelData.bannerUrl}
-                    alt=""
+                    alt="Offline banner"
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : channelData?.avatarUrl ? (
@@ -226,9 +227,9 @@ export function StreamPage() {
               <div className="absolute inset-0 z-20 overflow-hidden">
                 {/* Background: Offline banner if available, otherwise blurred avatar or gradient */}
                 {channelData?.bannerUrl ? (
-                  <img
+                  <ProxiedImage
                     src={channelData.bannerUrl}
-                    alt=""
+                    alt="Offline banner"
                     className="absolute inset-0 w-full h-full object-cover"
                   />
                 ) : channelData?.avatarUrl ? (

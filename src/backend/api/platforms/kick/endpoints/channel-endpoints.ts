@@ -163,7 +163,27 @@ export async function getPublicChannel(slug: string): Promise<UnifiedChannel | n
             username: data.slug,
             displayName: user.username || data.slug,
             avatarUrl: user.profile_pic || '',
-            bannerUrl: data.offline_banner_image?.src || data.offline_banner_image?.url || (typeof data.offline_banner_image === 'string' ? data.offline_banner_image : undefined),
+            // Try to extract a responsive WebP image from srcset as they may bypass CDN restrictions
+            // The srcset contains URLs like: "url1 1200w, url2 1003w, ..."
+            // We pick the largest one (first in the list)
+            bannerUrl: (() => {
+                if (!data.offline_banner_image) return undefined;
+
+                // Try srcset first (responsive WebP images)
+                if (data.offline_banner_image.srcset) {
+                    const srcset = data.offline_banner_image.srcset;
+                    // Extract first URL from srcset (format: "url 1200w, url2 1003w, ...")
+                    const firstUrl = srcset.split(',')[0]?.trim().split(' ')[0];
+                    if (firstUrl) {
+                        return firstUrl;
+                    }
+                }
+
+                // Fall back to src/url
+                return data.offline_banner_image.src ||
+                    data.offline_banner_image.url ||
+                    (typeof data.offline_banner_image === 'string' ? data.offline_banner_image : undefined);
+            })(),
             bio: user.bio || '',
             isLive: data.livestream !== null,
             isVerified: data.verified?.id !== undefined || false,

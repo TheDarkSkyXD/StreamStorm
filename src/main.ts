@@ -8,7 +8,7 @@
 // Load environment variables from .env file FIRST (before other imports)
 import 'dotenv/config';
 
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, session } from 'electron';
 import started from 'electron-squirrel-startup';
 
 import { registerIpcHandlers } from './backend/ipc-handlers';
@@ -21,10 +21,42 @@ if (started) {
   app.quit();
 }
 
+/**
+ * Setup request interceptors for CDN domains that require special headers
+ * This modifies outgoing requests at the Chromium level before they're sent
+ */
+function setupRequestInterceptors(): void {
+  // Intercept requests to Kick CDN and add proper headers
+  session.defaultSession.webRequest.onBeforeSendHeaders(
+    {
+      urls: [
+        'https://files.kick.com/*',
+        'https://images.kick.com/*',
+      ]
+    },
+    (details, callback) => {
+      // Add headers that make the request appear to come from kick.com
+      const modifiedHeaders = {
+        ...details.requestHeaders,
+        'Referer': 'https://kick.com/',
+        'Origin': 'https://kick.com',
+        'Sec-Fetch-Dest': 'image',
+        'Sec-Fetch-Mode': 'no-cors',
+        'Sec-Fetch-Site': 'same-site',
+      };
+
+      callback({ requestHeaders: modifiedHeaders });
+    }
+  );
+}
+
 // App lifecycle events
 app.on('ready', () => {
   // Register custom protocol handler for OAuth callbacks (streamstorm://)
   protocolHandler.registerProtocol();
+
+  // Setup request interceptors for CDN domains
+  setupRequestInterceptors();
 
   const mainWindow = windowManager.createMainWindow();
   registerIpcHandlers(mainWindow);
@@ -50,3 +82,4 @@ app.on('web-contents-created', (_event, contents) => {
     return { action: 'deny' };
   });
 });
+

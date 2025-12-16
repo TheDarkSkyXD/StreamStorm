@@ -6,6 +6,7 @@ import { KickLivePlayer } from '@/components/player/kick';
 import { TwitchLivePlayer } from '@/components/player/twitch';
 import { useMultiStreamStore } from '@/store/multistream-store';
 import { Button } from '@/components/ui/button';
+import { ProxiedImage } from '@/components/ui/proxied-image';
 import { X, MessageSquare, Volume2, VolumeX, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Platform } from '@/shared/auth-types';
@@ -151,9 +152,9 @@ export function StreamSlot({
                             <>
                                 {/* Background: Offline banner if available, otherwise blurred avatar or gradient */}
                                 {channelData?.bannerUrl ? (
-                                    <img
+                                    <ProxiedImage
                                         src={channelData.bannerUrl}
-                                        alt=""
+                                        alt="Offline banner"
                                         className="absolute inset-0 w-full h-full object-cover"
                                     />
                                 ) : channelData?.avatarUrl ? (

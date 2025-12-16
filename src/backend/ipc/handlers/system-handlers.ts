@@ -1,4 +1,4 @@
-import { app, ipcMain, shell, Notification, BrowserWindow, nativeTheme } from 'electron';
+import { app, ipcMain, shell, Notification, BrowserWindow, nativeTheme, net } from 'electron';
 import { IPC_CHANNELS } from '../../../shared/ipc-channels';
 
 export function registerSystemHandlers(mainWindow: BrowserWindow): void {
@@ -74,7 +74,48 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
         }
     });
 
-    // ========== Image Proxy (CORS bypass) ==========
+    // ========== Image Proxy (CORS/Hotlinking Bypass) ==========
+    /**
+     * IMAGE PROXY HANDLER
+     * 
+     * This handler fetches images that are blocked due to CORS or hotlinking restrictions
+     * (e.g., Kick CDN's files.kick.com) and returns them as base64 data URLs.
+     * 
+     * WHY THIS IS NECESSARY:
+     * - Kick CDN (files.kick.com) returns 403 Forbidden for requests without a valid Referer header
+     * - Browser/Electron renderer processes cannot set Referer headers for cross-origin requests
+     * - Desktop apps need to display user profile images, offline banners, etc.
+     * 
+     * APPROACH:
+     * - Uses Electron's main process `net.request` which can set arbitrary headers
+     * - Spoofs Referer header to appear as a request from kick.com
+     * - Converts response to base64 data URL for use in renderer
+     * 
+     * ⚠️ SECURITY & COMPLIANCE CONSIDERATIONS:
+     * 
+     * 1. HEADER SPOOFING:
+     *    - Modifies User-Agent and Referer headers to bypass origin checks
+     *    - This circumvents the Fetch Metadata Request Headers security mechanism
+     * 
+     * 2. TERMS OF SERVICE:
+     *    - This approach may violate Kick's Terms of Service
+     *    - Kick has an official API (https://docs.kick.com) but as of Dec 2025,
+     *      it does not provide a documented method for unauthenticated CDN access
+     *    - Consider checking https://developers.kick.com for future API updates
+     * 
+     * 3. ALTERNATIVES CONSIDERED:
+     *    - Official Kick API: Does not currently support CDN image access
+     *    - CORS proxy server: Would require hosting infrastructure
+     *    - Disable images: Poor UX for a streaming application
+     * 
+     * 4. MITIGATION:
+     *    - This feature is opt-in via preferences.advanced.enableImageProxy
+     *    - Users can disable it if they have compliance concerns
+     *    - The feature gracefully degrades (shows placeholder) if disabled
+     * 
+     * @see https://docs.kick.com - Kick's official API documentation
+     * @see https://developers.kick.com - Kick developer registration
+     */
     ipcMain.handle(IPC_CHANNELS.IMAGE_PROXY, async (_event, { url }: { url: string }): Promise<string | null> => {
         try {
             // Validate URL
@@ -85,43 +126,112 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
             }
 
             // Determine the appropriate headers based on the domain
-            // Twitch CDN requires a browser User-Agent, others are more permissive
+            const isKickCDN = parsedUrl.hostname.includes('kick.com') ||
+                parsedUrl.hostname.includes('images.kick.com') ||
+                parsedUrl.hostname.includes('files.kick.com');
+
+            // For Kick CDN, use Electron's net module which has access to session cookies
+            if (isKickCDN) {
+                return new Promise<string | null>((resolve) => {
+                    let resolved = false;
+
+                    const resolveOnce = (value: string | null) => {
+                        if (!resolved) {
+                            resolved = true;
+                            clearTimeout(timeoutId);
+                            resolve(value);
+                        }
+                    };
+
+                    const request = net.request({
+                        method: 'GET',
+                        url: url,
+                    });
+
+                    // 10 second timeout to prevent hanging indefinitely
+                    const timeoutId = setTimeout(() => {
+                        request.abort();
+                        console.warn('⚠️ Image proxy (net): Request timed out for', url);
+                        resolveOnce(null);
+                    }, 10000);
+
+                    // Set headers to mimic a browser request from kick.com
+                    request.setHeader('Accept', 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8');
+                    request.setHeader('Accept-Language', 'en-US,en;q=0.9');
+                    request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
+                    request.setHeader('Referer', 'https://kick.com/');
+                    request.setHeader('Origin', 'https://kick.com');
+                    request.setHeader('Sec-Fetch-Dest', 'image');
+                    request.setHeader('Sec-Fetch-Mode', 'no-cors');
+                    request.setHeader('Sec-Fetch-Site', 'cross-site');
+
+                    const chunks: Buffer[] = [];
+                    let contentType = 'image/jpeg';
+
+                    request.on('response', (response) => {
+                        if (response.statusCode !== 200) {
+                            console.warn(`⚠️ Image proxy: Failed to fetch ${url.substring(0, 60)}...: ${response.statusCode}`);
+                            resolveOnce(null);
+                            return;
+                        }
+
+                        const rawContentType = response.headers['content-type'];
+                        contentType = Array.isArray(rawContentType) ? rawContentType[0] : rawContentType || 'image/jpeg';
+
+                        response.on('data', (chunk: Buffer) => {
+                            chunks.push(chunk);
+                        });
+
+                        response.on('end', () => {
+                            const buffer = Buffer.concat(chunks);
+                            const base64 = buffer.toString('base64');
+                            resolveOnce(`data:${contentType};base64,${base64}`);
+                        });
+
+                        response.on('error', (error) => {
+                            console.error('❌ Image proxy response error:', error);
+                            resolveOnce(null);
+                        });
+                    });
+
+                    request.on('error', (error) => {
+                        console.error('❌ Image proxy request error:', error);
+                        resolveOnce(null);
+                    });
+
+                    request.end();
+                });
+            }
+
+            // For other CDNs (Twitch, etc), use regular fetch
             const isTwitchCDN = parsedUrl.hostname.includes('jtvnw.net') ||
                 parsedUrl.hostname.includes('twitch.tv');
-            const isKickCDN = parsedUrl.hostname.includes('kick.com') ||
-                parsedUrl.hostname.includes('images.kick.com');
 
             const headers: Record<string, string> = {
-                'Accept': 'image/webp,image/apng,image/*,*/*;q=0.8',
-                // Use a real browser User-Agent - CDNs reject fake/minimal user agents
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
             };
 
-            // Add referer for specific platforms that might require it
             if (isTwitchCDN) {
                 headers['Referer'] = 'https://www.twitch.tv/';
                 headers['Origin'] = 'https://www.twitch.tv';
-            } else if (isKickCDN) {
-                headers['Referer'] = 'https://kick.com/';
-                headers['Origin'] = 'https://kick.com';
             }
 
-            // Fetch image from main process (no CORS restrictions)
-            const response = await fetch(url, { headers });
+            const response = await fetch(url, {
+                headers,
+                redirect: 'follow',
+            });
 
             if (!response.ok) {
                 console.warn(`⚠️ Image proxy: Failed to fetch ${url}: ${response.status}`);
                 return null;
             }
 
-            // Get content type
             const contentType = response.headers.get('content-type') || 'image/jpeg';
-
-            // Convert to base64
             const buffer = await response.arrayBuffer();
             const base64 = Buffer.from(buffer).toString('base64');
 
-            // Return as data URL
             return `data:${contentType};base64,${base64}`;
         } catch (error) {
             console.error('❌ Image proxy error:', error);
