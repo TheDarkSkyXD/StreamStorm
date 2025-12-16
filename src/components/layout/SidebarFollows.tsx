@@ -10,6 +10,7 @@ import { PlatformAvatar } from '@/components/ui/platform-avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
 import { ScrollArea } from '../ui/scroll-area';
+import { getChannelKey, getStreamKey, getChannelNameKey } from '@/lib/id-utils';
 
 interface SidebarFollowsProps {
     collapsed: boolean;
@@ -28,44 +29,55 @@ export function SidebarFollows({ collapsed }: SidebarFollowsProps) {
     const { liveChannels, offlineChannels } = useMemo(() => {
         const channelMap = new Map<string, UnifiedChannel>();
 
-        // 1. Add Local Follows
-        localFollows.forEach((c) => channelMap.set(c.id, c));
+        // 1. Add Local Follows (using centralized key generation)
+        localFollows.forEach((c) => channelMap.set(getChannelKey(c), c));
 
         // 2. Add Remote Follows (overwrite local if dupes to get fresh data)
-        if (twitchFollows) twitchFollows.forEach((c) => channelMap.set(c.id, c));
-        if (kickFollows) kickFollows.forEach((c) => channelMap.set(c.id, c));
+        if (twitchFollows) twitchFollows.forEach((c) => channelMap.set(getChannelKey(c), c));
+        if (kickFollows) kickFollows.forEach((c) => channelMap.set(getChannelKey(c), c));
 
         const allChannels = Array.from(channelMap.values());
 
-        // Map live streams by both channelId AND channelName for flexible matching
+        // Map live streams by platform-aware keys for flexible matching
         // Different API endpoints return different ID formats, so we match by both
+        // Uses centralized key generation from id-utils
         const streamByIdMap = new Map<string, UnifiedStream>();
         const streamByNameMap = new Map<string, UnifiedStream>();
         if (liveStreams) {
             liveStreams.forEach((s) => {
-                streamByIdMap.set(s.channelId, s);
+                // Use centralized key generation for consistency
+                streamByIdMap.set(getStreamKey(s), s);
                 if (s.channelName) {
-                    streamByNameMap.set(s.channelName.toLowerCase(), s);
+                    streamByNameMap.set(getChannelNameKey(s.platform, s.channelName), s);
                 }
             });
         }
 
         const live: UnifiedStream[] = [];
         const offline: UnifiedChannel[] = [];
+        const addedStreamIds = new Set<string>(); // Track added streams to prevent duplicates
 
         allChannels.forEach((c) => {
-            // Try matching by ID first, then by username (slug)
-            let stream = streamByIdMap.get(c.id);
+            // Try matching by platform-ID first, then by platform-username (slug)
+            let stream = streamByIdMap.get(getChannelKey(c));
             if (!stream && c.username) {
-                stream = streamByNameMap.get(c.username.toLowerCase());
+                stream = streamByNameMap.get(getChannelNameKey(c.platform, c.username));
             }
 
             if (stream) {
-                // Hydrate avatar if missing on stream but present on channel
-                if (!stream.channelAvatar && c.avatarUrl) {
-                    stream.channelAvatar = c.avatarUrl;
+                // Prevent duplicate streams (same stream matched by different channels)
+                const streamKey = getStreamKey(stream);
+                if (addedStreamIds.has(streamKey)) {
+                    return; // Skip - already added this stream
                 }
-                live.push(stream);
+                addedStreamIds.add(streamKey);
+
+                // Hydrate avatar if missing on stream but present on channel
+                // Create a new object to avoid mutating React Query cache
+                const streamToAdd = (!stream.channelAvatar && c.avatarUrl)
+                    ? { ...stream, channelAvatar: c.avatarUrl }
+                    : stream;
+                live.push(streamToAdd);
             } else {
                 offline.push(c);
             }

@@ -1,12 +1,12 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { UnifiedChannel } from '../backend/api/unified/platform-types';
+import { getChannelKey, channelMatchesKey } from '../lib/id-utils';
 
 interface FollowState {
     localFollows: UnifiedChannel[];
     followChannel: (channel: UnifiedChannel) => void;
-    unfollowChannel: (channelId: string) => void;
-    isFollowing: (channelId: string) => boolean;
+    unfollowChannel: (channelKey: string) => void;
+    isFollowing: (channelKey: string) => boolean;
     toggleFollow: (channel: UnifiedChannel) => void;
     hydrate: () => Promise<void>;
 }
@@ -16,7 +16,10 @@ export const useFollowStore = create<FollowState>()(
         localFollows: [],
         followChannel: async (channel) => {
             const currentFollows = get().localFollows;
-            if (currentFollows.some(c => c.id === channel.id)) return;
+            const channelKey = getChannelKey(channel);
+
+            // Check if already following using platform-aware key
+            if (currentFollows.some(c => getChannelKey(c) === channelKey)) return;
 
             // Optimistic update
             set({ localFollows: [...currentFollows, channel] });
@@ -36,35 +39,27 @@ export const useFollowStore = create<FollowState>()(
                 set({ localFollows: currentFollows });
             }
         },
-        unfollowChannel: async (channelId) => {
+        unfollowChannel: async (channelKey) => {
             const currentFollows = get().localFollows;
-            const followToRemove = currentFollows.find(c => c.id === channelId);
 
-            // Remove optimistic
-            set({ localFollows: currentFollows.filter(c => c.id !== channelId) });
+            // Find channel using flexible matching (supports both new and legacy keys)
+            const followToRemove = currentFollows.find(c => channelMatchesKey(c, channelKey));
+            if (!followToRemove) {
+                console.warn(`[FollowStore] No channel found matching key: ${channelKey}`);
+                return;
+            }
+
+            // Remove optimistically using platform-aware comparison
+            const updatedFollows = currentFollows.filter(c => getChannelKey(c) !== getChannelKey(followToRemove));
+            set({ localFollows: updatedFollows });
 
             // Sync to backend
-            // Note: remove assumes we have the unique Follow ID, but here we likely only have Channel ID
-            // We need to find the correct local (guest) follow ID to remove it from the backend list
-            // Or the backend 'remove' could accept platform+channelId? 
-            // The backend 'remove' currently expects the 'follow.id' (e.g. "platform-channelId-timestamp").
-
-            // Let's fetch the actual stored follows to find the ID to delete?
-            // Or simpler: Update backend `follows.remove` to handle Logic by ChannelId, or we try to reconstruct it.
-            // But we don't have the timestamp.
-            // STRATEGY: 
-            // 1. Fetch backend list first? No, slow.
-            // 2. We should store the full LocalFollow object including its backend ID in this store?
-            //    Currently we store `UnifiedChannel`. We're losing the `LocalFollow.id`.
-
-            // FIX: We need to find the ID. 
-            // For now, let's assumme we can find it by channel ID in our sync logic?
-            // The `ipc-handlers` for `FOLLOWS_REMOVE` expects the ID.
-
-            // Workaround: We'll retrieve the list from backend to find the ID matching this channel.
             try {
                 const backendFollows = await window.electronAPI.follows.getAll();
-                const match = backendFollows.find(f => f.channelId === channelId || `${f.platform}-${f.channelId}` === channelId); // channelId in store might be just the ID
+                // Match by platform AND channelId for precision
+                const match = backendFollows.find(f =>
+                    f.platform === followToRemove.platform && f.channelId === followToRemove.id
+                );
 
                 if (match) {
                     await window.electronAPI.follows.remove(match.id);
@@ -75,20 +70,17 @@ export const useFollowStore = create<FollowState>()(
                 set({ localFollows: currentFollows });
             }
         },
-        isFollowing: (channelId) => {
+        isFollowing: (channelKey) => {
             const follows = get().localFollows;
-            return follows.some((c) =>
-                c.id === channelId ||
-                c.username === channelId ||
-                c.username?.toLowerCase() === channelId?.toLowerCase() ||
-                `${c.platform}-${c.username}` === channelId ||
-                `${c.platform}-${c.username?.toLowerCase()}` === channelId?.toLowerCase()
-            );
+            // Use flexible matching that supports both platform-aware keys and legacy formats
+            return follows.some(c => channelMatchesKey(c, channelKey));
         },
         toggleFollow: (channel) => {
             const { isFollowing, followChannel, unfollowChannel } = get();
-            if (isFollowing(channel.id)) {
-                unfollowChannel(channel.id);
+            // Use platform-aware key for checking and unfollowing
+            const channelKey = getChannelKey(channel);
+            if (isFollowing(channelKey)) {
+                unfollowChannel(channelKey);
             } else {
                 followChannel(channel);
             }

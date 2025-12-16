@@ -5,6 +5,7 @@ import { useFollowStore } from '@/store/follow-store';
 import { UnifiedChannel } from '@/backend/api/unified/platform-types';
 import { cn } from '@/lib/utils';
 import { Platform } from '@/shared/auth-types';
+import { getChannelKey } from '@/lib/id-utils';
 
 interface FollowButtonProps {
     channel: UnifiedChannel;
@@ -18,7 +19,8 @@ export function FollowButton({
     size = "sm"
 }: FollowButtonProps) {
     const { isFollowing: isFollowingStore, toggleFollow } = useFollowStore();
-    const isFollowing = isFollowingStore(channel.id);
+    // Use platform-aware key for checking follow status
+    const isFollowing = isFollowingStore(getChannelKey(channel));
     const [isHovering, setIsHovering] = useState(false);
 
     const platform = channel.platform as Platform;

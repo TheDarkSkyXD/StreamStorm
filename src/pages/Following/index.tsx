@@ -15,6 +15,7 @@ import { PlatformAvatar } from '@/components/ui/platform-avatar';
 import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
 import { cn } from '@/lib/utils';
 import type { LocalFollow } from '@/shared/auth-types';
+import { getChannelKey, getStreamKey, getChannelNameKey } from '@/lib/id-utils';
 
 export function FollowingPage() {
   const [filter, setFilter] = useState<Platform | 'all'>('all');
@@ -38,70 +39,81 @@ export function FollowingPage() {
   // Combine channels logic
   const { liveChannels, offlineChannels, isLoading } = useMemo(() => {
     // Collect all channels from local and remote sources
-    // Key by Channel ID (not Follow ID) to deduplicate
+    // Key by platform-channelId to deduplicate while preventing cross-platform collisions
+    // Uses centralized key generation from id-utils
     const channelMap = new Map<string, UnifiedChannel>();
 
-    // Add local follows (Map LocalFollow to UnifiedChannel)
     // Add local follows
     localFollows.forEach((channel) => {
       // LocalFollows store now returns UnifiedChannel[] (hydrated from backend)
-      channelMap.set(channel.id, channel);
+      channelMap.set(getChannelKey(channel), channel);
     });
 
     // Add remote follows (Twitch) - overwrites local if exists (fresh data)
     if (twitchFollows) {
-      twitchFollows.forEach((c) => channelMap.set(c.id, c));
+      twitchFollows.forEach((c) => channelMap.set(getChannelKey(c), c));
     }
 
     // Add remote follows (Kick)
     if (kickFollows) {
-      kickFollows.forEach((c) => channelMap.set(c.id, c));
+      kickFollows.forEach((c) => channelMap.set(getChannelKey(c), c));
     }
 
     const allChannels = Array.from(channelMap.values());
 
-    // Map of live streams by channelId AND channelName for flexible matching
+    // Map live streams by platform-aware keys for flexible matching
     // Different API endpoints return different ID formats, so we match by both
+    // Uses centralized key generation from id-utils
     const streamByIdMap = new Map<string, UnifiedStream>();
     const streamByNameMap = new Map<string, UnifiedStream>();
     if (liveStreams) {
       liveStreams.forEach((s) => {
-        streamByIdMap.set(s.channelId, s);
+        // Use centralized key generation for consistency
+        streamByIdMap.set(getStreamKey(s), s);
         if (s.channelName) {
-          streamByNameMap.set(s.channelName.toLowerCase(), s);
+          streamByNameMap.set(getChannelNameKey(s.platform, s.channelName), s);
         }
       });
     }
 
     const live: UnifiedStream[] = [];
     const offline: UnifiedChannel[] = [];
+    const addedStreamIds = new Set<string>(); // Track added streams to prevent duplicates
 
     // Sort and filter
     allChannels.forEach((c) => {
       // Filter by Platform
       if (filter !== 'all' && c.platform !== filter) return;
 
-      // Try matching by ID first, then by username (slug)
-      let stream = streamByIdMap.get(c.id);
+      // Try matching by platform-ID first, then by platform-username (slug)
+      let stream = streamByIdMap.get(getChannelKey(c));
       if (!stream && c.username) {
-        stream = streamByNameMap.get(c.username.toLowerCase());
+        stream = streamByNameMap.get(getChannelNameKey(c.platform, c.username));
       }
 
       // Filter by Search
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         const matchesName = c.displayName.toLowerCase().includes(q) || c.username.toLowerCase().includes(q);
-        const matchesGame = stream?.categoryName?.toLowerCase().includes(q) || stream?.title.toLowerCase().includes(q);
+        const matchesGame = stream?.categoryName?.toLowerCase().includes(q) || stream?.title?.toLowerCase().includes(q);
         if (!matchesName && !matchesGame) return;
       }
 
       if (stream) {
+        // Prevent duplicate streams (same stream matched by different channels)
+        const streamKey = getStreamKey(stream);
+        if (addedStreamIds.has(streamKey)) {
+          return; // Skip - already added this stream
+        }
+        addedStreamIds.add(streamKey);
+
         // Channel is live
         // Ensure stream has avatar if missing (fallback to channel avatar)
-        if (!stream.channelAvatar && c.avatarUrl) {
-          stream.channelAvatar = c.avatarUrl;
-        }
-        live.push(stream);
+        // Create a new object to avoid mutating React Query cache
+        const streamToAdd = (!stream.channelAvatar && c.avatarUrl)
+          ? { ...stream, channelAvatar: c.avatarUrl }
+          : stream;
+        live.push(streamToAdd);
       } else {
         // Channel is offline
         offline.push(c);
@@ -227,7 +239,7 @@ export function FollowingPage() {
                 </h2>
                 <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-4 pt-2">
                   {offlineChannels.map((channel) => (
-                    <div key={channel.id} className="relative group">
+                    <div key={`${channel.platform}-${channel.id}`} className="relative group">
                       <Link
                         to="/stream/$platform/$channel"
                         params={{ platform: channel.platform, channel: channel.username }}

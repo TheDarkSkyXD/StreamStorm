@@ -3,6 +3,7 @@ import { StreamCard } from './stream-card';
 import { StreamCardSkeleton } from './stream-card-skeleton';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { getStreamElementKey } from '@/lib/id-utils';
 
 interface StreamGridProps {
     streams?: UnifiedStream[];
@@ -59,7 +60,7 @@ export function StreamGrid({
         >
             {streams.map((stream) => (
                 <motion.div
-                    key={`${stream.platform}-${stream.id}`}
+                    key={getStreamElementKey(stream)}
                     variants={{
                         hidden: { opacity: 0, y: 20 },
                         show: { opacity: 1, y: 0 }
