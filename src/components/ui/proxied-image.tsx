@@ -2,10 +2,11 @@
  * ProxiedImage Component
  * 
  * Fetches images through Electron's main process to bypass CORS restrictions.
- * Falls back to a placeholder if the image fails to load.
+ * Shows skeleton loading while fetching URL, falls back to a placeholder if the image fails to load.
  */
 
 import React, { useEffect, useState } from 'react';
+import { Skeleton } from './skeleton';
 
 // Domains that require proxying due to hotlinking or CORS restrictions
 const PROXY_REQUIRED_DOMAINS = [
@@ -33,6 +34,8 @@ interface ProxiedImageProps {
     className?: string;
     fallback?: React.ReactNode;
     fallbackClassName?: string;
+    /** Optional class name for the skeleton loader. Defaults to className if not provided. */
+    skeletonClassName?: string;
 }
 
 export function ProxiedImage({
@@ -40,45 +43,64 @@ export function ProxiedImage({
     alt,
     className = '',
     fallback,
-    fallbackClassName = ''
+    fallbackClassName = '',
+    skeletonClassName
 }: ProxiedImageProps) {
-    const [imageSrc, setImageSrc] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
+    // The resolved image source (either direct URL or proxied data URL)
+    const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
+    // Whether we're currently resolving/fetching the image URL
+    const [isResolving, setIsResolving] = useState(true);
+    // Whether there was an error (no src, invalid URL, or failed to proxy/load)
     const [hasError, setHasError] = useState(false);
+    // Whether to show skeleton (delayed to avoid flash for instant resolution)
+    const [showSkeleton, setShowSkeleton] = useState(false);
 
     useEffect(() => {
         let cancelled = false;
+        let skeletonTimer: ReturnType<typeof setTimeout> | null = null;
 
-        async function loadImage() {
-            setIsLoading(true);
+        async function resolveImageSrc() {
+            setIsResolving(true);
             setHasError(false);
-            setImageSrc(null);
+            setResolvedSrc(null);
+            setShowSkeleton(false);
+
+            // Show skeleton after 100ms delay (avoids flash for instant loads)
+            skeletonTimer = setTimeout(() => {
+                if (!cancelled) {
+                    setShowSkeleton(true);
+                }
+            }, 100);
 
             // If no src provided, show fallback
             if (!src || src.trim() === '') {
-                setIsLoading(false);
+                setIsResolving(false);
                 setHasError(true);
                 return;
             }
 
             // If it's already a data URL, use it directly
             if (src.startsWith('data:')) {
-                setImageSrc(src);
-                setIsLoading(false);
+                if (!cancelled) {
+                    setResolvedSrc(src);
+                    setIsResolving(false);
+                }
                 return;
             }
 
             // If it's not an http(s) URL, show fallback
             if (!src.startsWith('http')) {
-                setIsLoading(false);
+                setIsResolving(false);
                 setHasError(true);
                 return;
             }
 
             // If the URL doesn't need proxying, use it directly
             if (!needsProxy(src)) {
-                setImageSrc(src);
-                setIsLoading(false);
+                if (!cancelled) {
+                    setResolvedSrc(src);
+                    setIsResolving(false);
+                }
                 return;
             }
 
@@ -93,7 +115,7 @@ export function ProxiedImage({
                 if (cancelled) return;
 
                 if (proxiedUrl) {
-                    setImageSrc(proxiedUrl);
+                    setResolvedSrc(proxiedUrl);
                 } else {
                     setHasError(true);
                 }
@@ -103,20 +125,28 @@ export function ProxiedImage({
                 setHasError(true);
             } finally {
                 if (!cancelled) {
-                    setIsLoading(false);
+                    setIsResolving(false);
                 }
             }
         }
 
-        loadImage();
+        resolveImageSrc();
 
         return () => {
             cancelled = true;
+            if (skeletonTimer) {
+                clearTimeout(skeletonTimer);
+            }
         };
     }, [src]);
 
-    // Show fallback if loading or error
-    if (isLoading || hasError || !imageSrc) {
+    // Handle img element error (image failed to load after we had the URL)
+    const handleImgError = () => {
+        setHasError(true);
+    };
+
+    // Show fallback when there's an error (image unavailable)
+    if (hasError) {
         if (fallback) {
             return <>{fallback}</>;
         }
@@ -129,12 +159,29 @@ export function ProxiedImage({
         );
     }
 
-    return (
-        <img
-            src={imageSrc}
-            alt={alt}
-            className={className}
-            onError={() => setHasError(true)}
-        />
-    );
+    // Show skeleton while resolving URL (only after 100ms delay)
+    if (isResolving) {
+        if (showSkeleton) {
+            return <Skeleton className={skeletonClassName || className} />;
+        }
+        // Before 100ms delay, render nothing to avoid flash
+        return null;
+    }
+
+    // We have the resolved URL - render the image directly
+    // The browser will handle caching and loading animation natively
+    if (resolvedSrc) {
+        return (
+            <img
+                src={resolvedSrc}
+                alt={alt}
+                className={className}
+                onError={handleImgError}
+            />
+        );
+    }
+
+    // Fallback case (shouldn't normally reach here)
+    return null;
 }
+
