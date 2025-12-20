@@ -1,4 +1,5 @@
 import { app, ipcMain, shell, Notification, BrowserWindow, nativeTheme, net } from 'electron';
+import * as https from 'https';
 import { IPC_CHANNELS } from '../../../shared/ipc-channels';
 
 export function registerSystemHandlers(mainWindow: BrowserWindow): void {
@@ -130,7 +131,7 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
                 parsedUrl.hostname.includes('images.kick.com') ||
                 parsedUrl.hostname.includes('files.kick.com');
 
-            // For Kick CDN, use Electron's net module which has access to session cookies
+            // For Kick CDN, use Node.js https module (more reliable than Electron's net for this)
             if (isKickCDN) {
                 return new Promise<string | null>((resolve) => {
                     let resolved = false;
@@ -143,40 +144,55 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
                         }
                     };
 
-                    const request = net.request({
-                        method: 'GET',
-                        url: url,
-                    });
+                    let currentReq: any = null;
 
                     // 10 second timeout to prevent hanging indefinitely
                     const timeoutId = setTimeout(() => {
-                        request.abort();
-                        console.warn('⚠️ Image proxy (net): Request timed out for', url);
+                        if (currentReq) {
+                            currentReq.destroy();
+                        }
+                        console.warn('⚠️ Image proxy (https): Request timed out for', url.substring(0, 60));
                         resolveOnce(null);
                     }, 10000);
 
-                    // Set headers to mimic a browser request from kick.com
-                    request.setHeader('Accept', 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8');
-                    request.setHeader('Accept-Language', 'en-US,en;q=0.9');
-                    request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
-                    request.setHeader('Referer', 'https://kick.com/');
-                    request.setHeader('Origin', 'https://kick.com');
-                    request.setHeader('Sec-Fetch-Dest', 'image');
-                    request.setHeader('Sec-Fetch-Mode', 'no-cors');
-                    request.setHeader('Sec-Fetch-Site', 'cross-site');
+                    const options = {
+                        headers: {
+                            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                            'Accept-Language': 'en-US,en;q=0.9',
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+                            'Referer': 'https://kick.com/',
+                        }
+                    };
 
-                    const chunks: Buffer[] = [];
-                    let contentType = 'image/jpeg';
+                    currentReq = https.get(url, options, (response) => {
+                        // Handle redirects
+                        if (response.statusCode === 301 || response.statusCode === 302 || response.statusCode === 307) {
+                            const redirectUrl = response.headers.location;
+                            if (redirectUrl) {
+                                response.destroy(); // Clean up original response
+                                // Follow redirect with same options
+                                currentReq = https.get(redirectUrl, options, (redirectResponse) => {
+                                    handleResponse(redirectResponse);
+                                }).on('error', (error) => {
+                                    console.error('❌ Image proxy redirect error:', error.message);
+                                    resolveOnce(null);
+                                });
+                                return;
+                            }
+                        }
 
-                    request.on('response', (response) => {
+                        handleResponse(response);
+                    });
+
+                    function handleResponse(response: any) {
                         if (response.statusCode !== 200) {
-                            console.warn(`⚠️ Image proxy: Failed to fetch ${url.substring(0, 60)}...: ${response.statusCode}`);
+                            console.warn(`⚠️ Image proxy: Failed to fetch ${url.substring(0, 80)}... Status: ${response.statusCode}`);
                             resolveOnce(null);
                             return;
                         }
 
-                        const rawContentType = response.headers['content-type'];
-                        contentType = Array.isArray(rawContentType) ? rawContentType[0] : rawContentType || 'image/jpeg';
+                        const chunks: Buffer[] = [];
+                        const contentType = response.headers['content-type'] || 'image/jpeg';
 
                         response.on('data', (chunk: Buffer) => {
                             chunks.push(chunk);
@@ -188,18 +204,16 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
                             resolveOnce(`data:${contentType};base64,${base64}`);
                         });
 
-                        response.on('error', (error) => {
-                            console.error('❌ Image proxy response error:', error);
+                        response.on('error', (error: Error) => {
+                            console.error('❌ Image proxy response error:', error.message);
                             resolveOnce(null);
                         });
-                    });
+                    }
 
-                    request.on('error', (error) => {
-                        console.error('❌ Image proxy request error:', error);
+                    currentReq.on('error', (error: Error) => {
+                        console.error('❌ Image proxy request error:', error.message);
                         resolveOnce(null);
                     });
-
-                    request.end();
                 });
             }
 

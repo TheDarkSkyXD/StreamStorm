@@ -68,7 +68,7 @@ export function transformKickLivestream(livestream: KickApiLivestream): UnifiedS
         channelId: livestream.broadcaster_user_id.toString(),
         channelName: livestream.slug,
         channelDisplayName: livestream.slug,
-        channelAvatar: '', // Not provided in livestreams endpoint
+        channelAvatar: livestream.profile_picture || '', // Use official API profile_picture
         title: livestream.stream_title,
         viewerCount: livestream.viewer_count,
         thumbnailUrl: livestream.thumbnail || '',

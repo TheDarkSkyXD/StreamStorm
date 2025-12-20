@@ -81,6 +81,7 @@ export interface KickApiLivestream {
     has_mature_content: boolean;
     viewer_count: number;
     thumbnail: string | null;
+    profile_picture: string | null; // Channel avatar URL (kick.com/img/...)
     started_at: string;
     custom_tags: string[];
     category: KickApiChannelCategory;

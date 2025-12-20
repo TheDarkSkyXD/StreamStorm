@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { PlatformAvatar } from '@/components/ui/platform-avatar';
+import { ProxiedImage } from '@/components/ui/proxied-image';
 import { Card, CardContent } from '@/components/ui/card';
 import { Play, Lock, Sparkles } from 'lucide-react';
 import { VideoOrClip } from './types';
@@ -60,7 +61,11 @@ export function VideoCard({ video, platform, channelName, channelData }: VideoCa
             {/* Thumbnail Section */}
             <Link {...linkProps} className="block relative aspect-video bg-[var(--color-background-tertiary)] overflow-hidden">
                 {video.thumbnailUrl && (
-                    <img src={video.thumbnailUrl} alt={video.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <ProxiedImage
+                        src={video.thumbnailUrl}
+                        alt={video.title}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
                 )}
 
                 {/* Duration: Top Left */}

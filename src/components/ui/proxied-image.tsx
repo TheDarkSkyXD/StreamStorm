@@ -10,6 +10,7 @@ import React, { useEffect, useState } from 'react';
 // Domains that require proxying due to hotlinking or CORS restrictions
 const PROXY_REQUIRED_DOMAINS = [
     'files.kick.com',
+    'images.kick.com',
 ];
 
 /**

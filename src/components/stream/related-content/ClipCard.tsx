@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { Card, CardContent } from '@/components/ui/card';
+import { ProxiedImage } from '@/components/ui/proxied-image';
 import { PlatformAvatar } from '@/components/ui/platform-avatar';
 import { Play } from 'lucide-react';
 import { VideoOrClip } from './types';
@@ -24,7 +25,11 @@ export function ClipCard({ clip, onClick, platform, channelName, channelData }: 
             {/* Thumbnail Section */}
             <div onClick={onClick} className="block relative aspect-video bg-[var(--color-background-tertiary)] overflow-hidden">
                 {clip.thumbnailUrl && (
-                    <img src={clip.thumbnailUrl} alt={clip.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                    <ProxiedImage
+                        src={clip.thumbnailUrl}
+                        alt={clip.title}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    />
                 )}
 
                 {/* Duration: Top Left */}
