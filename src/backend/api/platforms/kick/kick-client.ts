@@ -35,6 +35,97 @@ class KickClient implements KickRequestor {
      * Make an authenticated request to the official Kick Public API v1
      * All official endpoints require OAuth2 Bearer token
      */
+    /**
+     * Make an HTTP request using Electron's net module
+     * Uses Chromium's networking stack which handles IPv6-only domains (like api.kick.com) properly
+     */
+    private electronRequest<T>(
+        url: string,
+        method: string,
+        headers: Record<string, string>,
+        body?: string
+    ): Promise<{ data: T; statusCode: number; responseHeaders: Record<string, string> }> {
+        return new Promise((resolve, reject) => {
+            const { net } = require('electron');
+
+            const request = net.request({
+                method,
+                url,
+            });
+
+            // Set headers
+            for (const [key, value] of Object.entries(headers)) {
+                request.setHeader(key, value);
+            }
+
+            // Track completion to prevent race conditions between timeout and response handlers
+            let completed = false;
+
+            // Timeout after 30 seconds
+            const timeout = setTimeout(() => {
+                if (completed) return;
+                completed = true;
+                request.abort();
+                reject(new Error('Request timeout after 30s'));
+            }, 30000);
+
+            request.on('response', (response: any) => {
+                let responseBody = '';
+                const responseHeaders: Record<string, string> = {};
+
+                // Collect response headers
+                if (response.headers) {
+                    for (const [key, value] of Object.entries(response.headers)) {
+                        responseHeaders[key.toLowerCase()] = Array.isArray(value) ? value[0] : value as string;
+                    }
+                }
+
+                response.on('data', (chunk: Buffer) => {
+                    responseBody += chunk.toString();
+                });
+
+                response.on('end', () => {
+                    if (completed) return;
+                    completed = true;
+                    clearTimeout(timeout);
+                    try {
+                        const data = responseBody ? JSON.parse(responseBody) : null;
+                        resolve({
+                            data: data as T,
+                            statusCode: response.statusCode,
+                            responseHeaders
+                        });
+                    } catch (e) {
+                        reject(new Error(`Failed to parse JSON response: ${responseBody.substring(0, 200)}`));
+                    }
+                });
+
+                response.on('error', (error: Error) => {
+                    if (completed) return;
+                    completed = true;
+                    clearTimeout(timeout);
+                    reject(error);
+                });
+            });
+
+            request.on('error', (error: Error) => {
+                if (completed) return;
+                completed = true;
+                clearTimeout(timeout);
+                reject(error);
+            });
+
+            // Send body if present
+            if (body) {
+                const contentLength = Buffer.byteLength(body, 'utf8');
+                request.setHeader('Content-Length', contentLength.toString());
+                request.write(body);
+            }
+
+            request.end();
+        });
+    }
+
     async request<T>(
         endpoint: string,
         options: RequestInit = {}
@@ -75,13 +166,14 @@ class KickClient implements KickRequestor {
         while (attempt <= maxRetries) {
             try {
                 const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
-                const response = await fetch(url, {
-                    ...options,
-                    headers,
-                });
+                const method = (options.method || 'GET').toUpperCase();
+                const body = options.body ? String(options.body) : undefined;
 
-                if (!response.ok) {
-                    if (response.status === 429) {
+                // Use Electron's net module for proper IPv6-only domain handling
+                const response = await this.electronRequest<T>(url, method, headers, body);
+
+                if (response.statusCode !== 200) {
+                    if (response.statusCode === 429) {
                         attempt++;
                         if (attempt > maxRetries) {
                             throw new Error(`Kick API error: 429 (Max retries exceeded)`);
@@ -89,7 +181,7 @@ class KickClient implements KickRequestor {
 
                         // Calculate backoff: 1s, 2s, 4s...
                         // Use Retry-After header if available
-                        const retryHeader = response.headers.get('Retry-After');
+                        const retryHeader = response.responseHeaders['retry-after'];
                         const backoff = retryHeader
                             ? parseInt(retryHeader, 10) * 1000
                             : 1000 * Math.pow(2, attempt - 1);
@@ -99,11 +191,11 @@ class KickClient implements KickRequestor {
                         continue;
                     }
 
-                    if (response.status === 403) {
+                    if (response.statusCode === 403) {
                         console.warn('⚠️ Kick API forbidden - may need additional scopes or User Token');
                     }
 
-                    if (response.status === 401) {
+                    if (response.statusCode === 401) {
                         console.log(`🔄 Kick ${isAppToken ? 'App' : 'User'} token expired, refreshing...`);
 
                         if (!isAppToken) {
@@ -117,17 +209,17 @@ class KickClient implements KickRequestor {
                         }
                     }
 
-                    throw new Error(`Kick API error: ${response.status}`);
+                    throw new Error(`Kick API error: ${response.statusCode}`);
                 }
 
-                return (await response.json()) as T;
+                return response.data;
             } catch (error: any) {
                 // If it's a 429 error we deliberately threw above, re-throw it
                 if (error.message && error.message.includes('429')) {
                     throw error;
                 }
 
-                // Network errors (fetch failed) logic could go here, but for now just log
+                // Network errors - log and throw
                 console.error(`❌ Kick API request failed: ${endpoint}`, error);
                 throw error;
             }
