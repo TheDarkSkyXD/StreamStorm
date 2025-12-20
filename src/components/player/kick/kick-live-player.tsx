@@ -51,6 +51,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
+    const volumePreferenceRef = useRef(100); // Preserve user's volume preference across stream changes
 
     // Hooks
     const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
@@ -84,9 +85,10 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
     // Apply user's default quality preference
     useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
 
-    // Reset error state when streamUrl changes
+    // Reset state when streamUrl changes (new stream)
     useEffect(() => {
         setHasError(false);
+        setIsReady(false); // Reset ready state so initialization runs for new stream
     }, [streamUrl]);
 
     // Uptime Calculation Effect
@@ -200,13 +202,24 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         };
     }, [isReady, startedAt]);
 
-    // Initialize volume/mute
+    // Keep volume preference ref in sync with state
+    useEffect(() => {
+        volumePreferenceRef.current = volume;
+    }, [volume]);
+
+    // Initialize volume/mute and sync React state
+    // Triggered when isReady becomes true (video element is available)
     useEffect(() => {
         const video = videoRef.current;
-        if (video) {
+        if (video && isReady) {
             video.muted = initialMuted;
+            // Apply user's volume preference (defaults to 100 on first mount)
+            video.volume = volumePreferenceRef.current / 100;
+            // Sync React state to ensure UI reflects actual video state
+            setIsMuted(video.muted);
+            setVolume(video.volume * 100);
         }
-    }, [initialMuted]);
+    }, [initialMuted, isReady]);
 
     // Handlers
     const togglePlay = useCallback(() => {
