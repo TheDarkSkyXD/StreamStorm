@@ -16,83 +16,115 @@ const CACHE_TTL = 1000 * 60 * 5; // 5 minutes
 
 /**
  * Get stream info using the public/legacy API (No Auth Required)
+ * Includes retry logic for transient server errors (502, 503, 504)
  */
 export async function getPublicStreamBySlug(slug: string): Promise<UnifiedStream | null> {
-    try {
-        const { net } = require('electron');
+    const maxRetries = 3;
+    let lastError: Error | null = null;
 
-        const data = await new Promise<any>((resolve, reject) => {
-            const request = net.request({
-                method: 'GET',
-                url: `${KICK_LEGACY_API_V1_BASE}/channels/${slug}`,
-            });
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            const { net } = require('electron');
 
-            request.setHeader('Accept', 'application/json');
-            request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-            request.setHeader('Referer', 'https://kick.com/');
-            request.setHeader('X-Requested-With', 'XMLHttpRequest');
-
-            request.on('response', (response: any) => {
-                if (response.statusCode === 404) {
-                    resolve(null);
-                    return;
-                }
-
-                if (response.statusCode !== 200) {
-                    reject(new Error(`Status ${response.statusCode}`));
-                    return;
-                }
-
-                let body = '';
-                response.on('data', (chunk: Buffer) => {
-                    body += chunk.toString();
+            const data = await new Promise<any>((resolve, reject) => {
+                const request = net.request({
+                    method: 'GET',
+                    url: `${KICK_LEGACY_API_V1_BASE}/channels/${slug}`,
                 });
 
-                response.on('end', () => {
-                    try {
-                        resolve(JSON.parse(body));
-                    } catch (e) {
-                        console.warn(`[KickStream] Failed to parse JSON for ${slug}`);
-                        reject(new Error('Failed to parse JSON'));
+                request.setHeader('Accept', 'application/json');
+                request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+                request.setHeader('Referer', 'https://kick.com/');
+                request.setHeader('X-Requested-With', 'XMLHttpRequest');
+
+                request.on('response', (response: any) => {
+                    if (response.statusCode === 404) {
+                        resolve(null);
+                        return;
                     }
+
+                    // Transient server errors - should retry
+                    if (response.statusCode === 502 || response.statusCode === 503 || response.statusCode === 504) {
+                        reject(new Error(`TRANSIENT:${response.statusCode}`));
+                        return;
+                    }
+
+                    if (response.statusCode !== 200) {
+                        reject(new Error(`Status ${response.statusCode}`));
+                        return;
+                    }
+
+                    let body = '';
+                    response.on('data', (chunk: Buffer) => {
+                        body += chunk.toString();
+                    });
+
+                    response.on('end', () => {
+                        try {
+                            resolve(JSON.parse(body));
+                        } catch (e) {
+                            console.warn(`[KickStream] Failed to parse JSON for ${slug}`);
+                            reject(new Error('Failed to parse JSON'));
+                        }
+                    });
                 });
+
+                request.on('error', (error: Error) => {
+                    reject(error);
+                });
+
+                request.end();
             });
 
-            request.on('error', (error: Error) => {
-                reject(error);
-            });
+            if (!data) return null;
 
-            request.end();
-        });
+            const livestream = data.livestream;
+            if (!livestream) return null;
 
-        if (!data) return null;
+            // Map legacy livestream to UnifiedStream
+            return {
+                id: livestream.id.toString(),
+                platform: 'kick',
+                channelId: livestream.channel_id.toString(),
+                channelName: data.slug,
+                channelDisplayName: data.user?.username || data.slug,
+                channelAvatar: data.user?.profile_pic || '',
+                title: livestream.session_title || '',
+                viewerCount: livestream.viewer_count ?? livestream.viewers ?? 0,
+                thumbnailUrl: livestream.thumbnail?.url || '',
+                isLive: true,
+                startedAt: livestream.created_at,
+                language: livestream.language || 'en',
+                tags: livestream.tags || livestream.custom_tags || [],
+                isMature: livestream.is_mature ?? false,
+                categoryId: livestream.categories?.[0]?.id?.toString() || '',
+                categoryName: livestream.categories?.[0]?.name || '',
+            };
+        } catch (error: any) {
+            lastError = error;
 
-        const livestream = data.livestream;
-        if (!livestream) return null;
+            // Check if this is a transient error that should be retried
+            if (error.message?.startsWith('TRANSIENT:')) {
+                const statusCode = error.message.split(':')[1];
+                // Don't delay after the final attempt
+                if (attempt < maxRetries - 1) {
+                    const backoffMs = 1000 * Math.pow(2, attempt); // 1s, 2s, 4s
+                    console.debug(`[KickStream] Got ${statusCode} for ${slug}, retrying in ${backoffMs}ms (attempt ${attempt + 1}/${maxRetries})`);
+                    await new Promise(resolve => setTimeout(resolve, backoffMs));
+                }
+                continue;
+            }
 
-        // Map legacy livestream to UnifiedStream
-        return {
-            id: livestream.id.toString(),
-            platform: 'kick',
-            channelId: livestream.channel_id.toString(),
-            channelName: data.slug,
-            channelDisplayName: data.user?.username || data.slug,
-            channelAvatar: data.user?.profile_pic || '',
-            title: livestream.session_title || '',
-            viewerCount: livestream.viewer_count ?? livestream.viewers ?? 0,
-            thumbnailUrl: livestream.thumbnail?.url || '',
-            isLive: true,
-            startedAt: livestream.created_at,
-            language: livestream.language || 'en',
-            tags: livestream.tags || livestream.custom_tags || [],
-            isMature: livestream.is_mature ?? false,
-            categoryId: livestream.categories?.[0]?.id?.toString() || '',
-            categoryName: livestream.categories?.[0]?.name || '',
-        };
-    } catch (error) {
-        console.warn(`Failed to fetch public Kick stream ${slug}:`, error);
-        return null;
+            // Non-transient error - don't retry
+            break;
+        }
     }
+
+    // All retries exhausted or non-transient error
+    if (lastError) {
+        console.warn(`Failed to fetch public Kick stream ${slug}:`, lastError);
+    }
+    return null;
 }
 
 /**

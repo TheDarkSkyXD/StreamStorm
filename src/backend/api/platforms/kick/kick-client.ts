@@ -173,6 +173,7 @@ class KickClient implements KickRequestor {
                 const response = await this.electronRequest<T>(url, method, headers, body);
 
                 if (response.statusCode !== 200) {
+                    // Handle rate limiting (429) with retry
                     if (response.statusCode === 429) {
                         attempt++;
                         if (attempt > maxRetries) {
@@ -187,6 +188,19 @@ class KickClient implements KickRequestor {
                             : 1000 * Math.pow(2, attempt - 1);
 
                         console.warn(`⚠️ Kick API 429 Too Many Requests. Retrying in ${backoff}ms (Attempt ${attempt}/${maxRetries})...`);
+                        await new Promise(resolve => setTimeout(resolve, backoff));
+                        continue;
+                    }
+
+                    // Handle transient server errors (502, 503, 504) with retry
+                    if (response.statusCode === 502 || response.statusCode === 503 || response.statusCode === 504) {
+                        attempt++;
+                        if (attempt > maxRetries) {
+                            throw new Error(`Kick API error: ${response.statusCode} (Max retries exceeded)`);
+                        }
+
+                        const backoff = 1000 * Math.pow(2, attempt - 1); // 1s, 2s, 4s
+                        console.warn(`⚠️ Kick API ${response.statusCode} Server Error. Retrying in ${backoff}ms (Attempt ${attempt}/${maxRetries})...`);
                         await new Promise(resolve => setTimeout(resolve, backoff));
                         continue;
                     }

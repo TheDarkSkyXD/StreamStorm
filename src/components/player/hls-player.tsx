@@ -131,9 +131,11 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 // Level loading retry settings
                 levelLoadingMaxRetry: 3,
                 levelLoadingRetryDelay: 5000,
-                // Fragment loading retry settings  
-                fragLoadingMaxRetry: 3,
-                fragLoadingRetryDelay: 5000,
+                // Fragment loading retry settings - more aggressive for live streams
+                // Transient errors like ERR_INCOMPLETE_CHUNKED_ENCODING are common
+                fragLoadingMaxRetry: 6, // More retries for fragments (they fail more often on live)
+                fragLoadingRetryDelay: 1000, // Faster initial retry (was 5000)
+                fragLoadingMaxRetryTimeout: 30000, // Cap total retry time
                 xhrSetup: (xhr, url) => {
                     xhr.withCredentials = false; // Important to avoid CORS issues with wildcards
                 },
@@ -181,8 +183,9 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             hls.on(Hls.Events.ERROR, (event, data) => {
                 // Completely ignore innocuous errors that resolve themselves automatically
                 // - bufferStalledError: temporary buffer underrun, HLS.js recovers automatically
-                // Reporting all errors for debugging robust stream handling
-                const silentErrors = ['bufferStalledError', 'levelSwitchError'];
+                // - fragLoadError (non-fatal): transient network errors like ERR_INCOMPLETE_CHUNKED_ENCODING
+                // Reporting fatal errors for debugging robust stream handling
+                const silentErrors = ['bufferStalledError', 'levelSwitchError', 'fragLoadError'];
 
                 // Check for 404/403 on manifest load - indicates stream is definitely gone
                 // Stop retrying immediately to prevent console noise
