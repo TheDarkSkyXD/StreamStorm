@@ -271,6 +271,7 @@ export function registerVideoHandlers(): void {
         limit?: number;
         cursor?: string;
         sort?: 'date' | 'views'; // Sort option: 'date' (most recent) or 'views'
+        timeRange?: 'day' | 'week' | 'month' | 'all';
     }) => {
         const { twitchClient } = await import('../../api/platforms/twitch/twitch-client');
         const { kickClient } = await import('../../api/platforms/kick/kick-client');
@@ -285,10 +286,29 @@ export function registerVideoHandlers(): void {
                     userId = users[0].id;
                 }
 
-                console.log(`[TwitchClip] Fetching clips for User ID: ${userId}`);
+                // Calculate started_at based on timeRange
+                let startedAt: string | undefined;
+                if (params.timeRange && params.timeRange !== 'all') {
+                    const now = new Date();
+                    switch (params.timeRange) {
+                        case 'day':
+                            now.setDate(now.getDate() - 1);
+                            break;
+                        case 'week':
+                            now.setDate(now.getDate() - 7);
+                            break;
+                        case 'month':
+                            now.setMonth(now.getMonth() - 1);
+                            break;
+                    }
+                    startedAt = now.toISOString();
+                }
+
+                console.log(`[TwitchClip] Fetching clips for User ID: ${userId} with timeRange: ${params.timeRange || 'all'} (startedAt: ${startedAt || 'none'})`);
                 const clips = await twitchClient.getClipsByBroadcaster(userId, {
                     first: params.limit,
-                    after: params.cursor
+                    after: params.cursor,
+                    started_at: startedAt
                 });
                 console.log(`[TwitchClip] Fetched ${clips.data.length} clips for ${params.channelName}`);
 

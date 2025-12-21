@@ -174,6 +174,8 @@ export interface PaginationOptions {
     first?: number; // Number of results (max 100)
     after?: string; // Cursor for next page
     before?: string; // Cursor for previous page
+    started_at?: string; // ISO timestamp
+    ended_at?: string; // ISO timestamp
 }
 
 export interface PaginatedResult<T> {

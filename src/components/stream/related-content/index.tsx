@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearch } from '@tanstack/react-router';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { RelatedContentProps, VideoOrClip } from './types';
 import { ContentTabs, SortOption } from './ContentTabs';
+
+export type TimeRange = 'day' | 'week' | 'month' | 'all';
 import { VideoCard } from './VideoCard';
 import { ClipCard } from './ClipCard';
 import { ClipDialog } from './ClipDialog';
@@ -22,7 +24,30 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
     const [clips, setClips] = useState<VideoOrClip[]>([]);
     const [selectedClip, setSelectedClip] = useState<VideoOrClip | null>(null);
     const [clipPlaybackUrl, setClipPlaybackUrl] = useState<string | null>(null);
-    const [sortBy, setSortBy] = useState<SortOption>('recent');
+    const [sortBy, setSortBy] = useState<SortOption>('views');
+    const [timeRange, setTimeRange] = useState<TimeRange>('all');
+
+    // Pagination State
+    const [videoCursor, setVideoCursor] = useState<string | undefined>(undefined);
+    const [clipCursor, setClipCursor] = useState<string | undefined>(undefined);
+    const [hasMoreVideos, setHasMoreVideos] = useState(true);
+    const [hasMoreClips, setHasMoreClips] = useState(true);
+    const [isFetchingMore, setIsFetchingMore] = useState(false);
+
+    // Intersection Observer for infinite scroll
+    // Intersection Observer for infinite scroll
+    const loadMoreRef = React.useRef<HTMLDivElement>(null);
+    const errorTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
+
+    // Clean up timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (errorTimeoutRef.current) {
+                clearTimeout(errorTimeoutRef.current);
+            }
+        };
+    }, []);
+
     const [clipLoading, setClipLoading] = useState(false);
     const [clipError, setClipError] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -33,18 +58,19 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
         onClipSelectionChange?.(!!selectedClip);
     }, [selectedClip, onClipSelectionChange]);
 
-    // Fetch data - wait for channelData to be loaded to get the channelId
+    // Initial Fetch (Resets list)
     useEffect(() => {
-        const fetchData = async () => {
+        const fetchInitialData = async () => {
             setIsLoading(true);
             setError(null);
+            setVideoCursor(undefined);
+            setClipCursor(undefined);
+            setHasMoreVideos(true);
+            setHasMoreClips(true);
+
             try {
                 const api = (window as any).electronAPI;
-                if (!api) {
-                    // This should not happen if preload ran correctly
-                    console.error('[RelatedContent] window.electronAPI is missing');
-                    return;
-                }
+                if (!api) return;
 
                 const targetTab = activeTab || 'videos';
 
@@ -53,14 +79,15 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                         platform,
                         channelName,
                         channelId: channelData?.id,
-                        limit: 12,
+                        limit: 5, // Initial load limit
                         sort: sortBy === 'views' ? 'views' : 'date'
                     });
                     if (result.success) {
                         setVideos(result.data || []);
+                        setVideoCursor(result.cursor);
+                        setHasMoreVideos(!!result.cursor && (result.data?.length || 0) >= 5);
                         setDebugInfo(result.debug || null);
                     } else {
-                        console.error("Failed to fetch videos:", result.error);
                         setError(result.error || "Failed to fetch videos");
                     }
                 } else if (targetTab === 'clips') {
@@ -68,13 +95,15 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                         platform,
                         channelName,
                         channelId: channelData?.id,
-                        limit: 12,
-                        sort: sortBy === 'views' ? 'views' : 'date'
+                        limit: 5, // Initial load limit
+                        sort: sortBy === 'views' ? 'views' : 'date',
+                        timeRange: timeRange
                     });
                     if (result.success) {
                         setClips(result.data || []);
+                        setClipCursor(result.cursor);
+                        setHasMoreClips(!!result.cursor && (result.data?.length || 0) >= 5);
                     } else {
-                        console.error("Failed to fetch clips:", result.error);
                         setError(result.error || "Failed to fetch clips");
                     }
                 }
@@ -86,11 +115,111 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
             }
         };
 
-        // Only fetch when we have both channel name and channel data (with id)
         if (platform && channelName && channelData?.id) {
-            fetchData();
+            fetchInitialData();
         }
-    }, [activeTab, platform, channelName, channelData?.id, sortBy]);
+    }, [activeTab, platform, channelName, channelData?.id, sortBy, timeRange]);
+
+    // Load More Function
+    const loadMore = useCallback(async () => {
+        if (isFetchingMore || isLoading) return;
+
+        const targetTab = activeTab || 'videos';
+        if (targetTab === 'videos' && !hasMoreVideos) return;
+        if (targetTab === 'clips' && !hasMoreClips) return;
+
+        setIsFetchingMore(true);
+        try {
+            const api = (window as any).electronAPI;
+            if (!api) {
+                console.error("API not available for loading more items");
+                return;
+            }
+
+            if (targetTab === 'videos') {
+                const result = await api.videos.getByChannel({
+                    platform,
+                    channelName,
+                    channelId: channelData?.id,
+                    limit: 5,
+                    cursor: videoCursor,
+                    sort: sortBy === 'views' ? 'views' : 'date'
+                });
+                if (result.success) {
+                    const newVideos = result.data || [];
+                    if (newVideos.length === 0) {
+                        setHasMoreVideos(false);
+                    } else {
+                        setVideos(prev => {
+                            // Filter out duplicates
+                            const existingIds = new Set(prev.map(v => v.id));
+                            const uniqueNewVideos = newVideos.filter((v: VideoOrClip) => !existingIds.has(v.id));
+                            return [...prev, ...uniqueNewVideos];
+                        });
+                        setVideoCursor(result.cursor);
+                        // If we got fewer than requested, we might be done, but rely on cursor if present
+                        if (!result.cursor) setHasMoreVideos(false);
+                    }
+                }
+            } else if (targetTab === 'clips') {
+                const result = await api.clips.getByChannel({
+                    platform,
+                    channelName,
+                    channelId: channelData?.id,
+                    limit: 5,
+                    cursor: clipCursor,
+                    sort: sortBy === 'views' ? 'views' : 'date',
+                    timeRange: timeRange
+                });
+                if (result.success) {
+                    const newClips = result.data || [];
+                    if (newClips.length === 0) {
+                        setHasMoreClips(false);
+                    } else {
+                        setClips(prev => {
+                            // Filter out duplicates
+                            const existingIds = new Set(prev.map(c => c.id));
+                            const uniqueNewClips = newClips.filter((c: VideoOrClip) => !existingIds.has(c.id));
+                            return [...prev, ...uniqueNewClips];
+                        });
+                        setClipCursor(result.cursor);
+                        if (!result.cursor) setHasMoreClips(false);
+                    }
+                }
+            }
+        } catch (err) {
+            console.error("Error loading more items:", err);
+            // Clear any existing error timeout
+            if (errorTimeoutRef.current) {
+                clearTimeout(errorTimeoutRef.current);
+            }
+            setError("Failed to load more items. Please try again.");
+            errorTimeoutRef.current = setTimeout(() => {
+                setError(null);
+                errorTimeoutRef.current = null;
+            }, 3000);
+        } finally {
+            setIsFetchingMore(false);
+        }
+    }, [isFetchingMore, isLoading, activeTab, hasMoreVideos, hasMoreClips, platform, channelName, channelData?.id, sortBy, timeRange, videoCursor, clipCursor]);
+
+    // Intersection Observer Effect
+    useEffect(() => {
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting) {
+                    loadMore();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        if (loadMoreRef.current) {
+            observer.observe(loadMoreRef.current);
+        }
+
+        return () => observer.disconnect();
+    }, [loadMore]);
 
     // Fetch clip playback URL when a clip is selected
     useEffect(() => {
@@ -169,9 +298,25 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                 <div className="flex items-center justify-start gap-4">
                     {/* Sort Dropdown - Relocated here */}
                     <div className="flex items-center gap-2 text-sm">
+                        {activeTab === 'clips' && (
+                            <div className="flex items-center gap-2 mr-4">
+                                <span className="text-[var(--color-foreground)] font-bold">Filter by:</span>
+                                <Select value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)}>
+                                    <SelectTrigger className="w-auto min-w-[100px] h-10 bg-[var(--color-background-secondary)] border-none font-bold px-4 text-base">
+                                        <SelectValue placeholder="Time" />
+                                    </SelectTrigger>
+                                    <SelectContent align="end">
+                                        <SelectItem value="day" className="font-bold">Last Day</SelectItem>
+                                        <SelectItem value="week" className="font-bold">Last Week</SelectItem>
+                                        <SelectItem value="month" className="font-bold">Last Month</SelectItem>
+                                        <SelectItem value="all" className="font-bold">All Time</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
                         <span className="text-[var(--color-foreground)] font-bold">Sort by:</span>
                         <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-                            <SelectTrigger className="w-[140px] h-8 bg-[var(--color-background-secondary)] border-none font-bold">
+                            <SelectTrigger className="w-auto min-w-[90px] h-10 bg-[var(--color-background-secondary)] border-none font-bold px-4 text-base">
                                 <SelectValue placeholder="Sort" />
                             </SelectTrigger>
                             <SelectContent align="end">
@@ -234,6 +379,15 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                                 </div>
                             )
                         )
+                    )}
+
+                    {/* Sentinel for infinite scroll */}
+                    <div ref={loadMoreRef} className="col-span-full h-4 w-full" />
+
+                    {isFetchingMore && (
+                        <div className="col-span-full py-4 flex justify-center">
+                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                        </div>
                     )}
                 </div>
             </div>
