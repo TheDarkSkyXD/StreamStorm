@@ -1,3 +1,4 @@
+import { BrowserWindow } from 'electron';
 import { KickRequestor } from '../kick-requestor';
 import { UnifiedChannel } from '../../../unified/platform-types';
 import { KickApiResponse, KickApiChannel, KICK_LEGACY_API_V1_BASE } from '../kick-types';
@@ -74,86 +75,87 @@ export async function getChannelsBySlugs(client: KickRequestor, slugs: string[])
 /**
  * Get channel info using the public/legacy API (No Auth Required)
  * GET https://kick.com/api/v1/channels/:slug
+ * 
+ * Uses a hidden Electron BrowserWindow to bypass Cloudflare/WAF 403 protections.
  */
 export async function getPublicChannel(slug: string): Promise<UnifiedChannel | null> {
+    let win: BrowserWindow | null = null;
     try {
-        const { net } = require('electron');
+        const url = `${KICK_LEGACY_API_V1_BASE}/channels/${slug}`;
 
-        const data = await new Promise<any>((resolve, reject) => {
-            const request = net.request({
-                method: 'GET',
-                url: `${KICK_LEGACY_API_V1_BASE}/channels/${slug}`,
-            });
-
-            request.setHeader('Accept', 'application/json');
-            request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-            request.setHeader('Referer', 'https://kick.com/');
-            request.setHeader('X-Requested-With', 'XMLHttpRequest');
-
-            request.on('response', (response: any) => {
-                if (response.statusCode === 404) {
-                    resolve(null);
-                    return;
-                }
-
-                if (response.statusCode !== 200) {
-                    reject(new Error(`Status ${response.statusCode}`));
-                    return;
-                }
-
-                let body = '';
-                response.on('data', (chunk: Buffer) => {
-                    body += chunk.toString();
-                });
-
-                response.on('end', () => {
-                    try {
-                        resolve(JSON.parse(body));
-                    } catch (e) {
-                        // Fallback: If body looks like HTML, we might be blocked
-                        console.warn(`[KickChannel] Failed to parse JSON for ${slug}. Preview: ${body.substring(0, 200)}`);
-                        reject(new Error('Failed to parse JSON'));
-                    }
-                });
-            });
-
-            request.on('error', (error: Error) => {
-                reject(error);
-            });
-
-            request.end();
+        // Create a hidden window
+        win = new BrowserWindow({
+            show: false,
+            width: 800,
+            height: 600,
+            webPreferences: {
+                nodeIntegration: false,
+                contextIsolation: true,
+                partition: 'persist:kick_public' // Use a persistent partition to cache Cloudflare tokens
+            }
         });
 
+        // Set a timeout for page load
+        const loadTimeout = 15000; // 15 seconds
+        const loadPromise = win.loadURL(url);
+        const timeoutPromise = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error('Page load timeout')), loadTimeout)
+        );
 
-        if (!data) return null;
+        await Promise.race([loadPromise, timeoutPromise]);
+
+        // Extract JSON content from the page body
+        const pageContent = await win.webContents.executeJavaScript(`
+            document.body.innerText;
+        `);
+
+        if (!pageContent) {
+            console.warn(`[KickChannel] Empty response for ${slug}`);
+            return null;
+        }
+
+        let data;
+        try {
+            data = JSON.parse(pageContent);
+        } catch (e) {
+            // Check for Cloudflare challenge or error pages
+            const title = win.title;
+            if (title.includes('Just a moment') || title.includes('Access denied')) {
+                console.warn(`[KickChannel] Cloudflare challenge triggered for ${slug}`);
+            } else if (pageContent.includes('404')) {
+                return null;
+            }
+            console.warn(`[KickChannel] Failed to parse JSON for ${slug}. Content preview: ${pageContent.substring(0, 100)}`);
+            return null;
+        }
+
+        if (data.message === 'Not found' || (data.code === 404)) {
+            return null;
+        }
 
         // Map the public API response to UnifiedChannel
         const user = data.user || {};
 
-        // Extract the most recent category - try recent_categories first, then livestream categories
+        // Extract the most recent category
         let categoryId: string | undefined;
         let categoryName: string | undefined;
 
         if (data.recent_categories && data.recent_categories.length > 0) {
-            // recent_categories is an array of categories the channel has recently streamed in
             const recentCategory = data.recent_categories[0];
             categoryId = recentCategory?.id?.toString();
             categoryName = recentCategory?.name;
         } else if (data.livestream?.categories && data.livestream.categories.length > 0) {
-            // If channel is live or has livestream data, use that category
             const liveCategory = data.livestream.categories[0];
             categoryId = liveCategory?.id?.toString();
             categoryName = liveCategory?.name;
         }
 
-        // Extract the last stream title - try livestream first, then previous_livestreams
+        // Extract the last stream title
         let lastStreamTitle: string | undefined;
 
         if (data.livestream?.session_title) {
-            // Current or most recent livestream title
             lastStreamTitle = data.livestream.session_title;
         } else if (data.previous_livestreams && data.previous_livestreams.length > 0) {
-            // Previous livestream title
             lastStreamTitle = data.previous_livestreams[0]?.session_title;
         }
 
@@ -192,9 +194,17 @@ export async function getPublicChannel(slug: string): Promise<UnifiedChannel | n
             categoryName,
             lastStreamTitle,
         };
+
     } catch (error) {
-        console.warn(`Failed to fetch public Kick channel ${slug}:`, error);
-        return null; // Return null on error so fallback can happen if we had one
+        console.warn(`Failed to fetch public Kick channel ${slug} via Window:`, error);
+        return null;
+    } finally {
+        if (win) {
+            try {
+                win.destroy();
+            } catch (e) {
+                // ignore
+            }
+        }
     }
 }
-
