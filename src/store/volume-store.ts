@@ -1,0 +1,36 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+interface VolumeState {
+    volume: number; // 0-100
+    isMuted: boolean;
+    setVolume: (volume: number) => void;
+    setMuted: (muted: boolean) => void;
+    toggleMute: () => void;
+}
+
+/**
+ * Global volume store with localStorage persistence.
+ * Volume persists across stream changes and app restarts.
+ */
+export const useVolumeStore = create<VolumeState>()(
+    persist(
+        (set, get) => ({
+            volume: 100,
+            isMuted: false,
+
+            setVolume: (volume) => {
+                const clamped = Math.max(0, Math.min(100, volume));
+                set({ volume: clamped });
+            },
+
+            setMuted: (muted) => set({ isMuted: muted }),
+
+            toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
+        }),
+        {
+            name: 'streamstorm-volume',
+            version: 1,
+        }
+    )
+);

@@ -8,6 +8,7 @@ import { usePictureInPicture } from '../use-picture-in-picture';
 import { useFullscreen } from '../use-fullscreen';
 import { useResumePlayback } from '../use-resume-playback';
 import { useDefaultQuality } from '../use-default-quality';
+import { useVolume } from '../useVolume';
 import { KickLoadingSpinner } from '@/components/ui/loading-spinner';
 
 export interface KickLivePlayerProps {
@@ -51,7 +52,12 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
-    const volumePreferenceRef = useRef(100); // Preserve user's volume preference across stream changes
+
+    // Persistent volume
+    const { volume, isMuted, handleVolumeChange, handleToggleMute, syncFromVideoElement } = useVolume({
+        videoRef: videoRef as React.RefObject<HTMLVideoElement>,
+        initialMuted
+    });
 
     // Hooks
     const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
@@ -70,8 +76,6 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
     // State
     const [isReady, setIsReady] = useState(false);
     const [isPlaying, setIsPlaying] = useState(autoPlay);
-    const [volume, setVolume] = useState(100);
-    const [isMuted, setIsMuted] = useState(initialMuted);
     const [availableQualities, setAvailableQualities] = useState<QualityLevel[]>([]);
     const [currentQualityId, setCurrentQualityId] = useState<string>('auto');
     const [isLoading, setIsLoading] = useState(true);
@@ -157,9 +161,8 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
 
         const handlePlay = () => setIsPlaying(true);
         const handlePause = () => setIsPlaying(false);
-        const handleVolumeChange = () => {
-            setIsMuted(video.muted);
-            setVolume(video.volume * 100);
+        const handleVideoVolumeChange = () => {
+            syncFromVideoElement();
         };
         const handleWait = () => setIsLoading(true);
         const handlePlaying = () => setIsLoading(false);
@@ -181,7 +184,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
 
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
-        video.addEventListener('volumechange', handleVolumeChange);
+        video.addEventListener('volumechange', handleVideoVolumeChange);
         video.addEventListener('waiting', handleWait);
         video.addEventListener('playing', handlePlaying);
         video.addEventListener('timeupdate', handleTimeUpdate);
@@ -192,7 +195,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         return () => {
             video.removeEventListener('play', handlePlay);
             video.removeEventListener('pause', handlePause);
-            video.removeEventListener('volumechange', handleVolumeChange);
+            video.removeEventListener('volumechange', handleVideoVolumeChange);
             video.removeEventListener('waiting', handleWait);
             video.removeEventListener('playing', handlePlaying);
             video.removeEventListener('timeupdate', handleTimeUpdate);
@@ -202,24 +205,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         };
     }, [isReady, startedAt]);
 
-    // Keep volume preference ref in sync with state
-    useEffect(() => {
-        volumePreferenceRef.current = volume;
-    }, [volume]);
-
-    // Initialize volume/mute and sync React state
-    // Triggered when isReady becomes true (video element is available)
-    useEffect(() => {
-        const video = videoRef.current;
-        if (video && isReady) {
-            video.muted = initialMuted;
-            // Apply user's volume preference (defaults to 100 on first mount)
-            video.volume = volumePreferenceRef.current / 100;
-            // Sync React state to ensure UI reflects actual video state
-            setIsMuted(video.muted);
-            setVolume(video.volume * 100);
-        }
-    }, [initialMuted, isReady]);
+    // Volume initialization is handled by useVolume hook
 
     // Handlers
     const togglePlay = useCallback(() => {
@@ -237,29 +223,11 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         }
     }, []);
 
-    const toggleMute = useCallback(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.muted = !video.muted;
-    }, []);
+    const toggleMute = handleToggleMute;
 
     const togglePipHandler = useCallback(async () => {
         await togglePip();
     }, [togglePip]);
-
-    const handleVolumeChange = useCallback((newVolume: number) => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        const vol = Math.max(0, Math.min(100, newVolume));
-        video.volume = vol / 100;
-        if (vol > 0 && video.muted) {
-            video.muted = false;
-        }
-        if (vol === 0) {
-            video.muted = true;
-        }
-    }, []);
 
     const handleSeek = useCallback((targetTime: number) => {
         const video = videoRef.current;

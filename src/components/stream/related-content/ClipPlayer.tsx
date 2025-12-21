@@ -4,6 +4,7 @@ import { Play, Pause, Maximize, Minimize, Volume2, Volume1, VolumeX } from 'luci
 import { formatDuration } from '@/lib/utils';
 import { ClipPlayerProps } from './types';
 import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
+import { useVolumeStore } from '@/store/volume-store';
 
 /**
  * Custom clip player component with volume control on the left
@@ -15,8 +16,11 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
     const volumeSliderRef = useRef<HTMLDivElement>(null);
     const hlsRef = useRef<Hls | null>(null);
     const [isPlaying, setIsPlaying] = useState(autoPlay);
-    const [volume, setVolume] = useState(100);
-    const [muted, setMuted] = useState(false);
+
+    // Persistent volume from store
+    const { volume: storedVolume, isMuted: storedMuted, setVolume: setStoredVolume, setMuted: setStoredMuted } = useVolumeStore();
+    const [volume, setVolume] = useState(storedVolume);
+    const [muted, setMuted] = useState(storedMuted);
     const [currentTime, setCurrentTime] = useState(0);
     const [duration, setDuration] = useState(0);
     const [isFullscreen, setIsFullscreen] = useState(false);
@@ -116,6 +120,15 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
         };
     }, [src, autoPlay, onError]);
 
+    // Apply stored volume on mount
+    useEffect(() => {
+        const video = videoRef.current;
+        if (video) {
+            video.volume = storedVolume / 100;
+            video.muted = storedMuted;
+        }
+    }, []);
+
     // Handle play/pause
     const togglePlay = useCallback(() => {
         const video = videoRef.current;
@@ -133,12 +146,14 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
         if (!video) return;
         const clampedVolume = Math.max(0, Math.min(100, newVolume));
         setVolume(clampedVolume);
+        setStoredVolume(clampedVolume); // Persist to store
         video.volume = clampedVolume / 100;
         if (clampedVolume > 0 && muted) {
             setMuted(false);
+            setStoredMuted(false);
             video.muted = false;
         }
-    }, [muted]);
+    }, [muted, setStoredVolume, setStoredMuted]);
 
     // Handle mute toggle
     const toggleMute = useCallback(() => {
@@ -146,7 +161,8 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
         if (!video) return;
         video.muted = !video.muted;
         setMuted(video.muted);
-    }, []);
+        setStoredMuted(video.muted); // Persist to store
+    }, [setStoredMuted]);
 
     // Handle seek
     const handleSeek = useCallback((time: number) => {
@@ -177,8 +193,11 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
         const onTimeUpdate = () => setCurrentTime(video.currentTime);
         const onDurationChange = () => setDuration(video.duration);
         const onVolumeChange = () => {
-            setVolume(video.volume * 100);
+            const newVol = video.volume * 100;
+            setVolume(newVol);
             setMuted(video.muted);
+            setStoredVolume(newVol);
+            setStoredMuted(video.muted);
         };
 
         video.addEventListener('play', onPlay);
@@ -194,7 +213,7 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
             video.removeEventListener('durationchange', onDurationChange);
             video.removeEventListener('volumechange', onVolumeChange);
         };
-    }, []);
+    }, [setStoredVolume, setStoredMuted]);
 
     // Auto-hide controls
     useEffect(() => {

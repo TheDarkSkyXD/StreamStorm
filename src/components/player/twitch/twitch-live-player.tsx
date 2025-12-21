@@ -6,6 +6,7 @@ import { usePlayerKeyboard } from '../use-player-keyboard';
 import { usePictureInPicture } from '../use-picture-in-picture';
 import { useFullscreen } from '../use-fullscreen';
 import { useDefaultQuality } from '../use-default-quality';
+import { useVolume } from '../useVolume';
 import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
 
 export interface TwitchLivePlayerProps {
@@ -39,7 +40,12 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
 
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
-    const volumePreferenceRef = useRef(100); // Preserve user's volume preference across stream changes
+
+    // Persistent volume
+    const { volume, isMuted, handleVolumeChange, handleToggleMute, syncFromVideoElement } = useVolume({
+        videoRef: videoRef as React.RefObject<HTMLVideoElement>,
+        initialMuted
+    });
 
     // Hooks
     const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
@@ -48,8 +54,6 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
     // State
     const [isReady, setIsReady] = useState(false);
     const [isPlaying, setIsPlaying] = useState(autoPlay);
-    const [volume, setVolume] = useState(100);
-    const [isMuted, setIsMuted] = useState(initialMuted);
     const [availableQualities, setAvailableQualities] = useState<QualityLevel[]>([]);
     const [currentQualityId, setCurrentQualityId] = useState<string>('auto');
     const [isLoading, setIsLoading] = useState(true);
@@ -72,9 +76,8 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
 
         const handlePlay = () => setIsPlaying(true);
         const handlePause = () => setIsPlaying(false);
-        const handleVolumeChange = () => {
-            setIsMuted(video.muted);
-            setVolume(video.volume * 100);
+        const handleVideoVolumeChange = () => {
+            syncFromVideoElement();
         };
         const handleWaiting = () => setIsLoading(true);
         const handlePlaying = () => setIsLoading(false);
@@ -82,7 +85,7 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
 
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
-        video.addEventListener('volumechange', handleVolumeChange);
+        video.addEventListener('volumechange', handleVideoVolumeChange);
         video.addEventListener('waiting', handleWaiting);
         video.addEventListener('playing', handlePlaying);
         video.addEventListener('ratechange', handleRateChange);
@@ -90,31 +93,14 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
         return () => {
             video.removeEventListener('play', handlePlay);
             video.removeEventListener('pause', handlePause);
-            video.removeEventListener('volumechange', handleVolumeChange);
+            video.removeEventListener('volumechange', handleVideoVolumeChange);
             video.removeEventListener('waiting', handleWaiting);
             video.removeEventListener('playing', handlePlaying);
             video.removeEventListener('ratechange', handleRateChange);
         };
     }, [isReady]);
 
-    // Keep volume preference ref in sync with state
-    useEffect(() => {
-        volumePreferenceRef.current = volume;
-    }, [volume]);
-
-    // Initialize volume/mute and sync React state
-    // Triggered when isReady becomes true (video element is available)
-    useEffect(() => {
-        const video = videoRef.current;
-        if (video && isReady) {
-            video.muted = initialMuted;
-            // Apply user's volume preference (defaults to 100 on first mount)
-            video.volume = volumePreferenceRef.current / 100;
-            // Sync React state to ensure UI reflects actual video state
-            setIsMuted(video.muted);
-            setVolume(video.volume * 100);
-        }
-    }, [initialMuted, isReady]);
+    // Volume initialization is handled by useVolume hook
 
     // Handlers
     const togglePlay = useCallback(() => {
@@ -132,29 +118,11 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
         }
     }, []);
 
-    const toggleMute = useCallback(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.muted = !video.muted;
-    }, []);
+    const toggleMute = handleToggleMute;
 
     const togglePipHandler = useCallback(async () => {
         await togglePip();
     }, [togglePip]);
-
-    const handleVolumeChange = useCallback((newVolume: number) => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        const vol = Math.max(0, Math.min(100, newVolume));
-        video.volume = vol / 100;
-        if (vol > 0 && video.muted) {
-            video.muted = false;
-        }
-        if (vol === 0) {
-            video.muted = true;
-        }
-    }, []);
 
     const handlePlaybackRateChange = useCallback((rate: number) => {
         const video = videoRef.current;
