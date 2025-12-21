@@ -350,6 +350,7 @@ export interface PaginationOptions {
     limit?: number;
     page?: number;
     cursor?: string;
+    sort?: 'date' | 'views'; // Sort option: 'date' (most recent) or 'views'
 }
 
 export interface PaginatedResult<T> {

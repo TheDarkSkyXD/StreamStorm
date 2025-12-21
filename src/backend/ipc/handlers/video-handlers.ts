@@ -148,6 +148,7 @@ export function registerVideoHandlers(): void {
         channelId?: string; // New: preferred way to lookup
         limit?: number;
         cursor?: string;
+        sort?: 'date' | 'views'; // Sort option: 'date' (most recent) or 'views'
     }) => {
         const { twitchClient } = await import('../../api/platforms/twitch/twitch-client');
         const { kickClient } = await import('../../api/platforms/kick/kick-client');
@@ -176,6 +177,12 @@ export function registerVideoHandlers(): void {
                 });
                 console.log(`[TwitchVideo] Fetched ${videos.data.length} videos for ${params.channelName} (User ID: ${userId})`);
 
+                // Sort by views if requested (Twitch API doesn't support views sort)
+                let sortedVideos = videos.data;
+                if (params.sort === 'views') {
+                    sortedVideos = [...videos.data].sort((a, b) => b.view_count - a.view_count);
+                }
+
                 // Resolve Game Info via GQL (since Helix videos endpoint doesn't return game_id)
                 const videoIds = videos.data.map(v => v.id);
                 let gameMap: Record<string, { id: string, name: string }> = {};
@@ -191,7 +198,7 @@ export function registerVideoHandlers(): void {
                 // Fallback logic for game IDs if they somehow exist (e.g. from a different endpoint in future)
                 // This preserves the previous logic just in case, but prefers GQL result
 
-                const mappedData = videos.data.map(v => {
+                const mappedData = sortedVideos.map(v => {
                     const gqlGame = gameMap[v.id];
                     const gameName = gqlGame?.name || v.game_name;
                     const gameId = gqlGame?.id || v.game_id;
@@ -221,10 +228,21 @@ export function registerVideoHandlers(): void {
             } else if (params.platform === 'kick') {
                 const videos = await kickClient.getVideos(params.channelName, {
                     limit: params.limit,
-                    cursor: params.cursor // Use cursor now for V2
+                    cursor: params.cursor, // Use cursor now for V2
+                    sort: params.sort // Pass sort to Kick API
                 });
                 // Check if videos.data exists before logging length
                 const count = videos.data ? videos.data.length : 0;
+
+                // Apply client-side sorting (as fallback since Kick API may not reliably sort by views)
+                if (videos.data && videos.data.length > 0 && params.sort === 'views') {
+                    console.log(`[KickVideo] Sorting ${videos.data.length} videos by views (client-side)`);
+                    videos.data = [...videos.data].sort((a: any, b: any) => {
+                        const viewsA = parseInt(a.views) || 0;
+                        const viewsB = parseInt(b.views) || 0;
+                        return viewsB - viewsA; // Descending (most views first)
+                    });
+                }
 
                 return {
                     success: true,
@@ -252,6 +270,7 @@ export function registerVideoHandlers(): void {
         channelId?: string;
         limit?: number;
         cursor?: string;
+        sort?: 'date' | 'views'; // Sort option: 'date' (most recent) or 'views'
     }) => {
         const { twitchClient } = await import('../../api/platforms/twitch/twitch-client');
         const { kickClient } = await import('../../api/platforms/kick/kick-client');
@@ -273,8 +292,14 @@ export function registerVideoHandlers(): void {
                 });
                 console.log(`[TwitchClip] Fetched ${clips.data.length} clips for ${params.channelName}`);
 
+                // Sort by views if requested (Twitch clips API doesn't support views sort for broadcaster endpoint)
+                let sortedClips = clips.data;
+                if (params.sort === 'views') {
+                    sortedClips = [...clips.data].sort((a, b) => b.view_count - a.view_count);
+                }
+
                 // Resolve Game IDs to Names
-                const gameIds = [...new Set(clips.data.map(c => c.game_id).filter(id => id))];
+                const gameIds = [...new Set(sortedClips.map(c => c.game_id).filter(id => id))];
                 let gameMap: Record<string, string> = {};
 
                 if (gameIds.length > 0) {
@@ -291,7 +316,7 @@ export function registerVideoHandlers(): void {
 
                 return {
                     success: true,
-                    data: clips.data.map(c => ({
+                    data: sortedClips.map(c => ({
                         id: c.id,
                         title: c.title,
                         duration: formatSeconds(c.duration),
@@ -313,7 +338,8 @@ export function registerVideoHandlers(): void {
                 console.log(`[KickClip] Fetching clips for channel: ${params.channelName}`);
                 const clips = await kickClient.getClips(params.channelName, {
                     limit: params.limit,
-                    cursor: params.cursor
+                    cursor: params.cursor,
+                    sort: params.sort // Pass sort to Kick API
                 });
                 const count = clips.data ? clips.data.length : 0;
                 console.log(`[KickClip] Fetched ${count} clips for ${params.channelName}`);
@@ -354,6 +380,16 @@ export function registerVideoHandlers(): void {
                         console.warn('[KickClip] Could not pre-check VOD availability:', vodCheckError);
                         // Continue without VOD check - clips will still have vodId set
                     }
+                }
+
+                // Apply client-side sorting (as fallback since Kick API may not reliably sort by views)
+                if (clips.data && clips.data.length > 0 && params.sort === 'views') {
+                    console.log(`[KickClip] Sorting ${clips.data.length} clips by views (client-side)`);
+                    clips.data = [...clips.data].sort((a: any, b: any) => {
+                        const viewsA = parseInt(a.views) || 0;
+                        const viewsB = parseInt(b.views) || 0;
+                        return viewsB - viewsA; // Descending (most views first)
+                    });
                 }
 
                 return { success: true, ...clips };

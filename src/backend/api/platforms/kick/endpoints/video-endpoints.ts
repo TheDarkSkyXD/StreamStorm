@@ -18,9 +18,11 @@ export async function getVideosByChannelSlug(
         const { net } = require('electron');
         const limit = options.limit || 20;
         const cursor = options.cursor || 0;
+        // Map sort option: 'views' -> 'view', 'date' -> 'date' (Kick API uses 'view' not 'views')
+        const sortParam = options.sort === 'views' ? 'view' : 'date';
 
         // Switch to V2 API to match clips implementation
-        const url = `${KICK_LEGACY_API_V2_BASE}/channels/${slug}/videos?cursor=${cursor}&limit=${limit}&sort=date`;
+        const url = `${KICK_LEGACY_API_V2_BASE}/channels/${slug}/videos?cursor=${cursor}&limit=${limit}&sort=${sortParam}`;
 
         const data = await new Promise<any>((resolve, reject) => {
             const request = net.request({

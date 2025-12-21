@@ -3,10 +3,17 @@ import { useSearch } from '@tanstack/react-router';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { RelatedContentProps, VideoOrClip } from './types';
-import { ContentTabs } from './ContentTabs';
+import { ContentTabs, SortOption } from './ContentTabs';
 import { VideoCard } from './VideoCard';
 import { ClipCard } from './ClipCard';
 import { ClipDialog } from './ClipDialog';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 
 export function RelatedContent({ platform, channelName, channelData, onClipSelectionChange }: RelatedContentProps) {
     const { tab: activeTab } = useSearch({ from: '/_app/stream/$platform/$channel' });
@@ -15,6 +22,7 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
     const [clips, setClips] = useState<VideoOrClip[]>([]);
     const [selectedClip, setSelectedClip] = useState<VideoOrClip | null>(null);
     const [clipPlaybackUrl, setClipPlaybackUrl] = useState<string | null>(null);
+    const [sortBy, setSortBy] = useState<SortOption>('recent');
     const [clipLoading, setClipLoading] = useState(false);
     const [clipError, setClipError] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -45,7 +53,8 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                         platform,
                         channelName,
                         channelId: channelData?.id,
-                        limit: 12
+                        limit: 12,
+                        sort: sortBy === 'views' ? 'views' : 'date'
                     });
                     if (result.success) {
                         setVideos(result.data || []);
@@ -59,7 +68,8 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                         platform,
                         channelName,
                         channelId: channelData?.id,
-                        limit: 12
+                        limit: 12,
+                        sort: sortBy === 'views' ? 'views' : 'date'
                     });
                     if (result.success) {
                         setClips(result.data || []);
@@ -80,7 +90,7 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
         if (platform && channelName && channelData?.id) {
             fetchData();
         }
-    }, [activeTab, platform, channelName, channelData?.id]);
+    }, [activeTab, platform, channelName, channelData?.id, sortBy]);
 
     // Fetch clip playback URL when a clip is selected
     useEffect(() => {
@@ -156,7 +166,21 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
 
             {/* Tab Content */}
             <div className="space-y-4">
-                <h2 className="text-lg font-semibold capitalize">{activeTab || 'videos'}</h2>
+                <div className="flex items-center justify-start gap-4">
+                    {/* Sort Dropdown - Relocated here */}
+                    <div className="flex items-center gap-2 text-sm">
+                        <span className="text-[var(--color-foreground)] font-bold">Sort by:</span>
+                        <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+                            <SelectTrigger className="w-[140px] h-8 bg-[var(--color-background-secondary)] border-none font-bold">
+                                <SelectValue placeholder="Sort" />
+                            </SelectTrigger>
+                            <SelectContent align="end">
+                                <SelectItem value="recent" className="font-bold">Most Recent</SelectItem>
+                                <SelectItem value="views" className="font-bold">Views</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {isLoading ? (
