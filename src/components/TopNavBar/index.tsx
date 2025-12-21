@@ -28,7 +28,7 @@ export function TopNavBar({ className }: TopNavBarProps) {
             {/* Left side - Brand + Sidebar Toggle */}
             <div className="flex items-center gap-3">
                 <button
-                    onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                    onClick={() => setSidebarCollapsed(!sidebarCollapsed, true)}
                     className="p-2 -ml-2 rounded-md hover:bg-[var(--color-background-secondary)] transition-colors text-[var(--color-foreground-secondary)] hover:text-white"
                     title={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                 >

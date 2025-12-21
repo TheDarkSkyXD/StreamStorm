@@ -10,8 +10,15 @@ interface AppState {
   // Sidebar
   sidebarOpen: boolean;
   sidebarCollapsed: boolean;
+  /** User's manual preference for sidebar collapsed state (not affected by theater mode) */
+  userPrefersSidebarCollapsed: boolean;
+  /** Whether theater mode is currently active (used to auto-collapse sidebar) */
+  isTheaterModeActive: boolean;
   toggleSidebar: () => void;
-  setSidebarCollapsed: (collapsed: boolean) => void;
+  /** Set sidebar collapsed state. If isUserAction=true, also updates user preference. */
+  setSidebarCollapsed: (collapsed: boolean, isUserAction?: boolean) => void;
+  /** Set theater mode active state. Auto-collapses sidebar when entering theater mode. */
+  setTheaterModeActive: (active: boolean) => void;
 
   // Multi-stream
   activeStreams: string[];
@@ -28,8 +35,20 @@ export const useAppStore = create<AppState>()(
       // Sidebar
       sidebarOpen: true,
       sidebarCollapsed: false,
+      userPrefersSidebarCollapsed: false,
+      isTheaterModeActive: false,
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-      setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+      setSidebarCollapsed: (collapsed, isUserAction = false) => set((state) => ({
+        sidebarCollapsed: collapsed,
+        // Only update user preference if this is a manual user action
+        userPrefersSidebarCollapsed: isUserAction ? collapsed : state.userPrefersSidebarCollapsed,
+      })),
+      setTheaterModeActive: (active) =>
+        set((state) => ({
+          isTheaterModeActive: active,
+          // Collapse when entering theater mode, restore user preference when exiting
+          sidebarCollapsed: active ? true : state.userPrefersSidebarCollapsed,
+        })),
 
       // Multi-stream
       activeStreams: [],
@@ -50,6 +69,7 @@ export const useAppStore = create<AppState>()(
       partialize: (state) => ({
 
         sidebarCollapsed: state.sidebarCollapsed,
+        userPrefersSidebarCollapsed: state.userPrefersSidebarCollapsed,
       }),
     }
   )

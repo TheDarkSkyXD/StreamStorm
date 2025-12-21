@@ -14,6 +14,7 @@ import { StreamInfo } from '@/components/stream/stream-info';
 import { RelatedContent } from '@/components/stream/related-content';
 import { KickLoadingSpinner, TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
 import { usePipStore } from '@/store/pip-store';
+import { useAppStore } from '@/store/app-store';
 
 export function StreamPage() {
   const { platform, channel: channelName } = useParams({ from: '/_app/stream/$platform/$channel' });
@@ -33,8 +34,8 @@ export function StreamPage() {
   const [chatWidth, setChatWidth] = useState(350);
   const [isResizing, setIsResizing] = useState(false);
 
-  // Theater Mode Logic
-  const [isTheater, setIsTheater] = useState(false);
+  // Theater Mode Logic - synced with app store for sidebar auto-collapse
+  const { isTheaterModeActive: isTheater, setTheaterModeActive } = useAppStore();
 
   // Player error state (e.g., stream offline even though URL was provided)
   const [playerError, setPlayerError] = useState<PlayerError | null>(null);
@@ -66,13 +67,16 @@ export function StreamPage() {
   const { setCurrentStream, setIsOnStreamPage } = usePipStore();
 
   // Mark that we're on the stream page when component mounts
+  // Also reset theater mode when leaving the page to restore sidebar state
   useEffect(() => {
     setIsOnStreamPage(true);
     return () => {
       // When leaving stream page, mark as not on stream page (triggers PiP if stream was active)
       setIsOnStreamPage(false);
+      // Reset theater mode when leaving the page to restore sidebar to user preference
+      setTheaterModeActive(false);
     };
-  }, [setIsOnStreamPage]);
+  }, [setIsOnStreamPage, setTheaterModeActive]);
 
   // Update PiP store with current stream info when we have a live stream
   useEffect(() => {
@@ -149,7 +153,7 @@ export function StreamPage() {
                 onReady={() => console.log('Kick Live Player ready')}
                 onError={handlePlayerError}
                 isTheater={isTheater}
-                onToggleTheater={() => setIsTheater(prev => !prev)}
+                onToggleTheater={() => setTheaterModeActive(!isTheater)}
                 startedAt={streamData?.startedAt}
               />
             ) : (
@@ -160,7 +164,7 @@ export function StreamPage() {
                 onReady={() => console.log('Twitch Live Player ready')}
                 onError={handlePlayerError}
                 isTheater={isTheater}
-                onToggleTheater={() => setIsTheater(prev => !prev)}
+                onToggleTheater={() => setTheaterModeActive(!isTheater)}
               />
             )}
             {/* Show loading only when fetching data */}
