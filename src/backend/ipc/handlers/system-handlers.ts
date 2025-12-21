@@ -3,6 +3,20 @@ import * as https from 'https';
 import { IPC_CHANNELS } from '../../../shared/ipc-channels';
 
 export function registerSystemHandlers(mainWindow: BrowserWindow): void {
+    /**
+     * Helper to safely send IPC messages to the renderer.
+     * Prevents "Render frame was disposed" errors when the window is closing.
+     */
+    function safeSend(channel: string, ...args: unknown[]): void {
+        try {
+            if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+                mainWindow.webContents.send(channel, ...args);
+            }
+        } catch {
+            console.warn(`⚠️ Could not send to ${channel}: Window disposed`);
+        }
+    }
+
     // ========== App Info ==========
     ipcMain.handle(IPC_CHANNELS.APP_GET_VERSION, () => {
         return app.getVersion();
@@ -38,11 +52,11 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
 
     // Send maximize change events to renderer
     mainWindow?.on('maximize', () => {
-        mainWindow.webContents.send(IPC_CHANNELS.WINDOW_ON_MAXIMIZE_CHANGE, true);
+        safeSend(IPC_CHANNELS.WINDOW_ON_MAXIMIZE_CHANGE, true);
     });
 
     mainWindow?.on('unmaximize', () => {
-        mainWindow.webContents.send(IPC_CHANNELS.WINDOW_ON_MAXIMIZE_CHANGE, false);
+        safeSend(IPC_CHANNELS.WINDOW_ON_MAXIMIZE_CHANGE, false);
     });
 
     // ========== Theme ==========

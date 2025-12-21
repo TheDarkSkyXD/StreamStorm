@@ -14,6 +14,20 @@ import {
 } from '../../auth';
 
 export function registerAuthHandlers(mainWindow: BrowserWindow): void {
+    /**
+     * Helper to safely send IPC messages to the renderer.
+     * Prevents "Render frame was disposed" errors when the window is closing.
+     */
+    function safeSend(channel: string, ...args: unknown[]): void {
+        try {
+            if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+                mainWindow.webContents.send(channel, ...args);
+            }
+        } catch {
+            console.warn(`⚠️ Could not send to ${channel}: Window disposed`);
+        }
+    }
+
     // ========== Auth - Token Management ==========
     ipcMain.handle(IPC_CHANNELS.AUTH_GET_TOKEN, (_event, { platform }: { platform: Platform }) => {
         return storageService.getToken(platform);
@@ -177,7 +191,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
             }
 
             // Notify renderer of successful auth
-            mainWindow.webContents.send(IPC_CHANNELS.AUTH_ON_CALLBACK, {
+            safeSend(IPC_CHANNELS.AUTH_ON_CALLBACK, {
                 platform,
                 success: true,
             });
@@ -191,7 +205,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
             console.error(`❌ OAuth failed for ${platform}:`, error);
 
             // Notify renderer of failed auth
-            mainWindow.webContents.send(IPC_CHANNELS.AUTH_ON_CALLBACK, {
+            safeSend(IPC_CHANNELS.AUTH_ON_CALLBACK, {
                 platform,
                 success: false,
                 error: error instanceof Error ? error.message : 'Authentication failed',
@@ -245,7 +259,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
         console.log('🚪 Logging out from Twitch...');
         try {
             await twitchAuthService.logout();
-            mainWindow.webContents.send(IPC_CHANNELS.AUTH_ON_CALLBACK, {
+            safeSend(IPC_CHANNELS.AUTH_ON_CALLBACK, {
                 platform: 'twitch',
                 success: true,
                 loggedOut: true,
@@ -297,7 +311,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
             await kickAuthService.logout();
         }
 
-        mainWindow.webContents.send(IPC_CHANNELS.AUTH_ON_CALLBACK, {
+        safeSend(IPC_CHANNELS.AUTH_ON_CALLBACK, {
             platform,
             success: true,
             loggedOut: true,
@@ -310,7 +324,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
         console.log('🚪 Logging out from Kick...');
         try {
             await kickAuthService.logout();
-            mainWindow.webContents.send(IPC_CHANNELS.AUTH_ON_CALLBACK, {
+            safeSend(IPC_CHANNELS.AUTH_ON_CALLBACK, {
                 platform: 'kick',
                 success: true,
                 loggedOut: true,
@@ -386,7 +400,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
                 expiresIn,
                 (status, message) => {
                     // Send status updates to renderer
-                    mainWindow.webContents.send(IPC_CHANNELS.AUTH_DCF_STATUS, { status, message });
+                    safeSend(IPC_CHANNELS.AUTH_DCF_STATUS, { status, message });
                 }
             );
 
@@ -400,7 +414,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
             }
 
             // Notify renderer
-            mainWindow.webContents.send(IPC_CHANNELS.AUTH_ON_CALLBACK, {
+            safeSend(IPC_CHANNELS.AUTH_ON_CALLBACK, {
                 platform: 'twitch',
                 success: true,
             });
