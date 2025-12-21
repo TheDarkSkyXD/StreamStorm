@@ -47,6 +47,15 @@ function formatSeconds(seconds: number): string {
     return `${mins}:${formattedSecs}`;
 }
 
+/**
+ * Get the livestream ID from a Kick video object, trying multiple field names
+ * This centralizes the logic for matching clips to VODs
+ */
+function getKickVideoLivestreamId(video: any): string | undefined {
+    const id = video.livestreamId || video.live_stream_id || video.id;
+    return id ? id.toString() : undefined;
+}
+
 export function registerVideoHandlers(): void {
     /**
      * Get playback URL for a VOD
@@ -293,7 +302,9 @@ export function registerVideoHandlers(): void {
                         url: c.url,
                         platform: 'twitch',
                         gameName: gameMap[c.game_id] || c.game_id || '',
-                        language: c.language
+                        language: c.language,
+                        // VOD availability - empty string means VOD is no longer available
+                        vodId: c.video_id || ''
                     })),
                     cursor: clips.cursor
                 };
@@ -306,6 +317,45 @@ export function registerVideoHandlers(): void {
                 });
                 const count = clips.data ? clips.data.length : 0;
                 console.log(`[KickClip] Fetched ${count} clips for ${params.channelName}`);
+
+                // Pre-check VOD availability for each clip
+                // Fetch channel videos and create a set of available livestream IDs
+                if (clips.data && clips.data.length > 0) {
+                    try {
+                        console.log(`[KickClip] Pre-checking VOD availability for ${count} clips`);
+                        const videos = await kickClient.getVideos(params.channelName, {
+                            limit: 100 // Fetch enough videos to match recent clips
+                        });
+
+                        // Create a set of available video IDs using centralized helper
+                        const availableVodIds = new Set<string>();
+                        if (videos.data) {
+                            for (const video of videos.data) {
+                                const vodId = getKickVideoLivestreamId(video);
+                                if (vodId) {
+                                    availableVodIds.add(vodId);
+                                }
+                            }
+                        }
+                        console.log(`[KickClip] Found ${availableVodIds.size} available VODs`);
+
+                        // Update each clip's vodId based on availability
+                        clips.data = clips.data.map((clip: any) => {
+                            const hasVod = clip.vodId && availableVodIds.has(clip.vodId.toString());
+                            if (!hasVod && clip.vodId) {
+                                console.log(`[KickClip] VOD not available for clip: ${clip.id} (livestream_id: ${clip.vodId})`);
+                            }
+                            return {
+                                ...clip,
+                                vodId: hasVod ? clip.vodId : '' // Clear vodId if VOD doesn't exist
+                            };
+                        });
+                    } catch (vodCheckError) {
+                        console.warn('[KickClip] Could not pre-check VOD availability:', vodCheckError);
+                        // Continue without VOD check - clips will still have vodId set
+                    }
+                }
+
                 return { success: true, ...clips };
             }
             throw new Error(`Unsupported platform: ${params.platform}`);
@@ -363,6 +413,92 @@ export function registerVideoHandlers(): void {
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to resolve clip URL'
+            };
+        }
+    });
+
+    /**
+     * Get Kick VOD by livestream ID (for clip-to-VOD navigation)
+     * Fetches the channel's videos and finds one with matching live_stream_id
+     */
+    ipcMain.handle(IPC_CHANNELS.VIDEOS_GET_BY_LIVESTREAM_ID, async (_event, params: {
+        channelSlug: string;
+        livestreamId: string;
+    }) => {
+        try {
+            console.log(`[KickVodLookup] Looking up VOD for livestream_id: ${params.livestreamId} on channel: ${params.channelSlug}`);
+
+            const { kickClient } = await import('../../api/platforms/kick/kick-client');
+
+            // Fetch videos from the channel (may need multiple pages to find the VOD)
+            let cursor: string | undefined;
+            let attempts = 0;
+            const maxAttempts = 5; // Limit to avoid infinite loops
+
+            while (attempts < maxAttempts) {
+                attempts++;
+                const videos = await kickClient.getVideos(params.channelSlug, {
+                    limit: 50,
+                    cursor: cursor
+                });
+
+                if (!videos.data || videos.data.length === 0) {
+                    break;
+                }
+
+                // Look for a video with matching livestream ID
+                // The video data structure has live_stream_id from the raw API, but our mapped data might use different fields
+                // We need to check against the livestreamId we're looking for
+                for (const video of videos.data) {
+                    // Use centralized helper for consistent ID extraction
+                    const videoLivestreamId = getKickVideoLivestreamId(video);
+
+                    if (videoLivestreamId && videoLivestreamId === params.livestreamId?.toString()) {
+                        console.log(`[KickVodLookup] Found matching VOD:`, video.id, video.title);
+
+                        // Return the video data with source URL for direct playback
+                        // Include all metadata needed by the Video page
+                        return {
+                            success: true,
+                            data: {
+                                id: video.id,
+                                uuid: video.uuid || '',
+                                title: video.title,
+                                source: video.source, // Direct HLS URL
+                                thumbnailUrl: video.thumbnailUrl,
+                                duration: video.duration,
+                                views: video.views,
+                                date: video.date,
+                                channelSlug: video.channelSlug,
+                                channelName: video.channelName || video.channelSlug || params.channelSlug,
+                                channelDisplayName: video.channelName || video.channelSlug || params.channelSlug,
+                                channelAvatar: video.channelAvatar || null,
+                                category: video.category,
+                                language: video.language || ''
+                            }
+                        };
+                    }
+                }
+
+                // Continue to next page if available
+                if (videos.cursor) {
+                    cursor = videos.cursor;
+                } else {
+                    break;
+                }
+            }
+
+            console.log(`[KickVodLookup] VOD not found for livestream_id: ${params.livestreamId}`);
+            return {
+                success: false,
+                error: 'VOD not found - it may have been deleted or is not yet available'
+            };
+
+        } catch (error) {
+            console.error('❌ Failed to lookup Kick VOD by livestream ID:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to lookup VOD'
             };
         }
     });

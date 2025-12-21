@@ -334,6 +334,28 @@ const electronAPI = {
       error?: string;
     }> =>
       ipcRenderer.invoke(IPC_CHANNELS.VIDEOS_GET_METADATA, params),
+
+    // Look up Kick VOD by livestream ID (for clip-to-VOD navigation)
+    getByLivestreamId: (params: {
+      channelSlug: string;
+      livestreamId: string;
+    }): Promise<{
+      success: boolean;
+      data?: {
+        id: string;
+        title: string;
+        source: string;
+        thumbnailUrl: string;
+        duration: string;
+        views: string;
+        date: string;
+        channelSlug: string;
+        channelName: string;
+        category: string;
+      };
+      error?: string;
+    }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.VIDEOS_GET_BY_LIVESTREAM_ID, params),
   },
 
   clips: {

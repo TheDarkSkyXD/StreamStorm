@@ -81,7 +81,11 @@ export async function getClipsByChannelSlug(
                 url: c.clip_url, // Clip page URL on Kick website
                 gameName: c.category?.name || 'Unknown',
                 isLive: false, // Clips aren't live
-                thumbnailUrl: c.thumbnail_url
+                thumbnailUrl: c.thumbnail_url,
+                // VOD availability - livestream_id links to the full VOD
+                vodId: c.livestream_id || '',
+                // Channel info for VOD lookup
+                channelSlug: c.channel?.slug || ''
             })),
             cursor: nextCursor?.toString()
         };

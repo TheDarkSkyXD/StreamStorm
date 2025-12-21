@@ -22,6 +22,8 @@ export interface VideoOrClip {
     tags?: string[];
     language?: string;
     isMature?: boolean;
+    // VOD availability for clips - empty/null means VOD is no longer available
+    vodId?: string;
 }
 
 export interface ClipPlayerProps {

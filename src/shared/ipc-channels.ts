@@ -124,6 +124,9 @@ export const IPC_CHANNELS = {
   // ========== Discovery: Clips ==========
   CLIPS_GET_BY_CHANNEL: 'clips:get-by-channel',
   CLIPS_GET_PLAYBACK_URL: 'clips:get-playback-url',
+
+  // ========== VOD Lookup (for clip-to-VOD navigation) ==========
+  VIDEOS_GET_BY_LIVESTREAM_ID: 'videos:get-by-livestream-id',
 } as const;
 
 // Type for channel names

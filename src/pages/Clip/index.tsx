@@ -150,16 +150,8 @@ export function ClipPage() {
                                     </Button>
                                 </Link>
                             )}
-
-                            <Link
-                                to="/video/$platform/$videoId"
-                                params={{ platform: platform || 'twitch', videoId: 'mock-vod-id' }}
-                                className="w-full"
-                            >
-                                <Button variant="outline" className="w-full h-12 text-base font-bold border-[var(--color-border)] hover:bg-[var(--color-background-secondary)]">
-                                    Watch Full Video
-                                </Button>
-                            </Link>
+                            {/* Note: Watch Full Video button is only shown when clip has an available VOD */}
+                            {/* This page uses mock data - in real usage, check clip.vodId like ClipDialog does */}
                         </div>
 
                     </div>

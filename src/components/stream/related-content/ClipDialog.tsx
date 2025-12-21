@@ -1,5 +1,5 @@
-import React from 'react';
-import { Link } from '@tanstack/react-router';
+import React, { useState, useCallback } from 'react';
+import { Link, useNavigate } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -41,6 +41,58 @@ export function ClipDialog({
     channelData,
     onPlaybackError,
 }: ClipDialogProps) {
+    const navigate = useNavigate();
+    const [vodLookupLoading, setVodLookupLoading] = useState(false);
+    const [vodLookupError, setVodLookupError] = useState<string | null>(null);
+
+    // Handle Kick VOD lookup and navigation
+    const handleKickWatchFullVideo = useCallback(async () => {
+        if (!selectedClip?.vodId || !selectedClip?.channelSlug) return;
+
+        setVodLookupLoading(true);
+        setVodLookupError(null);
+
+        try {
+            const api = (window as any).electronAPI;
+            if (!api?.videos?.getByLivestreamId) {
+                setVodLookupError('VOD lookup not available');
+                return;
+            }
+            const result = await api.videos.getByLivestreamId({
+                channelSlug: selectedClip.channelSlug,
+                livestreamId: selectedClip.vodId
+            });
+
+            if (result.success && result.data) {
+                // Close dialog and navigate to video page with source URL
+                // Use channelData as fallback for avatar since VOD API may not have it
+                onClose();
+                navigate({
+                    to: '/video/$platform/$videoId',
+                    params: { platform: 'kick', videoId: result.data.id },
+                    search: {
+                        src: result.data.source,
+                        title: result.data.title,
+                        channelName: result.data.channelName || channelData?.username || channelName,
+                        channelDisplayName: result.data.channelDisplayName || channelData?.displayName || channelName,
+                        channelAvatar: result.data.channelAvatar || channelData?.avatarUrl || undefined,
+                        views: result.data.views,
+                        date: result.data.date,
+                        category: result.data.category,
+                        duration: result.data.duration,
+                        language: result.data.language || selectedClip.language || undefined
+                    }
+                });
+            } else {
+                setVodLookupError(result.error || 'VOD not found');
+            }
+        } catch (error) {
+            console.error('Failed to lookup VOD:', error);
+            setVodLookupError('Failed to lookup VOD');
+        } finally {
+            setVodLookupLoading(false);
+        }
+    }, [selectedClip, onClose, navigate, channelData, channelName]);
     return (
         <Dialog open={!!selectedClip} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="max-w-[90vw] w-full max-w-[1600px] bg-black border-[var(--color-border)] p-0 overflow-hidden">
@@ -156,15 +208,36 @@ export function ClipDialog({
                                         Watch Livestream
                                     </Button>
                                 )}
-                                <Link
-                                    to="/video/$platform/$videoId"
-                                    params={{ platform: platform || 'twitch', videoId: 'mock-vod-id' }}
-                                    className="w-full"
-                                >
-                                    <Button variant="outline" className="w-full h-12 text-base font-bold border-[var(--color-border)] hover:bg-[var(--color-background-tertiary)]">
-                                        Watch Full Video
-                                    </Button>
-                                </Link>
+                                {/* Watch Full Video button - show if VOD is available */}
+                                {/* vodId is empty string when VOD is deleted/unavailable */}
+                                {selectedClip.vodId && (
+                                    platform === 'twitch' ? (
+                                        // Twitch: Direct link using vodId
+                                        <Link
+                                            to="/video/$platform/$videoId"
+                                            params={{ platform: platform, videoId: selectedClip.vodId }}
+                                            className="w-full"
+                                        >
+                                            <Button variant="outline" className="w-full h-12 text-base font-bold border-[var(--color-border)] hover:bg-[var(--color-background-tertiary)]">
+                                                Watch Full Video
+                                            </Button>
+                                        </Link>
+                                    ) : (
+                                        // Kick: Need to look up VOD first
+                                        <Button
+                                            variant="outline"
+                                            className="w-full h-12 text-base font-bold border-[var(--color-border)] hover:bg-[var(--color-background-tertiary)]"
+                                            onClick={handleKickWatchFullVideo}
+                                            disabled={vodLookupLoading || !selectedClip.channelSlug}
+                                        >
+                                            {vodLookupLoading ? 'Loading VOD...' : 'Watch Full Video'}
+                                        </Button>
+                                    )
+                                )}
+                                {/* Show VOD lookup error for Kick */}
+                                {vodLookupError && (
+                                    <p className="text-sm text-red-400 text-center">{vodLookupError}</p>
+                                )}
                             </div>
                         </div>
                     </div>
