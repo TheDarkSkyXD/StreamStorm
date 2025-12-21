@@ -143,7 +143,7 @@ export function StreamPage() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         <div className={`flex-1 overflow-y-auto no-scrollbar ${isTheater ? 'flex flex-col' : ''}`}>
           {/* Video Player Area */}
-          <div className={`${isTheater ? 'flex-1 min-h-0' : 'aspect-video'} bg-black flex items-center justify-center shrink-0 w-full relative transition-all duration-300`}>
+          <div className={`${isTheater ? 'flex-1 min-h-0' : 'aspect-video'} bg-black flex items-center justify-center shrink-0 w-full relative`}>
             {/* Platform-specific live stream players */}
             {platform === 'kick' ? (
               <KickLivePlayer
