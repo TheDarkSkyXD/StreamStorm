@@ -51,9 +51,9 @@ This document tracks the implementation progress of Phase 3: Stream Viewing.
 - [x] **3.6.5** Create clip player
 
 ## Phase 3.7: Performance Optimization
-- [ ] **3.7.1** Implement adaptive quality (`useAdaptiveQuality`)
-- [ ] **3.7.3** Implement background stream throttling
-- [ ] **3.7.5** Optimize video element lifecycle
+- [x] **3.7.1** Implement adaptive quality (`useAdaptiveQuality`)
+- [x] **3.7.3** Implement background stream throttling
+- [x] **3.7.5** Optimize video element lifecycle
 
 ## Completion Checklist
 - [ ] Single streams play smoothly from both platforms

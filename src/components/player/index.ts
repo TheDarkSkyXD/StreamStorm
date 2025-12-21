@@ -15,6 +15,7 @@ export { SettingsMenu } from './settings-menu';
 export { ProgressBar } from './progress-bar';
 export { PlayPauseButton } from './play-pause-button';
 export { HlsPlayer } from './hls-player';
+export { PerformanceEnhancedPlayer, PerformanceIndicator } from './performance-enhanced-player';
 
 // Platform-Specific Players
 // Kick - Live (no progress bar) and VOD (with green progress bar)
@@ -47,6 +48,16 @@ export { usePictureInPicture } from './use-picture-in-picture';
 export { usePlayerKeyboard } from './use-player-keyboard';
 export { useResumePlayback } from './use-resume-playback';
 export { useDefaultQuality } from './use-default-quality';
+
+// Performance Optimization Hooks (Phase 3.7)
+export { useAdaptiveQuality } from './use-adaptive-quality';
+export { useBackgroundThrottle, useMultistreamThrottle } from './use-background-throttle';
+export {
+    useVideoLifecycle,
+    useMultiVideoLifecycle,
+    useVideoChurnDetection,
+    cleanupVideoElement
+} from './use-video-lifecycle';
 
 // Types
 export * from './types';
