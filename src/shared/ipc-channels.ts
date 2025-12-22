@@ -102,6 +102,9 @@ export const IPC_CHANNELS = {
   STREAMS_GET_BY_CHANNEL: 'streams:get-by-channel',
   STREAMS_GET_PLAYBACK_URL: 'streams:get-playback-url',
 
+  // ========== Proxy (Twitch Ad Blocking) ==========
+  PROXY_TEST_CONNECTION: 'proxy:test-connection',
+
   // ========== Discovery: Categories ==========
   CATEGORIES_GET_TOP: 'categories:get-top',
   CATEGORIES_GET_BY_ID: 'categories:get-by-id',

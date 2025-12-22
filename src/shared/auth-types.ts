@@ -4,6 +4,7 @@
  * Shared type definitions for authentication across main and renderer processes.
  */
 
+import { StreamProxyConfig, DEFAULT_STREAM_PROXY_CONFIG } from './proxy-types';
 // ========== Platform Types ==========
 
 export type Platform = 'twitch' | 'kick';
@@ -136,6 +137,17 @@ export interface AdvancedPreferences {
      * @default true (enabled for better UX, but can be disabled)
      */
     enableImageProxy: boolean;
+
+    /**
+     * Stream proxy configuration for ad blocking (Twitch only).
+     * Routes HLS manifest requests through external servers to bypass ads.
+     * 
+     * Based on the Twire Android app implementation.
+     * @see https://github.com/twireapp/Twire
+     * 
+     * @default { selectedProxy: 'none', fallbackToDirect: true }
+     */
+    streamProxy: StreamProxyConfig;
 }
 
 export interface UserPreferences {
@@ -237,6 +249,7 @@ export const DEFAULT_PLAYBACK_PREFERENCES: PlaybackPreferences = {
 
 export const DEFAULT_ADVANCED_PREFERENCES: AdvancedPreferences = {
     enableImageProxy: true, // Enabled by default for better UX
+    streamProxy: DEFAULT_STREAM_PROXY_CONFIG, // Disabled by default, user must opt-in
 };
 
 export const DEFAULT_USER_PREFERENCES: UserPreferences = {

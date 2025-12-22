@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Platform } from '@/shared/auth-types';
 import { StreamPlayback } from '@/components/player/types';
 
@@ -7,6 +7,10 @@ interface UseStreamPlaybackResult {
     isLoading: boolean;
     error: Error | null;
     reload: () => void;
+    /** Whether the current playback URL is using a proxy (Twitch only) */
+    isUsingProxy: boolean;
+    /** Retry loading the stream without proxy (fallback to direct) */
+    retryWithoutProxy: () => void;
 }
 
 export function useStreamPlayback(platform: Platform, identifier: string): UseStreamPlaybackResult {
@@ -14,15 +18,21 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
     const [isLoading, setIsLoading] = useState(!!identifier);
     const [error, setError] = useState<Error | null>(null);
     const [reloadKey, setReloadKey] = useState(0);
-    const currentKey = `${platform}-${identifier}`;
-    const [prevKey, setPrevKey] = useState(currentKey);
+    // Track if we're using proxy to enable fallback
+    const [isUsingProxy, setIsUsingProxy] = useState(false);
+    // Force disable proxy for fallback
+    const [forceNoProxy, setForceNoProxy] = useState(false);
 
-    if (currentKey !== prevKey) {
-        setPrevKey(currentKey);
+    const currentKey = `${platform}-${identifier}`;
+
+    useEffect(() => {
+        // Reset all state when stream identifier changes
         setPlayback(null);
         setIsLoading(!!identifier);
         setError(null);
-    }
+        setIsUsingProxy(false);
+        setForceNoProxy(false);
+    }, [currentKey, identifier]);
 
     useEffect(() => {
         if (!identifier) return;
@@ -38,9 +48,11 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
                 }
 
                 // Use IPC to fetch playback URL from main process
+                // Pass useProxy: false if we're in fallback mode
                 const result = await window.electronAPI.streams.getPlaybackUrl({
                     platform,
-                    channelSlug: identifier
+                    channelSlug: identifier,
+                    useProxy: forceNoProxy ? false : undefined // undefined = use user preference
                 });
 
                 if (!result.success || !result.data) {
@@ -52,6 +64,18 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
                         url: result.data.url,
                         format: result.data.format as 'hls' | 'dash' | 'mp4'
                     });
+                    // Detect if this is a proxy URL (check for known proxy domains)
+                    const url = result.data.url;
+                    const usingProxy = (
+                        url.includes('cdn-perfprod.com') ||
+                        url.includes('luminous.dev')
+                    ) && !forceNoProxy;
+                    console.log(`[useStreamPlayback] Loaded URL:`, {
+                        url: url.substring(0, 80) + '...',
+                        isProxy: usingProxy,
+                        forceNoProxy
+                    });
+                    setIsUsingProxy(usingProxy);
                     setIsLoading(false);
                 }
             } catch (err) {
@@ -74,12 +98,22 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
         return () => {
             isMounted = false;
         };
-    }, [platform, identifier, reloadKey]);
+    }, [platform, identifier, reloadKey, forceNoProxy]);
+
+    const retryWithoutProxy = useCallback(() => {
+        console.log('[useStreamPlayback] Retrying without proxy (fallback to direct)');
+        setForceNoProxy(true);
+        setPlayback(null);
+        setError(null);
+        setReloadKey(prev => prev + 1);
+    }, []);
 
     return {
         playback,
         isLoading,
         error,
-        reload: () => setReloadKey(prev => prev + 1)
+        isUsingProxy,
+        reload: () => setReloadKey(prev => prev + 1),
+        retryWithoutProxy
     };
 }

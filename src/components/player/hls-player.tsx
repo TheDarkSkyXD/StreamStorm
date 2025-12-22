@@ -64,6 +64,9 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
         isMountedRef.current = true;
 
         let hls: Hls | null = null;
+        // Track event handlers for cleanup (used by native HLS and standard playback)
+        let handleLoadedMetadata: (() => void) | null = null;
+        let handleError: ((e: Event) => void) | null = null;
 
         // Safe play helper that handles interruption gracefully
         const safePlay = () => {
@@ -114,6 +117,9 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
         const isHls = src.includes('.m3u8') || src.includes('usher.ttvnw.net');
 
         if (isHls && Hls.isSupported()) {
+            // Detect if this is a proxy URL (for faster failure on proxy errors)
+            const isProxyUrl = src.includes('cdn-perfprod.com') || src.includes('luminous.dev');
+
             hls = new Hls({
                 enableWorker: true,
                 lowLatencyMode: true,
@@ -124,13 +130,13 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 liveMaxLatencyDurationCount: 5, // Jump to live sooner if behind (was 10)
                 maxBufferLength: 30, // 30 seconds buffer
                 maxMaxBufferLength: 60,
-                // Manifest loading retry settings - 3 retries with 5 second delays
-                manifestLoadingMaxRetry: 3,
-                manifestLoadingRetryDelay: 5000,
-                manifestLoadingMaxRetryTimeout: 30000,
+                // Manifest loading retry settings - use fewer retries for proxy URLs
+                manifestLoadingMaxRetry: isProxyUrl ? 1 : 3, // Fast fail for proxy
+                manifestLoadingRetryDelay: isProxyUrl ? 1000 : 5000, // Shorter delay for proxy
+                manifestLoadingMaxRetryTimeout: isProxyUrl ? 5000 : 30000,
                 // Level loading retry settings
-                levelLoadingMaxRetry: 3,
-                levelLoadingRetryDelay: 5000,
+                levelLoadingMaxRetry: isProxyUrl ? 1 : 3,
+                levelLoadingRetryDelay: isProxyUrl ? 1000 : 5000,
                 // Fragment loading retry settings - more aggressive for live streams
                 // Transient errors like ERR_INCOMPLETE_CHUNKED_ENCODING are common
                 fragLoadingMaxRetry: 6, // More retries for fragments (they fail more often on live)
@@ -154,10 +160,16 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                     safePlay();
                 }
 
-                // Restore current level if set
+                // Restore current level if set (with validation)
                 if (currentLevel !== undefined) {
-                    if (currentLevel === 'auto') hls!.currentLevel = -1;
-                    else hls!.currentLevel = parseInt(currentLevel, 10);
+                    if (currentLevel === 'auto') {
+                        hls!.currentLevel = -1;
+                    } else {
+                        const levelIndex = parseInt(currentLevel, 10);
+                        if (!isNaN(levelIndex) && levelIndex >= 0 && levelIndex < data.levels.length) {
+                            hls!.currentLevel = levelIndex;
+                        }
+                    }
                 }
 
                 if (onQualityLevelsRef.current && data.levels) {
@@ -187,16 +199,57 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 // Reporting fatal errors for debugging robust stream handling
                 const silentErrors = ['bufferStalledError', 'levelSwitchError', 'fragLoadError'];
 
-                // Check for 404/403 on manifest load - indicates stream is definitely gone
+                // Debug logging for error structure
+                console.log(`[HLS] Error event:`, {
+                    details: data.details,
+                    fatal: data.fatal,
+                    type: data.type,
+                    // @ts-ignore - check all possible status code paths
+                    responseCode: data.response?.code,
+                    // @ts-ignore 
+                    statusCode: data.response?.status,
+                    // @ts-ignore
+                    networkDetails: data.networkDetails?.status,
+                    isProxyUrl
+                });
+
+                // Check for 404/403/500 on manifest load - indicates stream is definitely gone or proxy error
                 // Stop retrying immediately to prevent console noise
                 // @ts-ignore - response exists on ErrorData for network errors
-                const statusCode = data.response?.code;
+                const statusCode = data.response?.code || data.response?.status || data.networkDetails?.status;
+
                 if (data.details === 'manifestLoadError' && (statusCode === 404 || statusCode === 403)) {
                     console.debug(`[HLS] Critical network error ${statusCode}, stopping retries`);
                     hls?.destroy();
                     onErrorRef.current?.({
                         code: 'STREAM_OFFLINE',
                         message: 'Stream offline or unavailable',
+                        fatal: true,
+                        originalError: data
+                    });
+                    return;
+                }
+
+                // Handle 500 errors specially - likely proxy server error
+                if (data.details === 'manifestLoadError' && statusCode === 500) {
+                    console.log(`[HLS] Proxy/server error ${statusCode}, triggering fallback`);
+                    hls?.destroy();
+                    onErrorRef.current?.({
+                        code: 'PROXY_ERROR',
+                        message: 'Proxy server error (500)',
+                        fatal: true,
+                        originalError: data
+                    });
+                    return;
+                }
+
+                // For proxy URLs, treat any manifest error as proxy failure
+                if (isProxyUrl && data.details === 'manifestLoadError' && data.fatal) {
+                    console.log(`[HLS] Proxy manifest load failed (status: ${statusCode || 'unknown'}), triggering fallback`);
+                    hls?.destroy();
+                    onErrorRef.current?.({
+                        code: 'PROXY_ERROR',
+                        message: `Proxy error: ${statusCode || 'manifest load failed'}`,
                         fatal: true,
                         originalError: data
                     });
@@ -248,9 +301,6 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                     if (data.details === 'bufferStalledError') {
                         const video = videoRef.current;
                         if (video && !video.paused) {
-                            // Check if there's a gap at the start - buffer exists but not at position 0
-                            // @ts-ignore - bufferInfo exists on error data for buffer stall errors
-                            const bufferInfo = data.buffer !== undefined ? data : null;
 
                             if (video.buffered.length > 0) {
                                 const currentTime = video.currentTime;
@@ -277,29 +327,33 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 }
             });
 
+
+
         } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
             // Native HLS (Safari)
             console.log('Using native HLS');
             video.src = src;
-            video.addEventListener('loadedmetadata', () => {
+            handleLoadedMetadata = () => {
                 if (autoPlay && isMountedRef.current) safePlay();
-            });
-            video.addEventListener('error', (e) => {
+            };
+            handleError = (e: Event) => {
                 onErrorRef.current?.({
                     code: 'NATIVE_ERROR',
                     message: 'Native playback error',
                     fatal: true,
                     originalError: e
                 });
-            });
+            };
+            video.addEventListener('loadedmetadata', handleLoadedMetadata);
+            video.addEventListener('error', handleError);
         } else {
             // Standard Native Playback (e.g. MP4)
             console.log('Using standard native playback');
             video.src = src;
-            video.addEventListener('loadedmetadata', () => {
+            handleLoadedMetadata = () => {
                 if (autoPlay && isMountedRef.current) safePlay();
-            });
-            video.addEventListener('error', (e) => {
+            };
+            handleError = (e: Event) => {
                 // Only report error if we really fail
                 onErrorRef.current?.({
                     code: 'PLAYBACK_ERROR',
@@ -307,8 +361,13 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                     fatal: true,
                     originalError: e
                 });
-            });
+            };
+            video.addEventListener('loadedmetadata', handleLoadedMetadata);
+            video.addEventListener('error', handleError);
         }
+
+        // Store reference for cleanup
+        const currentVideo = video;
 
         return () => {
             // Mark as inactive to filter out stale errors
@@ -320,6 +379,16 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 hls.destroy();
             }
             hlsRef.current = null;
+
+            // Remove event listeners from video element to prevent memory leaks
+            if (currentVideo) {
+                if (handleLoadedMetadata) {
+                    currentVideo.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                }
+                if (handleError) {
+                    currentVideo.removeEventListener('error', handleError);
+                }
+            }
         };
     }, [src, autoPlay]); // Removed callbacks from dependency array
     // removed currentLevel (except initial read in manifest parsed) to prevent re-init. 

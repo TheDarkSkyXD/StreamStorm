@@ -1,7 +1,7 @@
 import { AlertCircle } from 'lucide-react';
+import { useState } from 'react';
 
 import { AccountConnect } from '@/components/auth';
-import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
@@ -14,8 +14,7 @@ import { useAppVersion } from '@/hooks';
 import { useAuthError } from '@/hooks/useAuth';
 import { useAuthStore } from '@/store/auth-store';
 import { VideoQuality } from '@/shared/auth-types';
-import { useState } from 'react';
-
+import { TwitchProxySettings } from './TwitchProxySettings';
 
 export function SettingsPage() {
 
@@ -128,6 +127,9 @@ export function SettingsPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Stream Proxy (Twitch Ad Blocking) */}
+        <TwitchProxySettings />
 
         {/* About */}
         <Card>

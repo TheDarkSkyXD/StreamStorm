@@ -1,6 +1,6 @@
 
 import { useParams } from '@tanstack/react-router';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { ProxiedImage } from '@/components/ui/proxied-image';
 import { useChannelByUsername } from '@/hooks/queries/useChannels';
@@ -23,7 +23,9 @@ export function StreamPage() {
   const {
     playback,
     isLoading: isPlaybackLoading,
-    reload: reloadPlayback
+    reload: reloadPlayback,
+    isUsingProxy,
+    retryWithoutProxy
   } = useStreamPlayback(platform as Platform, channelName);
 
   // Real data fetching
@@ -43,15 +45,70 @@ export function StreamPage() {
   // Track clip dialog state to mute main player
   const [isClipDialogOpen, setIsClipDialogOpen] = useState(false);
 
+  // Proxy fallback notification state
+  const [proxyFallbackNotice, setProxyFallbackNotice] = useState<string | null>(null);
+  const fallbackTimeoutRef = useRef<number | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (fallbackTimeoutRef.current) {
+        clearTimeout(fallbackTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handlePlayerError = useCallback((error: PlayerError) => {
+    console.log(`[StreamPage] handlePlayerError called:`, {
+      code: error.code,
+      isUsingProxy,
+      platform,
+      message: error.message
+    });
+
+    // PROXY_ERROR is specific to proxy server failures (500 errors)
+    if (error.code === 'PROXY_ERROR') {
+      console.log('[StreamPage] Proxy server error detected');
+
+      if (isUsingProxy && platform === 'twitch') {
+        console.log('[StreamPage] Triggering fallback to direct stream');
+        setProxyFallbackNotice('Proxy server unavailable. Falling back to direct stream (ads may show).');
+        retryWithoutProxy();
+        // Auto-hide notification after 8 seconds
+        if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+        fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 8000);
+        return; // Don't show error, let fallback attempt
+      }
+    }
+
     // STREAM_OFFLINE is expected when a stream ends - use debug logging
     if (error.code === 'STREAM_OFFLINE') {
       console.debug('Stream ended or went offline');
+
+      // If we were using proxy and got a network/offline error, try fallback to direct
+      if (isUsingProxy && platform === 'twitch') {
+        console.log('[StreamPage] Proxy stream failed, falling back to direct stream');
+        setProxyFallbackNotice('Proxy connection failed. Falling back to direct stream.');
+        retryWithoutProxy();
+        if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+        fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 8000);
+        return; // Don't show error yet, let fallback attempt
+      }
     } else {
       console.error('Player error', error);
+
+      // Also try fallback for other network errors when using proxy
+      if (isUsingProxy && platform === 'twitch') {
+        console.log('[StreamPage] Proxy stream network error, falling back to direct stream');
+        setProxyFallbackNotice('Proxy error. Switching to direct stream.');
+        retryWithoutProxy();
+        if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+        fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 8000);
+        return;
+      }
     }
     setPlayerError(error);
-  }, []);
+  }, [isUsingProxy, platform, retryWithoutProxy]);
 
   // Reset player error when playback changes
   useEffect(() => {
@@ -172,6 +229,26 @@ export function StreamPage() {
               <div className="absolute inset-0 flex items-center justify-center bg-black z-20 pointer-events-none">
                 <div className="flex flex-col items-center gap-2">
                   {platform === 'kick' ? <KickLoadingSpinner /> : <TwitchLoadingSpinner />}
+                </div>
+              </div>
+            )}
+            {/* Proxy fallback notification toast */}
+            {proxyFallbackNotice && (
+              <div className="absolute bottom-4 left-4 z-40 animate-in slide-in-from-bottom-4 fade-in duration-300">
+                <div className="bg-amber-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 max-w-md">
+                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span className="text-sm font-medium">{proxyFallbackNotice}</span>
+                  <button
+                    onClick={() => setProxyFallbackNotice(null)}
+                    className="ml-2 hover:bg-white/20 rounded p-1"
+                    aria-label="Dismiss notification"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
                 </div>
               </div>
             )}
