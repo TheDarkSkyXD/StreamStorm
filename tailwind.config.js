@@ -37,6 +37,13 @@ export default {
           DEFAULT: '#ffffff',
           secondary: '#a0a0a0',
           muted: '#666666',
+          category: '#b2b2b2',
+        },
+        // Tag Colors
+        tag: {
+          DEFAULT: '#35353b',
+          hover: '#45454b',
+          text: '#efeff1',
         },
         // UI Colors
         border: '#333333',

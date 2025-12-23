@@ -28,6 +28,12 @@
   --color-foreground: #ffffff;
   --color-foreground-secondary: #a0a0a0;
   --color-foreground-muted: #666666;
+  --color-foreground-category: #b2b2b2;
+  
+  /* Tag Colors */
+  --color-tag-text: #efeff1;
+  --color-tag-bg: #35353b;
+  --color-tag-bg-hover: #45454b;
   
   /* UI Colors */
   --color-border: #333333;
