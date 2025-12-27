@@ -15,6 +15,8 @@ import { RelatedContent } from '@/components/stream/related-content';
 import { KickLoadingSpinner, TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
 import { usePipStore } from '@/store/pip-store';
 import { useAppStore } from '@/store/app-store';
+import { useAuthStore } from '@/store/auth-store';
+import { DEFAULT_STREAM_PROXY_CONFIG } from '@/shared/proxy-types';
 
 export function StreamPage() {
   const { platform, channel: channelName } = useParams({ from: '/_app/stream/$platform/$channel' });
@@ -25,7 +27,8 @@ export function StreamPage() {
     isLoading: isPlaybackLoading,
     reload: reloadPlayback,
     isUsingProxy,
-    retryWithoutProxy
+    retryWithoutProxy,
+    retryWithProxy
   } = useStreamPlayback(platform as Platform, channelName);
 
   // Real data fetching
@@ -109,6 +112,29 @@ export function StreamPage() {
     }
     setPlayerError(error);
   }, [isUsingProxy, platform, retryWithoutProxy]);
+
+  // Get proxy preferences to check if fallback is possible
+  const preferences = useAuthStore(state => state.preferences);
+
+  // Handle ad detection trigger from player
+  const handleAdDetected = useCallback(() => {
+    // Only switch if we are NOT already using a proxy
+    // And only for Twitch
+    if (!isUsingProxy && platform === 'twitch') {
+      const proxyConfig = preferences?.advanced?.streamProxy ?? DEFAULT_STREAM_PROXY_CONFIG;
+
+      if (proxyConfig.selectedProxy === 'none') {
+        console.log('[StreamPage] Ads detected but no proxy configured. Cannot switch.');
+      } else {
+        console.log('[StreamPage] Ads detected on direct connection. Switching to proxy stream...');
+        setProxyFallbackNotice('Ads detected. Switching to proxy stream...');
+        retryWithProxy();
+
+        if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+        fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 5000);
+      }
+    }
+  }, [isUsingProxy, platform, retryWithProxy, preferences]);
 
   // Reset player error when playback changes
   useEffect(() => {
@@ -222,6 +248,8 @@ export function StreamPage() {
                 onError={handlePlayerError}
                 isTheater={isTheater}
                 onToggleTheater={() => setTheaterModeActive(!isTheater)}
+                channelName={channelName}
+                onAdDetected={handleAdDetected}
               />
             )}
             {/* Show loading only when fetching data */}

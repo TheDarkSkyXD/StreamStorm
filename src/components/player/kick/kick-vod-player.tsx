@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { QualityLevel, PlayerError, Platform } from '../types';
-import { HlsPlayer } from '../hls-player';
+import { HlsPlayer, HlsPlayerHandle } from '../hls-player';
 import { KickVodPlayerControls } from './kick-vod-player-controls';
 import { usePlayerKeyboard } from '../use-player-keyboard';
 import { usePictureInPicture } from '../use-picture-in-picture';

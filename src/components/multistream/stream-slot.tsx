@@ -130,6 +130,7 @@ export function StreamSlot({
                             autoPlay={true}
                             muted={isMuted}
                             className="pointer-events-none"
+                            channelName={channelName}
                         />
                     )
                 ) : (

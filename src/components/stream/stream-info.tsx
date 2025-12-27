@@ -83,7 +83,7 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                     )}
                 </h1>
                 {/* Use stream title if live, otherwise fall back to channel's last stream title */}
-                <p className="text-white font-bold truncate pr-4">{stream?.title || channel.lastStreamTitle || channel.bio || "No title set"}</p>
+                <p className="text-[var(--color-foreground)] font-bold truncate pr-4">{stream?.title || channel.lastStreamTitle || channel.bio || "No title set"}</p>
                 <p className="text-[var(--color-foreground-muted)] text-sm capitalize flex items-center gap-1.5 mt-1">
                     {/* Use stream category if live, otherwise fall back to channel's last known category */}
                     {(stream?.categoryId || channel.categoryId) ? (
@@ -108,13 +108,13 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                     <div className="flex flex-wrap gap-2 mt-2">
                         {/* Language Tag */}
                         {stream.language && (
-                            <span className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default">
+                            <span className="text-xs px-3 py-1 rounded-full font-medium bg-[var(--color-tag-bg)] text-[var(--color-tag-text)] hover:bg-[var(--color-tag-bg-hover)] transition-colors cursor-default">
                                 {new Intl.DisplayNames(['en'], { type: 'language' }).of(stream.language) || stream.language.toUpperCase()}
                             </span>
                         )}
                         {/* Mature Content Tag */}
                         {stream.isMature && (
-                            <span className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default">
+                            <span className="text-xs px-3 py-1 rounded-full font-medium bg-[var(--color-tag-bg)] text-[var(--color-tag-text)] hover:bg-[var(--color-tag-bg-hover)] transition-colors cursor-default">
                                 18+
                             </span>
                         )}
@@ -134,7 +134,7 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                                 .map((tag, index) => (
                                     <span
                                         key={`${tag}-${index}`}
-                                        className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default"
+                                        className="text-xs px-3 py-1 rounded-full font-medium bg-[var(--color-tag-bg)] text-[var(--color-tag-text)] hover:bg-[var(--color-tag-bg-hover)] transition-colors cursor-default"
                                     >
                                         {tag}
                                     </span>
@@ -157,8 +157,8 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <div className="flex items-center gap-1.5 cursor-default">
-                                    <Users className="w-4 h-4 text-white" />
-                                    <span className="font-semibold text-white">
+                                    <Users className="w-4 h-4 text-[var(--color-foreground)]" />
+                                    <span className="font-semibold text-[var(--color-foreground)]">
                                         {formatViewerCount(stream.viewerCount)}
                                     </span>
                                 </div>
@@ -172,8 +172,8 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <div className="flex items-center gap-1.5 cursor-default">
-                                    <Clock className="w-4 h-4 text-white" />
-                                    <span className="font-semibold tabular-nums text-white">
+                                    <Clock className="w-4 h-4 text-[var(--color-foreground)]" />
+                                    <span className="font-semibold tabular-nums text-[var(--color-foreground)]">
                                         {uptime}
                                     </span>
                                 </div>

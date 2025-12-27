@@ -90,3 +90,10 @@ typings/
 
 # Electron-Forge
 out/
+documentation/features/active/twitch-ad-block-progress.md
+documentation/features/active/twitch-ad-block-spec.md
+documentation/features/completed/twitch-ad-block-progress.md
+documentation/features/completed/twitch-ad-block-spec.md
+documentation/features/completed/twitch-adblock-xtra-progress.md
+documentation/features/completed/twitch-adblock-xtra-spec.md
+documentation/features/completed/twitch-adblock-dynamic-proxy.md

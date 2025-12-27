@@ -23,13 +23,15 @@ export function useVolume({ videoRef, initialMuted = false }: UseVolumeOptions) 
 
         // On first mount, use initialMuted prop; afterward use store state
         if (isFirstMount.current) {
-            video.muted = initialMuted;
-            setMuted(initialMuted); // Sync store with initial value
+            // Respect stored mute state, but allow initialMuted prop to force start as muted
+            // We do NOT sync back to store prevents overwriting user preference with default 'false'
+            video.muted = isMuted || initialMuted;
             isFirstMount.current = false;
         } else {
             video.muted = isMuted;
         }
-    }, [videoRef, volume, isMuted, setMuted]); // eslint-disable-line react-hooks/exhaustive-deps -- initialMuted intentionally excluded, only used on first mount
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [videoRef, volume, isMuted]);
 
     // Handle volume change from UI
     const handleVolumeChange = useCallback((newVolume: number) => {

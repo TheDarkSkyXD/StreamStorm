@@ -21,6 +21,8 @@ export function TwitchProxySettings() {
     const preferences = useAuthStore(state => state.preferences);
     const updatePreferences = useAuthStore(state => state.updatePreferences);
 
+    const isAdBlockEnabled = preferences?.advanced?.adBlock?.enabled ?? false;
+
     // Ref for debouncing custom URL saves
     const saveTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const preferencesRef = useRef(preferences);
@@ -171,7 +173,25 @@ export function TwitchProxySettings() {
                     Stream Proxy (Twitch)
                 </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent
+                className={`space-y-6 ${isAdBlockEnabled ? 'opacity-50 pointer-events-none' : ''}`}
+                aria-disabled={isAdBlockEnabled}
+            >
+
+                {/* Visual warning for mutual exclusivity */}
+                {isAdBlockEnabled && (
+                    <div className="bg-[var(--color-background-secondary)] border border-[var(--color-border)] rounded-md p-4 mb-4 flex items-start gap-3">
+                        <Shield className="w-5 h-5 text-[var(--color-foreground-muted)] shrink-0 mt-0.5" />
+                        <div className="text-sm">
+                            <p className="font-medium">Proxy Settings Disabled</p>
+                            <p className="text-[var(--color-foreground-muted)]">
+                                Native ad-block is currently enabled. Proxy settings are ignored to prevent conflicts.
+                                Disable native ad-block to configure proxy settings.
+                            </p>
+                        </div>
+                    </div>
+                )}
+
                 {/* Proxy Server Selection */}
                 <div className="flex items-center justify-between">
                     <div>

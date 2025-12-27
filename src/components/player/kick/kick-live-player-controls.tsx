@@ -3,7 +3,7 @@ import { PlayPauseButton } from '../play-pause-button';
 import { VolumeControl } from '../volume-control';
 import { SettingsMenu } from '../settings-menu';
 import { QualityLevel } from '../types';
-import { Maximize, Minimize, Radio } from 'lucide-react';
+import { Maximize, Minimize, Radio, RefreshCcw } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip';
 import { KickProgressBar } from './kick-progress-bar';
@@ -49,6 +49,8 @@ interface KickLivePlayerControlsProps {
     onToggleFullscreen: () => void;
     onToggleTheater?: () => void;
     onTogglePip?: () => void;
+    /** Callback to manually refresh the stream */
+    onRefreshStream?: () => void;
 
     currentTime?: number;
     duration?: number;
@@ -79,6 +81,7 @@ export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
         onToggleFullscreen,
         onToggleTheater,
         onTogglePip,
+        onRefreshStream,
         currentTime = 0,
         duration = 0,
         onSeek,
@@ -215,6 +218,25 @@ export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {/* Refresh Stream Button */}
+                    {onRefreshStream && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-white hover:bg-white/20"
+                                    onClick={onRefreshStream}
+                                >
+                                    <RefreshCcw className="w-5 h-5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Refresh Stream (r)</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    )}
+
                     <SettingsMenu
                         qualities={qualities}
                         currentQualityId={currentQualityId}

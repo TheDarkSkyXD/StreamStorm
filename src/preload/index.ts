@@ -204,6 +204,52 @@ const electronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.PROXY_TEST_CONNECTION, { proxyConfig }),
   },
 
+  // ========== Ad-Block (VAFT) ==========
+  adblock: {
+    /**
+     * Find an ad-free backup stream when ads are detected during playback.
+     * Tries different playerType/platform combinations (VAFT method).
+     * 
+     * Phase 1: Supports resolution matching via preferredResolution/targetResolution
+     * Phase 2: Supports caching and minimal requests mode via lastPlayerReload
+     */
+    findBackupStream: (params: {
+      channelLogin: string;
+      skipPlayerTypes?: string[];
+      timeoutMs?: number;
+      /** Current stream resolution for quality matching (e.g., '1080p60') */
+      preferredResolution?: string;
+      /** Last player reload timestamp for minimal requests mode */
+      lastPlayerReload?: number;
+      /** Skip cache and fetch fresh */
+      skipCache?: boolean;
+    }): Promise<{
+      success: boolean;
+      data?: {
+        url: string;
+        /** Resolution-matched variant URL if available */
+        variantUrl?: string;
+        playerType: string;
+        platform: string;
+        tokenValue: string;
+        tokenSignature: string;
+        /** The master M3U8 content */
+        masterM3u8?: string;
+        /** Whether this result came from cache */
+        fromCache?: boolean;
+      };
+      error?: string;
+    }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_FIND_BACKUP_STREAM, params),
+
+    /**
+     * Clear the backup stream cache for a specific channel or all channels.
+     * Should be called when switching streams.
+     */
+    clearCache: (channelLogin?: string): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_CLEAR_CACHE, { channelLogin }),
+  },
+
   // ========== Discovery: Streams ==========
   streams: {
     getTop: (params?: {

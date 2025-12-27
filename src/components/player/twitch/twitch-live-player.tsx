@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { QualityLevel, PlayerError, Platform } from '../types';
-import { HlsPlayer } from '../hls-player';
+import { HlsPlayer, HlsPlayerHandle } from '../hls-player';
 import { TwitchLivePlayerControls } from './twitch-live-player-controls';
 import { usePlayerKeyboard } from '../use-player-keyboard';
 import { usePictureInPicture } from '../use-picture-in-picture';
@@ -8,6 +8,8 @@ import { useFullscreen } from '../use-fullscreen';
 import { useDefaultQuality } from '../use-default-quality';
 import { useVolume } from '../useVolume';
 import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
+import { useAdBlock } from '@/hooks/useAdBlock';
+import { AdBlockOverlay } from '../AdBlockOverlay';
 
 export interface TwitchLivePlayerProps {
     streamUrl: string;
@@ -21,6 +23,9 @@ export interface TwitchLivePlayerProps {
     className?: string;
     isTheater?: boolean;
     onToggleTheater?: () => void;
+    channelName?: string;
+    /** Callback when ads are detected (for dynamic proxy switching) */
+    onAdDetected?: () => void;
 }
 
 export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
@@ -35,10 +40,14 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
         onQualityChange,
         className,
         isTheater,
-        onToggleTheater
+        onToggleTheater,
+        channelName,
+        onAdDetected
     } = props;
 
     const containerRef = useRef<HTMLDivElement>(null);
+    const hlsPlayerRef = useRef<HlsPlayerHandle>(null);
+    // Standard video element ref
     const videoRef = useRef<HTMLVideoElement>(null);
 
     // Persistent volume
@@ -50,6 +59,31 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
     // Hooks
     const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
     const { isPip, togglePip } = usePictureInPicture(videoRef);
+
+    // Ad Block Hook with VAFT backup stream support
+    const {
+        isEnabled: adBlockEnabled,
+        isBlockingAds,
+        adInfo,
+        shouldHideAds,
+        checkFragmentForAds,
+        attachToHls,
+        detachFromHls,
+        isSearchingBackup,
+        resetBackupState,
+        backupStream,
+    } = useAdBlock({
+        channelLogin: channelName,
+        onBackupStreamFound: (backupUrl) => {
+            // Switch to the ad-free backup stream dynamically
+            if (hlsPlayerRef.current) {
+                console.log('[TwitchPlayer] Switching to backup stream...');
+                hlsPlayerRef.current.switchSource(backupUrl);
+            } else {
+                console.warn('[TwitchPlayer] HLS player not ready for source switch');
+            }
+        },
+    });
 
     // State
     const [isReady, setIsReady] = useState(false);
@@ -63,11 +97,51 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
     // Apply user's default quality preference
     useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
 
+    // Determine effective mute state (declarative)
+    const effectiveMuted = isMuted;
+
+    // Handle ad blocking state tracking (logging mainly)
+    useEffect(() => {
+        // Legacy imperative mute logic removed in favor of declarative 'effectiveMuted' prop passed to HlsPlayer
+        // This ensures React keeps the video element in sync with our state (including persistence)
+    }, [isBlockingAds, shouldHideAds]);
+
+    // Track previous blocking state to detect transitions
+    const prevIsBlockingAdsRef = useRef(false);
+
+    // Notify parent when ads are detected (for dynamic proxy switching)
+    useEffect(() => {
+        if (isBlockingAds && !prevIsBlockingAdsRef.current && onAdDetected) {
+            onAdDetected();
+        }
+        prevIsBlockingAdsRef.current = isBlockingAds;
+    }, [isBlockingAds, onAdDetected]);
+
     // Reset state when streamUrl changes (new stream)
     useEffect(() => {
         setHasError(false);
         setIsReady(false); // Reset ready state so initialization runs for new stream
-    }, [streamUrl]);
+        // Detach ad detector when stream changes
+        detachFromHls();
+        // Reset backup stream state (clear tried player types)
+        resetBackupState();
+    }, [streamUrl, detachFromHls, resetBackupState]);
+
+    // Handle HLS instance for ad detection
+    const handleHlsInstance = useCallback((hls: import('hls.js').default) => {
+        // Attach ad detector to the HLS instance
+        if (adBlockEnabled) {
+            attachToHls(hls);
+            console.log('[TwitchPlayer] Ad detector attached to HLS instance');
+        }
+    }, [adBlockEnabled, attachToHls]);
+
+    // Cleanup ad detector on unmount
+    useEffect(() => {
+        return () => {
+            detachFromHls();
+        };
+    }, [detachFromHls]);
 
     // Setup event listeners
     useEffect(() => {
@@ -101,6 +175,14 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
     }, [isReady]);
 
     // Volume initialization is handled by useVolume hook
+    // However, when switching streams (component reuse), the video element is reset.
+    // We need to re-apply the persistent volume state when the player becomes ready.
+    useEffect(() => {
+        if (isReady && videoRef.current) {
+            videoRef.current.volume = volume / 100;
+            // Mute state is handled by the declarative 'muted' prop on HlsPlayer now
+        }
+    }, [isReady, volume]);
 
     // Handlers
     const togglePlay = useCallback(() => {
@@ -130,6 +212,26 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
         video.playbackRate = rate;
     }, []);
 
+    // Manual stream refresh
+    const handleRefreshStream = useCallback(() => {
+        const hls = hlsPlayerRef.current?.getHls();
+        if (hls) {
+            console.log('[TwitchPlayer] Manual stream refresh triggered');
+            try {
+                hls.recoverMediaError();
+            } catch (error) {
+                console.warn('[TwitchPlayer] recoverMediaError failed, trying startLoad:', error);
+                try {
+                    hls.startLoad();
+                } catch (e) {
+                    console.error('[TwitchPlayer] startLoad failed:', e);
+                }
+            }
+        } else {
+            console.warn('[TwitchPlayer] No HLS instance available for refresh');
+        }
+    }, []);
+
     const handleQualityLevels = useCallback((levels: QualityLevel[]) => {
         setAvailableQualities(levels);
         if (!isReady) {
@@ -154,6 +256,7 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
         onVolumeUp: () => handleVolumeChange(volume + 10),
         onVolumeDown: () => handleVolumeChange(volume - 10),
         onToggleFullscreen: toggleFullscreen,
+        onRefreshStream: handleRefreshStream,
         disabled: !isReady
     });
 
@@ -165,19 +268,22 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
             {streamUrl ? (
                 <HlsPlayer
                     ref={videoRef}
+                    handleRef={hlsPlayerRef as React.Ref<HlsPlayerHandle>}
                     src={streamUrl}
                     poster={poster}
-                    muted={initialMuted}
+                    muted={effectiveMuted}
                     autoPlay={autoPlay}
                     currentLevel={currentQualityId}
                     onQualityLevels={handleQualityLevels}
+                    onFragmentLoaded={checkFragmentForAds}
+                    onHlsInstance={handleHlsInstance}
                     onError={(error) => {
                         console.error('[TwitchPlayer] Player error:', error);
                         setHasError(true);
                         setIsLoading(false);
                         onError?.(error);
                     }}
-                    className="size-full object-contain cursor-pointer"
+                    className={`size-full object-contain cursor-pointer`}
                     controls={false}
                     onDoubleClick={toggleFullscreen}
                 />
@@ -187,8 +293,16 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
                 </div>
             )}
 
+            {/* Ad Block Overlay */}
+            <AdBlockOverlay
+                visible={isBlockingAds && shouldHideAds}
+                channelName={channelName}
+                isMidroll={adInfo?.isMidroll ?? true} // Default to true (midroll) during playback if unknown
+                isStripping={isSearchingBackup} // Show 'stripping' (or similar) while searching/switching
+            />
+
             {/* Centered Loading Spinner - Twitch Purple */}
-            {isLoading && streamUrl && (
+            {isLoading && streamUrl && !isBlockingAds && (
                 <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
                     <TwitchLoadingSpinner />
                 </div>
@@ -212,6 +326,7 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
                     onToggleTheater={onToggleTheater}
                     isTheater={isTheater}
                     onTogglePip={togglePipHandler}
+                    onRefreshStream={handleRefreshStream}
                     playbackRate={playbackRate}
                     onPlaybackRateChange={handlePlaybackRateChange}
                 />

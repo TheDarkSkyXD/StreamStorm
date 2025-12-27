@@ -4,6 +4,7 @@ import {
     StreamPlayback
 } from './twitch-types';
 import { StreamProxyConfig } from '../../../../shared/proxy-types';
+import { TwitchAdBlockConfig, generateRandomDeviceId, FALLBACK_DEVICE_ID } from '../../../../shared/adblock-types';
 import { TwitchProxyService, ProxyConfigError } from './twitch-proxy-service';
 
 export class TwitchStreamResolver {
@@ -100,6 +101,170 @@ export class TwitchStreamResolver {
     }
 
     /**
+     * Get stream URL with ad-block support.
+     * Implements mutual exclusivity: ad-block takes precedence over proxy.
+     *
+     * Priority:
+     * 1. If adBlockConfig is enabled → use native ad-block (ignores proxy)
+     * 2. If proxyConfig is enabled  → use proxy
+     * 3. Otherwise                  → use direct stream
+     *
+     * @param channelLogin - The channel login/username
+     * @param adBlockConfig - Optional ad-block configuration
+     * @param proxyConfig - Optional proxy configuration (ignored if ad-block enabled)
+     * @returns StreamPlayback object with URL
+     */
+    async getStreamPlaybackUrlWithAdBlock(
+        channelLogin: string,
+        adBlockConfig?: TwitchAdBlockConfig,
+        proxyConfig?: StreamProxyConfig
+    ): Promise<StreamPlayback> {
+        // Ad-block takes precedence over proxy (mutual exclusivity)
+        if (adBlockConfig?.enabled) {
+            try {
+                // First, check if the channel is actually live
+                const { twitchClient } = await import('./twitch-client');
+                const stream = await twitchClient.getStreamByLogin(channelLogin);
+
+                if (!stream) {
+                    throw new Error('Channel is offline');
+                }
+
+                // Get token with ad-block modifications
+                const token = await this.getPlaybackAccessTokenWithAdBlock(
+                    channelLogin,
+                    false,
+                    adBlockConfig
+                );
+
+                // Construct URL with fast_bread for lower latency
+                const url = this.constructHlsUrl(
+                    channelLogin,
+                    token.value,
+                    token.signature,
+                    true // includeFastBread
+                );
+
+                console.log(`[TwitchResolver] Ad-block enabled: playerType=${adBlockConfig.playerType}, platform=${adBlockConfig.platform}`);
+
+                return {
+                    url,
+                    format: 'hls'
+                };
+            } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : String(error);
+                if (!errorMessage.toLowerCase().includes('offline')) {
+                    console.error('[TwitchResolver] Ad-block stream resolution failed:', error);
+                }
+                throw error;
+            }
+        }
+
+        // Fall back to proxy or direct stream
+        return this.getStreamPlaybackUrlWithProxy(channelLogin, proxyConfig);
+    }
+
+    /**
+     * Get playback access token with ad-block modifications.
+     * Adds X-Device-Id header and configurable playerType/platform.
+     */
+    private async getPlaybackAccessTokenWithAdBlock(
+        loginOrId: string,
+        isVod: boolean,
+        config: TwitchAdBlockConfig
+    ): Promise<{ value: string; signature: string }> {
+        // Build headers with optional X-Device-Id
+        const headers: Record<string, string> = {
+            'Client-Id': this.GQL_CLIENT_ID,
+            'Content-Type': 'application/json'
+        };
+
+        // Always send X-Device-Id when ad-block is enabled
+        // This is key to bypassing ad tracking - either random (new user each time)
+        // or fallback (consistent ID that avoids some ad targeting)
+        if (config.useRandomDeviceId) {
+            headers['X-Device-Id'] = generateRandomDeviceId();
+            console.log('[TwitchResolver] Using random X-Device-Id for ad-block');
+        } else {
+            headers['X-Device-Id'] = config.fallbackDeviceId || FALLBACK_DEVICE_ID;
+            console.log('[TwitchResolver] Using fallback X-Device-Id for ad-block');
+        }
+
+        // Query with configurable platform and playerType
+        // Note: supportedCodecs is not accepted by Twitch's current GQL API
+        const query = `
+            query PlaybackAccessToken(
+                $login: String!,
+                $vodID: ID!,
+                $isVod: Boolean!,
+                $playerType: String!,
+                $platform: String!
+            ) {
+                streamPlaybackAccessToken(
+                    channelName: $login,
+                    params: {
+                        platform: $platform,
+                        playerBackend: "mediaplayer",
+                        playerType: $playerType
+                    }
+                ) @skip(if: $isVod) {
+                    value
+                    signature
+                }
+                videoPlaybackAccessToken(
+                    id: $vodID,
+                    params: {
+                        platform: $platform,
+                        playerBackend: "mediaplayer",
+                        playerType: $playerType
+                    }
+                ) @include(if: $isVod) {
+                    value
+                    signature
+                }
+            }
+        `;
+
+        const variables = {
+            login: isVod ? '' : loginOrId.toLowerCase(),
+            isVod: isVod,
+            vodID: isVod ? loginOrId : '',
+            playerType: config.playerType,
+            platform: config.platform
+            // Note: supportedCodecs kept in config for future use if API changes
+        };
+
+        const response = await fetch(this.GQL_ENDPOINT, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ query, variables })
+        });
+
+        if (!response.ok) {
+            throw new Error(`GQL request failed: ${response.status}`);
+        }
+
+        const json = await response.json() as TwitchGqlResponse<TwitchPlaybackAccessTokenData>;
+
+        if (json.errors) {
+            throw new Error(`GQL Errors: ${JSON.stringify(json.errors)}`);
+        }
+
+        const data = json.data;
+        if (isVod) {
+            if (!data.videoPlaybackAccessToken) {
+                throw new Error('No VOD token found. The VOD might be sub-only or deleted.');
+            }
+            return data.videoPlaybackAccessToken;
+        } else {
+            if (!data.streamPlaybackAccessToken) {
+                throw new Error('No stream token found. The channel might be offline or non-existent.');
+            }
+            return data.streamPlaybackAccessToken;
+        }
+    }
+
+    /**
      * Get playback URL for a VOD
      */
     async getVodPlaybackUrl(vodId: string): Promise<StreamPlayback> {
@@ -114,6 +279,50 @@ export class TwitchStreamResolver {
             console.error('Failed to resolve Twitch VOD URL for:', vodId, error);
             throw error;
         }
+    }
+
+    /**
+     * Get playback URL for a VOD with ad-block support.
+     * Uses the same ad-block token modifications as live streams.
+     *
+     * @param vodId - The VOD ID
+     * @param adBlockConfig - Optional ad-block configuration
+     * @returns StreamPlayback object with URL
+     */
+    async getVodPlaybackUrlWithAdBlock(
+        vodId: string,
+        adBlockConfig?: TwitchAdBlockConfig
+    ): Promise<StreamPlayback> {
+        if (adBlockConfig?.enabled) {
+            try {
+                // Mark this as a VOD request for the token handler
+                const vodConfig: TwitchAdBlockConfig = {
+                    ...adBlockConfig,
+                    isVod: true,
+                };
+
+                const token = await this.getPlaybackAccessTokenWithAdBlock(
+                    vodId,
+                    true,
+                    vodConfig
+                );
+
+                const url = this.constructVodUrl(vodId, token.value, token.signature);
+
+                console.log(`[TwitchResolver] VOD ad-block enabled: playerType=${adBlockConfig.playerType}`);
+
+                return {
+                    url,
+                    format: 'hls'
+                };
+            } catch (error) {
+                console.error('[TwitchResolver] VOD ad-block resolution failed:', error);
+                throw error;
+            }
+        }
+
+        // Fall back to regular VOD URL
+        return this.getVodPlaybackUrl(vodId);
     }
 
     private async getPlaybackAccessToken(loginOrId: string, isVod: boolean): Promise<{ value: string, signature: string }> {
@@ -193,11 +402,28 @@ export class TwitchStreamResolver {
         }
     }
 
-    private constructHlsUrl(channel: string, token: string, sig: string): string {
+    private constructHlsUrl(
+        channel: string,
+        token: string,
+        sig: string,
+        includeFastBread: boolean = false
+    ): string {
         // Construct the usher URL
         // Random integer 0-999999 for cache busting
         const p = Math.floor(Math.random() * 999999);
-        return `https://usher.ttvnw.net/api/channel/hls/${channel}.m3u8?token=${encodeURIComponent(token)}&sig=${sig}&allow_source=true&allow_audio_only=true&p=${p}`;
+        let url = `https://usher.ttvnw.net/api/channel/hls/${channel}.m3u8?` +
+            `token=${encodeURIComponent(token)}` +
+            `&sig=${sig}` +
+            `&allow_source=true` +
+            `&allow_audio_only=true` +
+            `&p=${p}`;
+
+        // Add fast_bread for low latency when ad-block is enabled
+        if (includeFastBread) {
+            url += '&fast_bread=true';
+        }
+
+        return url;
     }
 
     private constructVodUrl(vodId: string, token: string, sig: string): string {

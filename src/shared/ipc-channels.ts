@@ -105,6 +105,10 @@ export const IPC_CHANNELS = {
   // ========== Proxy (Twitch Ad Blocking) ==========
   PROXY_TEST_CONNECTION: 'proxy:test-connection',
 
+  // ========== Ad-Block (VAFT) ==========
+  ADBLOCK_FIND_BACKUP_STREAM: 'adblock:find-backup-stream',
+  ADBLOCK_CLEAR_CACHE: 'adblock:clear-cache',
+
   // ========== Discovery: Categories ==========
   CATEGORIES_GET_TOP: 'categories:get-top',
   CATEGORIES_GET_BY_ID: 'categories:get-by-id',

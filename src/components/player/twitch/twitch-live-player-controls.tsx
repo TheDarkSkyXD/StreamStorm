@@ -3,7 +3,7 @@ import { PlayPauseButton } from '../play-pause-button';
 import { VolumeControl } from '../volume-control';
 import { SettingsMenu } from '../settings-menu';
 import { QualityLevel } from '../types';
-import { Maximize, Minimize } from 'lucide-react';
+import { Maximize, Minimize, RefreshCcw } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip';
 
@@ -47,6 +47,8 @@ interface TwitchLivePlayerControlsProps {
     onToggleFullscreen: () => void;
     onToggleTheater?: () => void;
     onTogglePip?: () => void;
+    /** Callback to manually refresh the stream */
+    onRefreshStream?: () => void;
 
     // Playback Speed
     playbackRate?: number;
@@ -70,6 +72,7 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
         onToggleFullscreen,
         onToggleTheater,
         onTogglePip,
+        onRefreshStream,
 
     } = props;
 
@@ -137,6 +140,25 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
+                    {/* Refresh Stream Button */}
+                    {onRefreshStream && (
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-white hover:bg-white/20"
+                                    onClick={onRefreshStream}
+                                >
+                                    <RefreshCcw className="w-5 h-5" />
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p>Refresh Stream (r)</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    )}
+
                     <SettingsMenu
                         qualities={qualities}
                         currentQualityId={currentQualityId}

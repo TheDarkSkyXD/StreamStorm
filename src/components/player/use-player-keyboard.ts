@@ -7,6 +7,7 @@ interface UsePlayerKeyboardProps {
     onVolumeDown: () => void;
     onToggleFullscreen: () => void;
     onToggleTheater?: () => void;
+    onRefreshStream?: () => void;
     disabled?: boolean;
 }
 
@@ -17,6 +18,7 @@ export function usePlayerKeyboard({
     onVolumeDown,
     onToggleFullscreen,
     onToggleTheater,
+    onRefreshStream,
     disabled = false
 }: UsePlayerKeyboardProps) {
     useEffect(() => {
@@ -55,10 +57,16 @@ export function usePlayerKeyboard({
                     e.preventDefault();
                     onVolumeDown();
                     break;
+                case 'r':
+                    if (onRefreshStream) {
+                        e.preventDefault();
+                        onRefreshStream();
+                    }
+                    break;
             }
         };
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [disabled, onTogglePlay, onToggleMute, onVolumeUp, onVolumeDown, onToggleFullscreen, onToggleTheater]);
+    }, [disabled, onTogglePlay, onToggleMute, onVolumeUp, onVolumeDown, onToggleFullscreen, onToggleTheater, onRefreshStream]);
 }

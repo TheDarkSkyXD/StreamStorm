@@ -15,6 +15,9 @@ import { useAuthError } from '@/hooks/useAuth';
 import { useAuthStore } from '@/store/auth-store';
 import { VideoQuality } from '@/shared/auth-types';
 import { TwitchProxySettings } from './TwitchProxySettings';
+import { TwitchAdBlockSettings } from './TwitchAdBlockSettings';
+import { BufferingRecoverySettings } from './BufferingRecoverySettings';
+import { EnhancedFeaturesSettings } from './EnhancedFeaturesSettings';
 
 export function SettingsPage() {
 
@@ -128,8 +131,17 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Stream Proxy (Twitch Ad Blocking) */}
+        {/* Twitch Ad Blocking (Native) */}
+        <TwitchAdBlockSettings />
+
+        {/* Stream Proxy (Twitch Ad Blocking Legacy) */}
         <TwitchProxySettings />
+
+        {/* Stream Recovery (Buffering Fix) */}
+        <BufferingRecoverySettings />
+
+        {/* Enhanced Features (Phase 4) */}
+        <EnhancedFeaturesSettings />
 
         {/* About */}
         <Card>

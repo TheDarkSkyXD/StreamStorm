@@ -205,7 +205,11 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         };
     }, [isReady, startedAt]);
 
-    // Volume initialization is handled by useVolume hook
+    useEffect(() => {
+        if (isReady && videoRef.current) {
+            videoRef.current.volume = volume / 100;
+        }
+    }, [isReady, volume]);
 
     // Handlers
     const togglePlay = useCallback(() => {
@@ -308,6 +312,26 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         hlsRef.current = hls;
     }, []);
 
+    // Manual stream refresh
+    const handleRefreshStream = useCallback(() => {
+        const hls = hlsRef.current;
+        if (hls) {
+            console.log('[KickPlayer] Manual stream refresh triggered');
+            try {
+                hls.recoverMediaError();
+            } catch (error) {
+                console.warn('[KickPlayer] recoverMediaError failed, trying startLoad:', error);
+                try {
+                    hls.startLoad();
+                } catch (e) {
+                    console.error('[KickPlayer] startLoad failed:', e);
+                }
+            }
+        } else {
+            console.warn('[KickPlayer] No HLS instance available for refresh');
+        }
+    }, []);
+
     // Keyboard shortcuts
     usePlayerKeyboard({
         onTogglePlay: togglePlay,
@@ -315,6 +339,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         onVolumeUp: () => handleVolumeChange(volume + 10),
         onVolumeDown: () => handleVolumeChange(volume - 10),
         onToggleFullscreen: toggleFullscreen,
+        onRefreshStream: handleRefreshStream,
         disabled: !isReady
     });
 
@@ -328,7 +353,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
                     ref={videoRef}
                     src={streamUrl}
                     poster={poster}
-                    muted={initialMuted}
+                    muted={isMuted}
                     autoPlay={autoPlay}
                     currentLevel={currentQualityId}
                     onQualityLevels={handleQualityLevels}
@@ -374,6 +399,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
                     onToggleTheater={onToggleTheater}
                     isTheater={isTheater}
                     onTogglePip={togglePipHandler}
+                    onRefreshStream={handleRefreshStream}
                     currentTime={currentTime}
                     duration={duration}
                     seekableRange={seekableRange}

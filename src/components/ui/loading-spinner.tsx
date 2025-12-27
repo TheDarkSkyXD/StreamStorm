@@ -41,10 +41,10 @@ export function LoadingSpinner({
 }
 
 // Platform-specific convenience components
-export function KickLoadingSpinner({ size = 'lg' }: { size?: 'sm' | 'md' | 'lg' }) {
-    return <LoadingSpinner size={size} color="#53fc18" />;
+export function KickLoadingSpinner({ size = 'lg', className }: { size?: 'sm' | 'md' | 'lg', className?: string }) {
+    return <LoadingSpinner size={size} color="#53fc18" className={className} />;
 }
 
-export function TwitchLoadingSpinner({ size = 'lg' }: { size?: 'sm' | 'md' | 'lg' }) {
-    return <LoadingSpinner size={size} color="#9146ff" />;
+export function TwitchLoadingSpinner({ size = 'lg', className }: { size?: 'sm' | 'md' | 'lg', className?: string }) {
+    return <LoadingSpinner size={size} color="#9146ff" className={className} />;
 }

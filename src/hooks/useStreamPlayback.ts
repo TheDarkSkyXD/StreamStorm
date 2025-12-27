@@ -10,7 +10,10 @@ interface UseStreamPlaybackResult {
     /** Whether the current playback URL is using a proxy (Twitch only) */
     isUsingProxy: boolean;
     /** Retry loading the stream without proxy (fallback to direct) */
+    /** Retry loading the stream without proxy (fallback to direct) */
     retryWithoutProxy: () => void;
+    /** Retry loading the stream with proxy (switch to proxy) */
+    retryWithProxy: () => void;
 }
 
 export function useStreamPlayback(platform: Platform, identifier: string): UseStreamPlaybackResult {
@@ -22,6 +25,8 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
     const [isUsingProxy, setIsUsingProxy] = useState(false);
     // Force disable proxy for fallback
     const [forceNoProxy, setForceNoProxy] = useState(false);
+    // Force enable proxy for fallback
+    const [forceProxy, setForceProxy] = useState(false);
 
     const currentKey = `${platform}-${identifier}`;
 
@@ -32,6 +37,7 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
         setError(null);
         setIsUsingProxy(false);
         setForceNoProxy(false);
+        setForceProxy(false);
     }, [currentKey, identifier]);
 
     useEffect(() => {
@@ -47,12 +53,19 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
                     throw new Error('Electron API not available');
                 }
 
+                // Determine effective proxy usage
+                // forceNoProxy takes precedence (manual fallback to direct)
+                // then forceProxy (manual switch to proxy)
+                // then undefined (user preference)
+                let useProxyParam: boolean | undefined = undefined;
+                if (forceNoProxy) useProxyParam = false;
+                else if (forceProxy) useProxyParam = true;
+
                 // Use IPC to fetch playback URL from main process
-                // Pass useProxy: false if we're in fallback mode
                 const result = await window.electronAPI.streams.getPlaybackUrl({
                     platform,
                     channelSlug: identifier,
-                    useProxy: forceNoProxy ? false : undefined // undefined = use user preference
+                    useProxy: useProxyParam
                 });
 
                 if (!result.success || !result.data) {
@@ -66,14 +79,19 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
                     });
                     // Detect if this is a proxy URL (check for known proxy domains)
                     const url = result.data.url;
-                    const usingProxy = (
+                    // Also consider it "using proxy" if we forced it, even if URL pattern matching assumes otherwise
+                    // (though usually URL pattern is reliable)
+                    const usingProxy = forceProxy || ((
                         url.includes('cdn-perfprod.com') ||
-                        url.includes('luminous.dev')
-                    ) && !forceNoProxy;
+                        url.includes('luminous.dev') ||
+                        url.includes('ttv.lol')
+                    ) && !forceNoProxy);
+
                     console.log(`[useStreamPlayback] Loaded URL:`, {
                         url: url.substring(0, 80) + '...',
                         isProxy: usingProxy,
-                        forceNoProxy
+                        forceNoProxy,
+                        forceProxy
                     });
                     setIsUsingProxy(usingProxy);
                     setIsLoading(false);
@@ -98,11 +116,21 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
         return () => {
             isMounted = false;
         };
-    }, [platform, identifier, reloadKey, forceNoProxy]);
+    }, [platform, identifier, reloadKey, forceNoProxy, forceProxy]);
 
     const retryWithoutProxy = useCallback(() => {
         console.log('[useStreamPlayback] Retrying without proxy (fallback to direct)');
         setForceNoProxy(true);
+        setForceProxy(false);
+        setPlayback(null);
+        setError(null);
+        setReloadKey(prev => prev + 1);
+    }, []);
+
+    const retryWithProxy = useCallback(() => {
+        console.log('[useStreamPlayback] Retrying with proxy (switching to proxy)');
+        setForceProxy(true);
+        setForceNoProxy(false);
         setPlayback(null);
         setError(null);
         setReloadKey(prev => prev + 1);
@@ -114,6 +142,7 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
         error,
         isUsingProxy,
         reload: () => setReloadKey(prev => prev + 1),
-        retryWithoutProxy
+        retryWithoutProxy,
+        retryWithProxy
     };
 }

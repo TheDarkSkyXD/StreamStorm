@@ -183,7 +183,7 @@ export function MiniPlayer() {
             {/* Video Player */}
             {!hasError && currentStream.streamUrl && (
                 <HlsPlayer
-                    ref={videoRef}
+                    ref={videoRef as any}
                     src={currentStream.streamUrl}
                     muted={isMuted}
                     autoPlay={true}

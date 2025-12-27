@@ -1,8 +1,9 @@
 import { ipcMain } from 'electron';
-import { Platform } from '../../../shared/auth-types';
+import { Platform, DEFAULT_ADBLOCK_PREFERENCES } from '../../../shared/auth-types';
 import { IPC_CHANNELS } from '../../../shared/ipc-channels';
 import { storageService } from '../../services/storage-service';
 import { StreamProxyConfig, DEFAULT_STREAM_PROXY_CONFIG } from '../../../shared/proxy-types';
+import { TwitchAdBlockConfig, createTwitchAdBlockConfig } from '../../../shared/adblock-types';
 
 export function registerStreamHandlers(): void {
     /**
@@ -283,7 +284,13 @@ export function registerStreamHandlers(): void {
 
     /**
      * Get playback URL for a live stream
-     * Supports optional proxy configuration for Twitch ad blocking
+     * Supports ad-blocking and optional proxy configuration for Twitch
+     *
+     * Priority:
+     * 1. If useProxy === true → force proxy (overrides ad-block)
+     * 2. If ad-block is enabled → use native ad-block
+     * 3. If proxy is configured → use proxy
+     * 4. Otherwise → use direct stream
      */
     ipcMain.handle(IPC_CHANNELS.STREAMS_GET_PLAYBACK_URL, async (_event, params: {
         platform: Platform;
@@ -298,29 +305,47 @@ export function registerStreamHandlers(): void {
 
         try {
             if (params.platform === 'twitch') {
-                let proxyConfig: StreamProxyConfig | undefined;
-
-                // Handle proxy opt-in/opt-out logic:
-                // - useProxy === true: force use proxy
-                // - useProxy === false: force skip proxy
-                // - useProxy === undefined: use user preference (default behavior)
-
-                // Safely read preferences with fallback for uninitialized state (e.g., first launch)
+                // Safely read preferences with fallback for uninitialized state
                 const preferences = storageService.getPreferences() ?? {};
+                const adBlockPrefs = preferences.advanced?.adBlock ?? DEFAULT_ADBLOCK_PREFERENCES;
                 const userProxyConfig = preferences.advanced?.streamProxy ?? DEFAULT_STREAM_PROXY_CONFIG;
 
-                if (params.useProxy === true ||
-                    (params.useProxy !== false && userProxyConfig.selectedProxy !== 'none')) {
+                // Build ad-block config if enabled
+                let adBlockConfig: TwitchAdBlockConfig | undefined;
+                let proxyConfig: StreamProxyConfig | undefined;
+
+                // Priority:
+                // 1. useProxy === true: Force proxy (overrides ad-block)
+                // 2. Ad-block enabled && useProxy !== true: Use ad-block
+                // 3. Proxy configured && useProxy !== false: Use proxy
+                // 4. Otherwise: Direct stream
+
+                if (params.useProxy === true) {
+                    // Explicit proxy force - takes precedence over ad-block
                     proxyConfig = userProxyConfig;
+                    console.log(`[StreamHandler] Forcing proxy: ${proxyConfig.selectedProxy}`);
+                } else if (adBlockPrefs.enabled && params.useProxy !== false) {
+                    // Ad-block enabled and proxy not explicitly forced
+                    // Use VAFT-style config with hardcoded optimal values
+                    adBlockConfig = createTwitchAdBlockConfig(true);
+                    console.log(`[StreamHandler] Using VAFT-style ad-block: playerType=${adBlockConfig.playerType}`);
+                } else if (
+                    params.useProxy !== false && userProxyConfig.selectedProxy !== 'none'
+                ) {
+                    // Proxy configured and not explicitly disabled
+                    proxyConfig = userProxyConfig;
+                    console.log(`[StreamHandler] Using proxy: ${proxyConfig.selectedProxy}`);
                 }
 
-                const result = await twitchResolver.getStreamPlaybackUrlWithProxy(
+                // Use the new method that handles both ad-block and proxy
+                const result = await twitchResolver.getStreamPlaybackUrlWithAdBlock(
                     params.channelSlug,
+                    adBlockConfig,
                     proxyConfig
                 );
                 return { success: true, data: result };
             } else if (params.platform === 'kick') {
-                // Kick doesn't need proxy (different ad system)
+                // Kick doesn't need proxy or ad-block (different ad system)
                 const result = await kickResolver.getStreamPlaybackUrl(params.channelSlug);
                 return { success: true, data: result };
             }
@@ -359,6 +384,75 @@ export function registerStreamHandlers(): void {
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to test proxy',
+            };
+        }
+    });
+
+    /**
+     * Find ad-free backup stream (VAFT ad-blocking)
+     * Called when ads are detected during playback to find an alternative stream
+     * 
+     * Phase 1: Supports resolution matching via preferredResolution
+     * Phase 2: Supports caching and minimal requests mode via lastPlayerReload
+     */
+    ipcMain.handle(IPC_CHANNELS.ADBLOCK_FIND_BACKUP_STREAM, async (_event, params: {
+        channelLogin: string;
+        skipPlayerTypes?: string[];
+        timeoutMs?: number;
+        preferredResolution?: string;
+        lastPlayerReload?: number;
+        skipCache?: boolean;
+    }) => {
+        try {
+            const { getBackupStreamService } = await import('../../adblock/twitch-backup-stream-service');
+            const backupService = getBackupStreamService();
+
+            const result = await backupService.findAdFreeStream({
+                channelLogin: params.channelLogin,
+                skipPlayerTypes: params.skipPlayerTypes,
+                timeoutMs: params.timeoutMs,
+                preferredResolution: params.preferredResolution,
+                lastPlayerReload: params.lastPlayerReload,
+                skipCache: params.skipCache,
+            });
+
+            if (result) {
+                return {
+                    success: true,
+                    data: result,
+                };
+            } else {
+                return {
+                    success: false,
+                    error: 'No ad-free backup stream found',
+                };
+            }
+        } catch (error) {
+            console.error('❌ Failed to find backup stream:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to find backup stream',
+            };
+        }
+    });
+
+    /**
+     * Clear backup stream cache (Phase 2)
+     * Should be called when switching streams to prevent stale data
+     */
+    ipcMain.handle(IPC_CHANNELS.ADBLOCK_CLEAR_CACHE, async (_event, params: {
+        channelLogin?: string;
+    }) => {
+        try {
+            const { getBackupStreamService } = await import('../../adblock/twitch-backup-stream-service');
+            const backupService = getBackupStreamService();
+            backupService.clearCache(params.channelLogin);
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Failed to clear backup cache:', error);
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Failed to clear cache',
             };
         }
     });

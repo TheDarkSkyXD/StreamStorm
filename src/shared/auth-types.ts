@@ -5,6 +5,7 @@
  */
 
 import { StreamProxyConfig, DEFAULT_STREAM_PROXY_CONFIG } from './proxy-types';
+import { AdBlockConfig, DEFAULT_ADBLOCK_CONFIG } from './adblock-types';
 // ========== Platform Types ==========
 
 export type Platform = 'twitch' | 'kick';
@@ -115,6 +116,121 @@ export interface PlaybackPreferences {
 }
 
 /**
+ * Ad-block preferences for Twitch streams.
+ * Uses VAFT-style ad-blocking with hardcoded optimal strategies.
+ */
+export interface AdBlockPreferences {
+    /** Enable native ad-blocking (mutually exclusive with streamProxy) */
+    enabled: boolean;
+
+    /** Hide video and mute when ads are detected (fallback protection) */
+    hideAdsDuringPlayback: boolean;
+
+    /**
+     * Show blocking status overlay in top-left corner.
+     * e.g., "Blocking midroll ads"
+     * @default true
+     */
+    showStatusOverlay: boolean;
+}
+
+/**
+ * Buffering recovery preferences for stream stability.
+ * Phase 3 VAFT feature: Automatic detection and recovery of stuck playback.
+ */
+export interface BufferingRecoveryPreferences {
+    /** Enable automatic buffering recovery. Default: true */
+    enabled: boolean;
+
+    /**
+     * Detection sensitivity preset.
+     * - 'low': Very conservative (5 stuck checks, 0.5s danger zone, 10s cooldown)
+     * - 'medium': Balanced (3 stuck checks, 1s danger zone, 5s cooldown) - DEFAULT
+     * - 'high': Aggressive (2 stuck checks, 2s danger zone, 3s cooldown)
+     */
+    sensitivity: 'low' | 'medium' | 'high';
+
+    /** Show a subtle notification when recovery triggers. Default: false */
+    showNotification: boolean;
+}
+
+/**
+ * Sensitivity preset configurations for buffering recovery.
+ */
+export const BUFFERING_RECOVERY_PRESETS = {
+    low: {
+        checkIntervalMs: 500,
+        sameStateThreshold: 5,
+        dangerZoneSeconds: 0.5,
+        minRepeatDelayMs: 10000,
+    },
+    medium: {
+        checkIntervalMs: 500,
+        sameStateThreshold: 3,
+        dangerZoneSeconds: 1,
+        minRepeatDelayMs: 5000,
+    },
+    high: {
+        checkIntervalMs: 500,
+        sameStateThreshold: 2,
+        dangerZoneSeconds: 2,
+        minRepeatDelayMs: 3000,
+    },
+} as const;
+
+/**
+ * Enhanced Features preferences (Phase 4 VAFT).
+ * Advanced ad-blocking and playback optimization features.
+ */
+export interface EnhancedFeaturesPreferences {
+    /**
+     * Enable visibility state spoofing for background playback.
+     * Prevents the player from pausing when window loses focus.
+     * Useful for PiP and multi-monitor setups.
+     *
+     * Based on VAFT lines 971-1027.
+     * @default false
+     */
+    visibilitySpoofing: boolean;
+
+    /**
+     * Force AVC codec over HEVC for better compatibility.
+     * Some browsers (especially Chrome) may not fully support HEVC playback.
+     * When enabled, the app will prefer AVC variants over HEVC for 2K/4K streams.
+     *
+     * Based on VAFT lines 329-355.
+     * @default false (auto-detect)
+     */
+    forceAvcCodec: boolean;
+
+    /**
+     * Use ad segment stripping for additional ad blocking.
+     * Replaces ad segments in the playlist with a placeholder video.
+     * This is more aggressive than just hiding the player during ads.
+     *
+     * Based on VAFT lines 391-430.
+     * @default false (experimental)
+     */
+    adSegmentStripping: boolean;
+
+    /**
+     * Ad segment stripping mode.
+     * - 'placeholder': Replace ad segments with a black/silent video
+     * - 'skip': Remove ad segments entirely (may cause timing issues)
+     *
+     * @default 'placeholder'
+     */
+    adStrippingMode: 'placeholder' | 'skip';
+}
+
+export const DEFAULT_ENHANCED_FEATURES_PREFERENCES: EnhancedFeaturesPreferences = {
+    visibilitySpoofing: false,
+    forceAvcCodec: false,
+    adSegmentStripping: false,
+    adStrippingMode: 'placeholder',
+};
+
+/**
  * Advanced/Developer preferences.
  * These settings control behavior that may have security or compliance implications.
  */
@@ -141,13 +257,41 @@ export interface AdvancedPreferences {
     /**
      * Stream proxy configuration for ad blocking (Twitch only).
      * Routes HLS manifest requests through external servers to bypass ads.
-     * 
+     *
      * Based on the Twire Android app implementation.
      * @see https://github.com/twireapp/Twire
-     * 
+     *
+     * ⚠️ MUTUAL EXCLUSIVITY: If adBlock.enabled is true, streamProxy is ignored.
+     *
      * @default { selectedProxy: 'none', fallbackToDirect: true }
      */
     streamProxy: StreamProxyConfig;
+
+    /**
+     * Native ad-block configuration for Twitch streams.
+     * Uses token manipulation and device ID randomization to reduce ads.
+     *
+     * ⚠️ MUTUAL EXCLUSIVITY: When enabled, streamProxy is automatically disabled.
+     *
+     * @default { enabled: false, useRandomDeviceId: true, livePlayerType: 'embed', ... }
+     */
+    adBlock: AdBlockPreferences;
+
+    /**
+     * Buffering recovery configuration for stream stability.
+     * Automatically detects and recovers stuck playback.
+     *
+     * @default { enabled: true, recoveryMethod: 'pause-play', sensitivity: 'medium', showNotification: false }
+     */
+    bufferingRecovery: BufferingRecoveryPreferences;
+
+    /**
+     * Enhanced features configuration (Phase 4 VAFT).
+     * Advanced ad-blocking and playback optimization features.
+     *
+     * @default { visibilitySpoofing: false, forceAvcCodec: false, adSegmentStripping: false }
+     */
+    enhancedFeatures: EnhancedFeaturesPreferences;
 }
 
 export interface UserPreferences {
@@ -247,9 +391,24 @@ export const DEFAULT_PLAYBACK_PREFERENCES: PlaybackPreferences = {
     muted: false,
 };
 
+export const DEFAULT_ADBLOCK_PREFERENCES: AdBlockPreferences = {
+    enabled: false, // Disabled by default (user must opt-in)
+    hideAdsDuringPlayback: true, // Always mute/hide when ads leak through
+    showStatusOverlay: true, // Show status by default
+};
+
+export const DEFAULT_BUFFERING_RECOVERY_PREFERENCES: BufferingRecoveryPreferences = {
+    enabled: true, // Enabled by default for better UX
+    sensitivity: 'medium', // Balanced default
+    showNotification: false, // Don't spam user
+};
+
 export const DEFAULT_ADVANCED_PREFERENCES: AdvancedPreferences = {
     enableImageProxy: true, // Enabled by default for better UX
     streamProxy: DEFAULT_STREAM_PROXY_CONFIG, // Disabled by default, user must opt-in
+    adBlock: DEFAULT_ADBLOCK_PREFERENCES, // Disabled by default, user must opt-in
+    bufferingRecovery: DEFAULT_BUFFERING_RECOVERY_PREFERENCES, // Enabled by default
+    enhancedFeatures: DEFAULT_ENHANCED_FEATURES_PREFERENCES, // Disabled by default (experimental)
 };
 
 export const DEFAULT_USER_PREFERENCES: UserPreferences = {
