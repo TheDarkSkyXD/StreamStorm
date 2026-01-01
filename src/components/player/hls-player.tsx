@@ -25,6 +25,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
     const isMountedRef = useRef(true);
     const pendingPlayRef = useRef<Promise<void> | null>(null);
     const playRequestIdRef = useRef(0); // Track play request to cancel stale ones
+    const lastRecoveryAttemptRef = useRef<number | null>(null); // Rate limit recovery attempts
 
     // Expose video ref to parent
     useImperativeHandle(ref, () => videoRef.current as HTMLVideoElement);
@@ -62,6 +63,8 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
         // Scoped active flag to handle rapid stream switching robustly
         let isEffectActive = true;
         isMountedRef.current = true;
+        // Reset recovery attempt tracker for new stream
+        lastRecoveryAttemptRef.current = null;
 
         let hls: Hls | null = null;
         // Track event handlers for cleanup (used by native HLS and standard playback)
@@ -126,10 +129,17 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 startFragPrefetch: true, // Start fetching fragment immediately for faster start
                 backBufferLength: 90,
                 // Refined for stability to prevent bufferStalledError
-                liveSyncDurationCount: 2, // Closer to live edge (was 3)
-                liveMaxLatencyDurationCount: 5, // Jump to live sooner if behind (was 10)
+                liveSyncDurationCount: 3, // Slightly behind live edge for stability
+                liveMaxLatencyDurationCount: 8, // More tolerance before jumping to live
                 maxBufferLength: 30, // 30 seconds buffer
                 maxMaxBufferLength: 60,
+                // Buffer stall recovery settings (HLS.js handles these automatically)
+                maxBufferHole: 0.5, // Increased tolerance for buffer gaps (default 0.1)
+                highBufferWatchdogPeriod: 3, // Seconds before nudging starts (default 3)
+                nudgeOffset: 0.2, // Nudge amount per retry (default 0.1)
+                nudgeMaxRetry: 5, // Max nudge attempts before fatal (default 3)
+                // Buffer append error retry settings
+                appendErrorMaxRetry: 5, // Retry buffer append up to 5 times (default 3)
                 // Manifest loading retry settings - use fewer retries for proxy URLs
                 manifestLoadingMaxRetry: isProxyUrl ? 1 : 3, // Fast fail for proxy
                 manifestLoadingRetryDelay: isProxyUrl ? 1000 : 5000, // Shorter delay for proxy
@@ -281,10 +291,30 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                             });
                             hls?.destroy();
                             break;
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            console.log('[HLS] Fatal media error encountered, trying to recover...');
-                            hls?.recoverMediaError();
+                        case Hls.ErrorTypes.MEDIA_ERROR: {
+                            // Rate limit recovery attempts to prevent infinite recovery loops
+                            // Per HLS.js docs: only attempt recovery if 5+ seconds since last attempt
+                            const now = Date.now();
+                            const lastAttempt = lastRecoveryAttemptRef.current;
+
+                            if (!lastAttempt || now - lastAttempt > 5000) {
+                                console.log('[HLS] Fatal media error encountered, attempting recovery...');
+                                lastRecoveryAttemptRef.current = now;
+                                hls?.recoverMediaError();
+                            } else {
+                                const timeSince = Math.round((now - lastAttempt) / 1000);
+                                console.warn(`[HLS] Fatal media error - skipping recovery (only ${timeSince}s since last attempt)`);
+                                // If we can't recover, report the error
+                                onErrorRef.current?.({
+                                    code: 'MEDIA_ERROR',
+                                    message: `Fatal media error: ${data.details}`,
+                                    fatal: true,
+                                    originalError: data
+                                });
+                                hls?.destroy();
+                            }
                             break;
+                        }
                         default:
                             console.error('[HLS] Unrecoverable error', data);
                             onErrorRef.current?.({
@@ -297,26 +327,23 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                             break;
                     }
                 } else {
-                    // Non-fatal error - HLS.js is handling this internally (retrying)
+                    // Non-fatal error - HLS.js handles these internally
+                    // IMPORTANT: Do NOT call recoverMediaError() for non-fatal errors!
+                    // HLS.js automatically handles buffer stalls via nudging (configured above)
                     if (data.details === 'bufferStalledError') {
                         const video = videoRef.current;
-                        if (video && !video.paused) {
+                        if (video && !video.paused && video.buffered.length > 0) {
+                            const currentTime = video.currentTime;
+                            const bufferStart = video.buffered.start(0);
 
-                            if (video.buffered.length > 0) {
-                                const currentTime = video.currentTime;
-                                const bufferStart = video.buffered.start(0);
-
-                                // If we're at position 0 (or very close) and buffer starts later,
-                                // seek to where the buffer actually begins
-                                if (currentTime < 1 && bufferStart > currentTime + 0.5) {
-                                    console.debug(`[HLS] Buffer gap detected at start. Current: ${currentTime.toFixed(2)}s, Buffer starts: ${bufferStart.toFixed(2)}s. Seeking to buffer start.`);
-                                    video.currentTime = bufferStart + 0.1; // Seek slightly into the buffer
-                                    return;
-                                }
+                            // If we're at position 0 (or very close) and buffer starts later,
+                            // seek to where the buffer actually begins (startup edge case)
+                            if (currentTime < 1 && bufferStart > currentTime + 0.5) {
+                                console.debug(`[HLS] Buffer gap at start. Seeking from ${currentTime.toFixed(2)}s to ${bufferStart.toFixed(2)}s`);
+                                video.currentTime = bufferStart + 0.1;
                             }
-
-                            // Otherwise try media recovery
-                            hls?.recoverMediaError();
+                            // Otherwise let HLS.js handle it via automatic nudging
+                            // Do NOT call recoverMediaError() - it can cause bufferAppendError
                         }
                     } else if (data.details === 'levelSwitchError') {
                         // Don't log - handled automatically

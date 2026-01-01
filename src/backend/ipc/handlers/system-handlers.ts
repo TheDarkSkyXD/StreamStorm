@@ -94,12 +94,16 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
      * IMAGE PROXY HANDLER
      * 
      * This handler fetches images that are blocked due to CORS or hotlinking restrictions
-     * (e.g., Kick CDN's files.kick.com) and returns them as base64 data URLs.
+     * and returns them as base64 data URLs.
+     * 
+     * KICK CDN HOTLINKING PROTECTION:
+     * - files.kick.com (profile images, banners): Requires Referer header
+     * - images.kick.com (video/VOD thumbnails): Requires Referer header due to hotlinking protection
      * 
      * WHY THIS IS NECESSARY:
-     * - Kick CDN (files.kick.com) returns 403 Forbidden for requests without a valid Referer header
+     * - Kick CDN returns 403 Forbidden for requests without a valid Referer header
      * - Browser/Electron renderer processes cannot set Referer headers for cross-origin requests
-     * - Desktop apps need to display user profile images, offline banners, etc.
+     * - Desktop apps need to display user profile images, offline banners, and video thumbnails
      * 
      * APPROACH:
      * - Uses Electron's main process `net.request` which can set arbitrary headers
@@ -141,9 +145,13 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
             }
 
             // Determine the appropriate headers based on the domain
-            const isKickCDN = parsedUrl.hostname.includes('kick.com') ||
-                parsedUrl.hostname.includes('images.kick.com') ||
-                parsedUrl.hostname.includes('files.kick.com');
+            // Both files.kick.com and images.kick.com require Referer headers due to hot linking protection
+            // SECURITY: Use strict matching to prevent subdomain spoofing (e.g. files.kick.com.attacker.com)
+            const isKickCDN =
+                parsedUrl.hostname === 'files.kick.com' ||
+                parsedUrl.hostname.endsWith('.files.kick.com') ||
+                parsedUrl.hostname === 'images.kick.com' ||
+                parsedUrl.hostname.endsWith('.images.kick.com');
 
             // For Kick CDN, use Node.js https module (more reliable than Electron's net for this)
             if (isKickCDN) {
@@ -232,8 +240,12 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
             }
 
             // For other CDNs (Twitch, etc), use regular fetch
-            const isTwitchCDN = parsedUrl.hostname.includes('jtvnw.net') ||
-                parsedUrl.hostname.includes('twitch.tv');
+            // SECURITY: Use strict matching to prevent subdomain spoofing
+            const isTwitchCDN =
+                parsedUrl.hostname === 'jtvnw.net' ||
+                parsedUrl.hostname.endsWith('.jtvnw.net') ||
+                parsedUrl.hostname === 'twitch.tv' ||
+                parsedUrl.hostname.endsWith('.twitch.tv');
 
             const headers: Record<string, string> = {
                 'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
