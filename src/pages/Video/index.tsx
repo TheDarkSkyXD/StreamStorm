@@ -8,6 +8,7 @@ import { VideoCard } from '@/components/stream/related-content/VideoCard';
 import { VideoOrClip } from '@/components/stream/related-content/types';
 import { Platform } from '@/shared/auth-types';
 import { useFollowStore } from '@/store/follow-store';
+import { useHistoryStore } from '@/store/history-store';
 
 interface VideoMetadata {
     id: string;
@@ -205,6 +206,23 @@ export function VideoPage() {
     const channelName = videoMetadata?.channelName || passedChannelName || "channel";
     const channelDisplayName = videoMetadata?.channelDisplayName || passedChannelDisplayName || passedChannelName || "Channel";
     const channelAvatar = videoMetadata?.channelAvatar || passedChannelAvatar;
+
+    // Save to history
+    const { addToHistory } = useHistoryStore();
+    useEffect(() => {
+        if (platform && videoId && videoTitle !== "Loading...") {
+            addToHistory({
+                id: `${platform}-video-${videoId}`,
+                originalId: videoId,
+                title: videoTitle,
+                thumbnail: videoMetadata?.thumbnailUrl || '', // Would be nice to have passedThumbnail
+                platform: platform as 'twitch' | 'kick',
+                type: 'video',
+                channelName: channelName,
+                channelDisplayName: channelDisplayName
+            });
+        }
+    }, [platform, videoId, videoTitle, channelName, channelDisplayName, videoMetadata, addToHistory]);
     const views = videoMetadata ? formatViews(videoMetadata.views) : (passedViews ? formatViews(passedViews) : "—");
     const date = videoMetadata ? formatRelativeDate(videoMetadata.createdAt) : (passedDate ? formatRelativeDate(passedDate) : "—");
     const category = videoMetadata?.category || passedCategory;

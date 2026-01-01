@@ -1,5 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router';
-import { Home, Heart, Grid3X3, Settings, LayoutDashboard } from 'lucide-react';
+import { Home, Heart, Grid3X3, Settings, LayoutDashboard, History, Download } from 'lucide-react';
 import React from 'react';
 
 import { useAuthInitialize } from '@/hooks/useAuth';
@@ -20,6 +20,8 @@ const navItems = [
   { path: '/following', label: 'Following', icon: Heart },
   { path: '/categories', label: 'Categories', icon: Grid3X3 },
   { path: '/multistream', label: 'MultiView', icon: LayoutDashboard },
+  { path: '/history', label: 'History', icon: History },
+  { path: '/downloads', label: 'Downloads', icon: Download },
   { path: '/settings', label: 'Settings', icon: Settings },
 ] as const;
 

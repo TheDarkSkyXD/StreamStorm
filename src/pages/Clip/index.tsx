@@ -1,8 +1,8 @@
-import { useParams } from '@tanstack/react-router';
+import { useParams, Link } from '@tanstack/react-router';
 import { Button } from '@/components/ui/button';
 import { Heart, HeartCrack } from 'lucide-react';
-import { useState } from 'react';
-import { Link } from '@tanstack/react-router';
+import { useState, useEffect } from 'react';
+import { useHistoryStore } from '@/store/history-store';
 
 // Mock data matching the StreamPage mocks
 const MOCK_CLIPS = Array.from({ length: 6 }).map((_, i) => ({
@@ -28,6 +28,23 @@ export function ClipPage() {
         id: clipId,
         title: 'Clip not found (Mock Fallback)'
     };
+
+    const { addToHistory } = useHistoryStore();
+
+    useEffect(() => {
+        if (clip) {
+            addToHistory({
+                id: `${platform}-clip-${clip.id}`,
+                originalId: clip.id,
+                title: clip.title,
+                thumbnail: '',
+                platform: platform as 'twitch' | 'kick',
+                type: 'clip',
+                channelName: clip.channelName,
+                channelDisplayName: clip.channelName
+            });
+        }
+    }, [clip, platform, addToHistory]);
 
     const getFollowButtonStyles = () => {
         if (isFollowing) {

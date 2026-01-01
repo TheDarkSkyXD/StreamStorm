@@ -18,6 +18,8 @@ import {
   SettingsPage,
   ClipPage,
   MultiStreamPage,
+  HistoryPage,
+  DownloadsPage,
 } from '@/pages';
 
 // Root layout (wraps everything)
@@ -144,6 +146,20 @@ const multiStreamRoute = createRoute({
   component: MultiStreamPage,
 });
 
+// History page
+const historyRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/history',
+  component: HistoryPage,
+});
+
+// Downloads page
+const downloadsRoute = createRoute({
+  getParentRoute: () => appLayoutRoute,
+  path: '/downloads',
+  component: DownloadsPage,
+});
+
 // Build the route tree
 const routeTree = rootRoute.addChildren([
   appLayoutRoute.addChildren([
@@ -157,6 +173,8 @@ const routeTree = rootRoute.addChildren([
     clipRoute,
     settingsRoute,
     multiStreamRoute,
+    historyRoute,
+    downloadsRoute,
   ]),
 ]);
 

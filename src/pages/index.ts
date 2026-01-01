@@ -9,3 +9,5 @@ export { VideoPage } from './Video';
 export { ClipPage } from './Clip';
 
 export { MultiStreamPage } from './MultiStream';
+export { HistoryPage } from './History';
+export { DownloadsPage } from './Downloads';
