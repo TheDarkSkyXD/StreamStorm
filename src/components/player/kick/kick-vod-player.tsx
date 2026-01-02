@@ -197,7 +197,7 @@ export function KickVodPlayer(props: KickVodPlayerProps) {
                     ref={videoRef}
                     src={streamUrl}
                     poster={poster}
-                    muted={initialMuted}
+                    muted={isMuted}
                     autoPlay={autoPlay}
                     currentLevel={currentQualityId}
                     onQualityLevels={handleQualityLevels}

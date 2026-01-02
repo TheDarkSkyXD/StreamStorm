@@ -167,7 +167,7 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
                     ref={videoRef}
                     src={streamUrl}
                     poster={poster}
-                    muted={initialMuted}
+                    muted={isMuted}
                     autoPlay={autoPlay}
                     currentLevel={currentQualityId}
                     onQualityLevels={handleQualityLevels}
