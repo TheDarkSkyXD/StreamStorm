@@ -70,7 +70,7 @@ function WindowButton({ onClick, isClose, children, 'aria-label': ariaLabel }: W
       onClick={onClick}
       aria-label={ariaLabel}
       className={cn(
-        'w-12 h-full flex items-center justify-center transition-colors',
+        'w-12 h-full flex items-center justify-center transition-colors focus:outline-none',
         'text-white',
         isClose
           ? 'hover:bg-red-500 hover:text-white'
