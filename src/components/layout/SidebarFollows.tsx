@@ -135,7 +135,7 @@ export function SidebarFollows({ collapsed }: SidebarFollowsProps) {
 
             {/* Since sidebar is a flex col, we want this list to scroll effectively */}
             <ScrollArea className="flex-1">
-                <div className="px-2 pb-2 space-y-1">
+                <div className="pl-2 pr-4 pb-2 space-y-1">
                     {liveChannels.map((stream) => (
                         <Link
                             key={`${stream.platform}-${stream.channelId}`}
@@ -173,7 +173,7 @@ export function SidebarFollows({ collapsed }: SidebarFollowsProps) {
                             {!collapsed && (
                                 <div className="flex flex-col min-w-0 flex-1">
                                     <div className="flex justify-between items-center gap-1">
-                                        <span className="truncate font-bold text-sm text-white group-hover:text-[var(--color-primary)] transition-colors">
+                                        <span className="truncate font-bold text-sm text-white group-hover:text-[var(--color-primary)] transition-colors flex-1">
                                             {stream.channelDisplayName}
                                         </span>
                                         <div className="flex items-center gap-1.5 shrink-0">
