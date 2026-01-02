@@ -203,33 +203,21 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
 
             // Handle HLS errors - distinguish between expected stream-ending scenarios and actual errors
             hls.on(Hls.Events.ERROR, (event, data) => {
-                // Completely ignore innocuous errors that resolve themselves automatically
-                // - bufferStalledError: temporary buffer underrun, HLS.js recovers automatically
-                // - fragLoadError (non-fatal): transient network errors like ERR_INCOMPLETE_CHUNKED_ENCODING
-                // Reporting fatal errors for debugging robust stream handling
-                const silentErrors = ['bufferStalledError', 'levelSwitchError', 'fragLoadError'];
-
-                // Debug logging for error structure
-                console.log(`[HLS] Error event:`, {
-                    details: data.details,
-                    fatal: data.fatal,
-                    type: data.type,
-                    // @ts-ignore - check all possible status code paths
-                    responseCode: data.response?.code,
-                    // @ts-ignore 
-                    statusCode: data.response?.status,
-                    // @ts-ignore
-                    networkDetails: data.networkDetails?.status,
-                    isProxyUrl
-                });
+                // Non-fatal errors that HLS.js recovers from automatically - don't spam the console
+                // - bufferStalledError: temporary buffer underrun, recovered via nudging
+                // - levelSwitchError: quality switch failed, HLS.js retries
+                // - fragLoadError: transient network errors, HLS.js retries
+                // - fragParsingError: corrupted segment, HLS.js skips to next
+                const silentErrors = ['bufferStalledError', 'levelSwitchError', 'fragLoadError', 'fragParsingError'];
 
                 // Check for 404/403/500 on manifest load - indicates stream is definitely gone or proxy error
                 // Stop retrying immediately to prevent console noise
                 // @ts-ignore - response exists on ErrorData for network errors
                 const statusCode = data.response?.code || data.response?.status || data.networkDetails?.status;
 
+                // Handle critical manifest errors early - no point retrying these
                 if (data.details === 'manifestLoadError' && (statusCode === 404 || statusCode === 403)) {
-                    console.debug(`[HLS] Critical network error ${statusCode}, stopping retries`);
+                    console.debug(`[HLS] Stream unavailable (${statusCode}), stopping retries`);
                     hls?.destroy();
                     onErrorRef.current?.({
                         code: 'STREAM_OFFLINE',
@@ -242,7 +230,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
 
                 // Handle 500 errors specially - likely proxy server error
                 if (data.details === 'manifestLoadError' && statusCode === 500) {
-                    console.log(`[HLS] Proxy/server error ${statusCode}, triggering fallback`);
+                    console.debug(`[HLS] Proxy/server error (${statusCode}), triggering fallback`);
                     hls?.destroy();
                     onErrorRef.current?.({
                         code: 'PROXY_ERROR',
@@ -253,9 +241,9 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                     return;
                 }
 
-                // For proxy URLs, treat any manifest error as proxy failure
+                // For proxy URLs, treat any fatal manifest error as proxy failure
                 if (isProxyUrl && data.details === 'manifestLoadError' && data.fatal) {
-                    console.log(`[HLS] Proxy manifest load failed (status: ${statusCode || 'unknown'}), triggering fallback`);
+                    console.debug(`[HLS] Proxy manifest load failed (status: ${statusCode || 'unknown'})`);
                     hls?.destroy();
                     onErrorRef.current?.({
                         code: 'PROXY_ERROR',
@@ -266,9 +254,11 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                     return;
                 }
 
-                // Only log fatal or unexpected errors - non-fatal ones are handled automatically
-                if (data.fatal || !silentErrors.includes(data.details)) {
-                    console.debug(`[HLS] Error: ${data.details}, fatal: ${data.fatal}, type: ${data.type}`);
+                // Only log errors that are fatal or unexpected (not in silent list)
+                const shouldLog = data.fatal || !silentErrors.includes(data.details);
+                if (shouldLog) {
+                    console.debug(`[HLS] Error: ${data.details}, fatal: ${data.fatal}, type: ${data.type}`,
+                        statusCode ? `(status: ${statusCode})` : '');
                 }
 
                 const isStreamEndingError =
