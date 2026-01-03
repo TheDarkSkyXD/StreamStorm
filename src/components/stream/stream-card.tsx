@@ -75,10 +75,11 @@ export function StreamCard({ stream, showCategory = true }: StreamCardProps) {
                                 {stream.categoryName}
                             </div>
                         )}
-                        <div className="text-xs font-semibold text-[var(--color-foreground-secondary)] truncate mt-0.5">
-                            {stream.channelDisplayName}
+                        <div className="flex items-center gap-1.5 mt-1">
+                            <span className="text-sm font-bold text-[#b5b5b5] truncate leading-none">
+                                {stream.channelDisplayName}
+                            </span>
                         </div>
-                        {/* Tags */}
                         {/* Tags */}
                         {(() => {
                             // Prepare tags list
@@ -117,11 +118,11 @@ export function StreamCard({ stream, showCategory = true }: StreamCardProps) {
                             const finalTags = displayTags.slice(0, maxTags);
 
                             return (
-                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                <div className="flex flex-wrap gap-1.5 mt-1.5">
                                     {finalTags.map((tag, index) => (
                                         <span
                                             key={`${tag}-${index}`}
-                                            className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#24272C] text-[#EFEFF1] hover:bg-[#32353B] transition-colors whitespace-nowrap"
+                                            className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#35373C] text-white hover:bg-[#464950] transition-colors whitespace-nowrap"
                                         >
                                             {tag}
                                         </span>
