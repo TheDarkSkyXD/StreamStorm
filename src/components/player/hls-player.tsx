@@ -70,6 +70,8 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
         // Track event handlers for cleanup (used by native HLS and standard playback)
         let handleLoadedMetadata: (() => void) | null = null;
         let handleError: ((e: Event) => void) | null = null;
+        // Heartbeat interval for fast offline detection (cleaned up in effect cleanup)
+        let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
         // Safe play helper that handles interruption gracefully
         const safePlay = () => {
@@ -140,18 +142,26 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 nudgeMaxRetry: 5, // Max nudge attempts before fatal (default 3)
                 // Buffer append error retry settings
                 appendErrorMaxRetry: 5, // Retry buffer append up to 5 times (default 3)
-                // Manifest loading retry settings - use fewer retries for proxy URLs
-                manifestLoadingMaxRetry: isProxyUrl ? 1 : 3, // Fast fail for proxy
-                manifestLoadingRetryDelay: isProxyUrl ? 1000 : 5000, // Shorter delay for proxy
-                manifestLoadingMaxRetryTimeout: isProxyUrl ? 5000 : 30000,
-                // Level loading retry settings
-                levelLoadingMaxRetry: isProxyUrl ? 1 : 3,
-                levelLoadingRetryDelay: isProxyUrl ? 1000 : 5000,
-                // Fragment loading retry settings - more aggressive for live streams
-                // Transient errors like ERR_INCOMPLETE_CHUNKED_ENCODING are common
-                fragLoadingMaxRetry: 6, // More retries for fragments (they fail more often on live)
-                fragLoadingRetryDelay: 1000, // Faster initial retry (was 5000)
-                fragLoadingMaxRetryTimeout: 30000, // Cap total retry time
+
+                // === FAST OFFLINE DETECTION SETTINGS ===
+                // Manifest loading - detect offline quickly (stream ended/unavailable)
+                manifestLoadingTimeOut: isProxyUrl ? 5000 : 8000, // Fail fast if manifest doesn't load (default 10000)
+                manifestLoadingMaxRetry: isProxyUrl ? 0 : 1, // Minimal retries - if manifest 404s, stream is gone
+                manifestLoadingRetryDelay: 500, // Very short delay between retries (default 1000)
+                manifestLoadingMaxRetryTimeout: isProxyUrl ? 5000 : 10000, // Cap total retry time
+
+                // Level/playlist loading - also needs fast detection for offline
+                levelLoadingTimeOut: isProxyUrl ? 5000 : 8000, // Fail fast on playlist load (default 10000)
+                levelLoadingMaxRetry: isProxyUrl ? 0 : 1, // Minimal retries
+                levelLoadingRetryDelay: 500, // Short delay
+                levelLoadingMaxRetryTimeout: isProxyUrl ? 5000 : 10000,
+
+                // Fragment loading - more tolerant since transient errors are common during live playback
+                fragLoadingTimeOut: 15000, // 15s timeout per fragment (default 20000)
+                fragLoadingMaxRetry: 4, // Reduced from 6, still handles transient errors
+                fragLoadingRetryDelay: 500, // Faster retry (was 1000)
+                fragLoadingMaxRetryTimeout: 20000, // Cap total retry time (was 30000)
+
                 xhrSetup: (xhr, url) => {
                     xhr.withCredentials = false; // Important to avoid CORS issues with wildcards
                 },
@@ -344,7 +354,44 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 }
             });
 
+            // === FAST OFFLINE DETECTION HEARTBEAT ===
+            // For live streams, periodically check if we're still receiving fragments
+            // This detects offline status faster than waiting for natural HLS timeouts
+            let lastFragLoadedTime = Date.now();
 
+            // Track successful fragment loads
+            hls.on(Hls.Events.FRAG_LOADED, () => {
+                lastFragLoadedTime = Date.now();
+            });
+
+            // Start heartbeat after manifest is parsed (stream is playing)
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                // Clear any existing heartbeat
+                if (heartbeatInterval) clearInterval(heartbeatInterval);
+
+                // Check every 10 seconds if fragments are still arriving
+                heartbeatInterval = setInterval(() => {
+                    if (!isEffectActive || !hls) {
+                        if (heartbeatInterval) clearInterval(heartbeatInterval);
+                        return;
+                    }
+
+                    const timeSinceLastFrag = Date.now() - lastFragLoadedTime;
+
+                    // If no fragments received in 15 seconds, the stream might be dead
+                    // Trigger a manifest reload to check status immediately
+                    if (timeSinceLastFrag > 15000) {
+                        console.debug(`[HLS] Heartbeat: No fragments in ${Math.round(timeSinceLastFrag / 1000)}s, checking stream...`);
+                        // Force HLS to reload by restarting the load process
+                        // startLoad() is the public API that triggers manifest reload
+                        try {
+                            hls.startLoad(-1); // -1 means start from live edge
+                        } catch (e) {
+                            // HLS may be in an invalid state, ignore
+                        }
+                    }
+                }, 10000); // Check every 10 seconds
+            });
 
         } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
             // Native HLS (Safari)
@@ -391,6 +438,12 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             isEffectActive = false;
             isMountedRef.current = false;
             pendingPlayRef.current = null;
+
+            // Clean up heartbeat interval first (before HLS destroy)
+            if (heartbeatInterval) {
+                clearInterval(heartbeatInterval);
+                heartbeatInterval = null;
+            }
 
             if (hls) {
                 hls.destroy();
