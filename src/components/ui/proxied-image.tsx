@@ -8,8 +8,15 @@
 import React, { useEffect, useState } from 'react';
 import { Skeleton } from './skeleton';
 
-// Domains that require proxying due to hotlinking or CORS restrictions
-const PROXY_REQUIRED_DOMAINS = [
+// Domains that require IPC proxying (image fetched in main process, returned as base64)
+//
+// Kick CDN domains require the IPC proxy because:
+// 1. files.kick.com and images.kick.com have strict hotlinking protection
+// 2. Electron's request interceptor (onBeforeSendHeaders) doesn't reliably set Referer headers
+// 3. The IPC proxy uses Electron's net.request which can set headers properly
+//
+// @see src/backend/ipc/handlers/system-handlers.ts
+const PROXY_REQUIRED_DOMAINS: string[] = [
     'files.kick.com',
     'images.kick.com',
 ];
