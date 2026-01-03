@@ -33,7 +33,7 @@ export function StreamPage() {
   const { data: streamData, isLoading: isStreamLoading } = useStreamByChannel(channelName, platform as Platform);
 
   // Chat Resizing Logic
-  const [chatWidth, setChatWidth] = useState(350);
+  const [chatWidth, setChatWidth] = useState(300);
   const [isResizing, setIsResizing] = useState(false);
 
   // Theater Mode Logic - synced with app store for sidebar auto-collapse
@@ -137,6 +137,15 @@ export function StreamPage() {
     };
   }, [setIsOnStreamPage, setTheaterModeActive]);
 
+  // Adjust chat width when toggling theater mode to optimize video size/black bars
+  useEffect(() => {
+    if (isTheater) {
+      setChatWidth(250); // Narrower chat in theater mode to maximize video height
+    } else {
+      setChatWidth(300); // Standard width for normal mode
+    }
+  }, [isTheater]);
+
   // Update PiP store with current stream info when we have a live stream
   useEffect(() => {
     if (isStreamLive && effectiveStreamUrl && channelData) {
@@ -176,8 +185,8 @@ export function StreamPage() {
     (mouseMoveEvent: MouseEvent) => {
       if (isResizing) {
         const newWidth = window.innerWidth - mouseMoveEvent.clientX;
-        // Min 300px, Max 600px
-        if (newWidth > 300 && newWidth < 600) {
+        // Min 200px, Max 600px
+        if (newWidth > 200 && newWidth < 600) {
           setChatWidth(newWidth);
         }
       }
@@ -200,7 +209,7 @@ export function StreamPage() {
     <div className="h-full flex overflow-hidden">
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        <div className={`flex-1 overflow-y-auto no-scrollbar ${isTheater ? 'flex flex-col' : ''}`}>
+        <div className={`flex-1 no-scrollbar ${isTheater ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
           {/* Video Player Area */}
           <div className={`${isTheater ? 'flex-1 min-h-0' : 'aspect-video'} bg-black flex items-center justify-center shrink-0 w-full relative`}>
             {/* Platform-specific live stream players */}
