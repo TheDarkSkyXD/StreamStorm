@@ -14,6 +14,101 @@ import { getChannel, getPublicChannel } from './channel-endpoints';
 let _topStreamsCache: { data: UnifiedStream[]; timestamp: number } | null = null;
 const CACHE_TTL = 1000 * 60 * 5; // 5 minutes
 
+// Cache for display name lookups to avoid redundant requests
+const _displayNameCache = new Map<string, { displayName: string; avatar: string; timestamp: number }>();
+const DISPLAY_NAME_CACHE_TTL = 1000 * 60 * 30; // 30 minutes
+const MAX_CACHE_SIZE = 1000; // Limit cache to 1000 entries
+
+// Periodically clean expired entries to prevent memory leaks
+// Using .unref() so the interval doesn't prevent graceful shutdown
+setInterval(() => {
+    const now = Date.now();
+    for (const [key, value] of _displayNameCache.entries()) {
+        if (now - value.timestamp >= DISPLAY_NAME_CACHE_TTL) {
+            _displayNameCache.delete(key);
+        }
+    }
+    // Also enforce max size by removing oldest entries
+    if (_displayNameCache.size > MAX_CACHE_SIZE) {
+        const entries = Array.from(_displayNameCache.entries())
+            .sort((a, b) => a[1].timestamp - b[1].timestamp);
+        const toRemove = entries.slice(0, _displayNameCache.size - MAX_CACHE_SIZE);
+        toRemove.forEach(([key]) => _displayNameCache.delete(key));
+    }
+}, 1000 * 60 * 5).unref(); // Clean every 5 minutes
+
+/**
+ * Lightweight function to fetch just display name and avatar for a channel
+ * Uses net.request (fast) instead of BrowserWindow (slow)
+ */
+async function getChannelDisplayInfo(slug: string): Promise<{ displayName: string; avatar: string } | null> {
+    // Check cache first
+    const cached = _displayNameCache.get(slug.toLowerCase());
+    if (cached && (Date.now() - cached.timestamp < DISPLAY_NAME_CACHE_TTL)) {
+        return { displayName: cached.displayName, avatar: cached.avatar };
+    }
+
+    try {
+        const { net } = require('electron');
+
+        const data = await new Promise<any>((resolve, reject) => {
+            const request = net.request({
+                method: 'GET',
+                url: `${KICK_LEGACY_API_V1_BASE}/channels/${slug}`,
+            });
+
+            request.setHeader('Accept', 'application/json');
+            request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+            request.setHeader('Referer', 'https://kick.com/');
+
+            const timeout = setTimeout(() => {
+                request.abort();
+                resolve(null);
+            }, 3000); // 3 second timeout
+
+            request.on('response', (response: any) => {
+                if (response.statusCode !== 200) {
+                    clearTimeout(timeout);
+                    resolve(null);
+                    return;
+                }
+
+                let body = '';
+                response.on('data', (chunk: Buffer) => { body += chunk.toString(); });
+                response.on('end', () => {
+                    clearTimeout(timeout);
+                    try {
+                        resolve(JSON.parse(body));
+                    } catch {
+                        resolve(null);
+                    }
+                });
+            });
+
+            request.on('error', () => {
+                clearTimeout(timeout);
+                resolve(null);
+            });
+
+            request.end();
+        });
+
+        if (!data) return null;
+
+        const result = {
+            displayName: data.user?.username || slug,
+            avatar: data.user?.profile_pic || ''
+        };
+
+        // Cache the result
+        _displayNameCache.set(slug.toLowerCase(), { ...result, timestamp: Date.now() });
+
+        return result;
+    } catch {
+        return null;
+    }
+}
+
 /**
  * Get stream info using the public/legacy API (No Auth Required)
  * Includes retry logic for transient server errors (502, 503, 504)
@@ -95,7 +190,7 @@ export async function getPublicStreamBySlug(slug: string): Promise<UnifiedStream
                 isLive: true,
                 startedAt: livestream.created_at,
                 language: livestream.language || 'en',
-                tags: livestream.tags || livestream.custom_tags || [],
+                tags: (livestream.custom_tags && livestream.custom_tags.length > 0) ? livestream.custom_tags : (livestream.tags || []),
                 isMature: livestream.is_mature ?? false,
                 categoryId: livestream.categories?.[0]?.id?.toString() || '',
                 categoryName: livestream.categories?.[0]?.name || '',
@@ -146,8 +241,13 @@ export async function getStreamBySlug(client: KickRequestor, slug: string): Prom
                     // Enrich with user avatar
                     try {
                         const users = await getUsersById(client, [parseInt(stream.channelId)]);
-                        if (users.length > 0 && users[0].profile_picture) {
-                            stream.channelAvatar = users[0].profile_picture;
+                        if (users.length > 0) {
+                            if (users[0].profile_picture) {
+                                stream.channelAvatar = users[0].profile_picture;
+                            }
+                            if (users[0].name) {
+                                stream.channelDisplayName = users[0].name;
+                            }
                         }
                     } catch (e) {
                         // Ignore user fetch errors
@@ -220,22 +320,17 @@ export async function getPublicTopStreams(
                                 try {
                                     const parsed = JSON.parse(body);
                                     resolve(parsed);
-                                } catch (e) {
-                                    if (body.trim().startsWith('<')) {
-                                        console.warn(`[KickStreams] ${url} returned HTML (bot protection)`);
-                                    }
+                                } catch {
                                     resolve(null);
                                 }
                             } else {
-                                console.log(`[KickStreams] ${url} returned ${response.statusCode}`);
                                 resolve(null);
                             }
                         });
                     });
 
-                    request.on('error', (error: Error) => {
+                    request.on('error', () => {
                         clearTimeout(timeout);
-                        console.log(`[KickStreams] ${url} error:`, error.message);
                         resolve(null);
                     });
 
@@ -243,9 +338,7 @@ export async function getPublicTopStreams(
                 });
 
                 if (data) {
-                    // Check how many items this endpoint returned
                     const rawList = Array.isArray(data) ? data : (data.data || data.livestreams || []);
-                    console.log(`[KickStreams] ${url} returned ${rawList.length} streams`);
 
                     if (rawList.length > bestCount) {
                         bestData = data;
@@ -257,13 +350,12 @@ export async function getPublicTopStreams(
                         break;
                     }
                 }
-            } catch (e) {
-                console.log(`[KickStreams] Error fetching ${url}`);
+            } catch {
+                // Ignore fetch errors, try next endpoint
             }
         }
 
         if (!bestData) {
-            console.log('[KickStreams] All endpoints failed, returning empty');
             return { data: [] };
         }
 
@@ -271,34 +363,50 @@ export async function getPublicTopStreams(
 
         // Handle different response formats
         const rawList = Array.isArray(bestData) ? bestData : (bestData.data || bestData.livestreams || []);
-        console.log(`[KickStreams] Processing ${rawList.length} streams from best endpoint`);
 
         for (const item of rawList) {
             // Basic validation - handle different response structures
             const slug = item.slug || item.channel?.slug || item.broadcaster_username;
             if (!item || !slug) continue;
 
+            // Extract thumbnail URL - different endpoints use different field structures
+            const thumbnailUrl =
+                item.thumbnail?.url ||
+                item.thumbnail?.src ||
+                item.thumbnail_url ||
+                (typeof item.thumbnail === 'string' ? item.thumbnail : '') ||
+                item.livestream?.thumbnail?.url ||
+                '';
+
+            // Extract avatar URL - different endpoints use different field structures  
+            const avatarUrl =
+                item.user?.profile_pic ||
+                item.user?.profile_picture ||
+                item.channel?.user?.profile_pic ||
+                item.channel?.user?.profile_picture ||
+                item.profile_picture ||
+                '';
+
             streams.push({
                 id: (item.id || item.session_id || '').toString(),
                 platform: 'kick',
                 channelId: (item.channel_id || item.broadcaster_user_id || item.user_id || '').toString(),
                 channelName: slug,
-                channelDisplayName: item.user?.username || item.channel?.user?.username || item.broadcaster_username || slug,
-                channelAvatar: item.user?.profile_pic || item.channel?.user?.profile_pic || '',
+                channelDisplayName: item.user?.username || item.channel?.user?.username || item.broadcaster_display_name || item.broadcaster_name || item.broadcaster_username || slug,
+                channelAvatar: avatarUrl,
                 title: item.session_title || item.title || '',
                 viewerCount: item.viewer_count ?? item.viewers ?? 0,
-                thumbnailUrl: item.thumbnail?.url || item.thumbnail_url || '',
+                thumbnailUrl: thumbnailUrl,
                 isLive: true,
                 startedAt: item.created_at || item.start_time || new Date().toISOString(),
                 language: item.language || language,
-                tags: item.tags || item.custom_tags || [],
+                tags: (item.custom_tags && item.custom_tags.length > 0) ? item.custom_tags : (item.tags || []),
                 isMature: item.is_mature ?? item.has_mature_content ?? false,
                 categoryId: (item.category_id || item.category?.id || '').toString(),
                 categoryName: item.category?.name || '',
             });
         }
 
-        console.log(`[KickStreams] Parsed ${streams.length} valid streams`);
 
         // Manual filter and sort since this endpoint is a "dump"
         if (options.limit && streams.length > options.limit) {
@@ -307,8 +415,7 @@ export async function getPublicTopStreams(
 
         return { data: streams };
 
-    } catch (error) {
-        console.warn('Failed to fetch public kick streams (web fallback):', error);
+    } catch {
         return { data: [] };
     }
 }
@@ -361,11 +468,67 @@ export async function getTopStreams(
         const streams = rawStreams.map(s => {
             const stream = transformKickLivestream(s);
             const user = userMap.get(s.broadcaster_user_id);
-            if (user && user.profile_picture) {
-                stream.channelAvatar = user.profile_picture;
+            if (user) {
+                if (user.profile_picture) {
+                    stream.channelAvatar = user.profile_picture;
+                }
+                if (user.name) {
+                    stream.channelDisplayName = user.name;
+                }
             }
             return stream;
         });
+
+        // If we couldn't enrich with user data (unauthenticated or rate limited),
+        // the display names will still be lowercase slugs. 
+        // Fetch individual channel data which has properly capitalized display names.
+        if (userMap.size === 0 && streams.length > 0) {
+            try {
+                // Get unique slugs that need enrichment
+                const uniqueSlugs = [...new Set(streams.map(s => s.channelName))];
+
+                // Fetch channel data in parallel (batch of 15 for speed)
+                const displayNameMap = new Map<string, { displayName: string; avatar: string }>();
+                const batchSize = 15;
+
+                for (let i = 0; i < uniqueSlugs.length; i += batchSize) {
+                    const batch = uniqueSlugs.slice(i, i + batchSize);
+                    const results = await Promise.all(
+                        batch.map(async (slug) => {
+                            const info = await getChannelDisplayInfo(slug);
+                            if (info) {
+                                return { slug, ...info };
+                            }
+                            return null;
+                        })
+                    );
+
+                    for (const result of results) {
+                        if (result && result.displayName) {
+                            displayNameMap.set(result.slug.toLowerCase(), {
+                                displayName: result.displayName,
+                                avatar: result.avatar || ''
+                            });
+                        }
+                    }
+                }
+
+                // Enrich streams with properly capitalized display names and avatars
+                for (const stream of streams) {
+                    const data = displayNameMap.get(stream.channelName.toLowerCase());
+                    if (data) {
+                        if (data.displayName && data.displayName !== stream.channelName) {
+                            stream.channelDisplayName = data.displayName;
+                        }
+                        if (data.avatar && !stream.channelAvatar) {
+                            stream.channelAvatar = data.avatar;
+                        }
+                    }
+                }
+            } catch {
+                // Silently ignore enrichment failures - streams will just have lowercase names
+            }
+        }
 
         return {
             data: streams,

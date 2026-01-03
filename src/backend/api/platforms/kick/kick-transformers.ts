@@ -67,7 +67,7 @@ export function transformKickLivestream(livestream: KickApiLivestream): UnifiedS
         platform: 'kick',
         channelId: livestream.broadcaster_user_id.toString(),
         channelName: livestream.slug,
-        channelDisplayName: livestream.slug,
+        channelDisplayName: livestream.broadcaster_display_name || livestream.slug,
         channelAvatar: livestream.profile_picture || '', // Use official API profile_picture
         title: livestream.stream_title,
         viewerCount: livestream.viewer_count,
@@ -75,7 +75,7 @@ export function transformKickLivestream(livestream: KickApiLivestream): UnifiedS
         isLive: true,
         startedAt: livestream.started_at,
         language: livestream.language,
-        tags: livestream.custom_tags || [],
+        tags: (livestream.custom_tags && livestream.custom_tags.length > 0) ? livestream.custom_tags : (livestream.tags || []),
         isMature: livestream.has_mature_content,
         categoryId: livestream.category.id.toString(),
         categoryName: livestream.category.name,

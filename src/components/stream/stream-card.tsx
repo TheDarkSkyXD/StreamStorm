@@ -70,14 +70,65 @@ export function StreamCard({ stream, showCategory = true }: StreamCardProps) {
                         <h3 className="font-bold text-sm text-[var(--color-foreground)] truncate leading-tight group-hover:text-[var(--color-primary)] transition-colors">
                             {stream.title}
                         </h3>
-                        <div className="text-xs text-[var(--color-foreground-secondary)] truncate mt-1">
-                            {stream.channelDisplayName}
-                        </div>
                         {showCategory && stream.categoryName && (
-                            <div className="text-xs text-[var(--color-foreground-muted)] truncate hover:underline mt-0.5">
+                            <div className="text-xs font-bold text-[var(--color-foreground)] truncate hover:underline mt-1">
                                 {stream.categoryName}
                             </div>
                         )}
+                        <div className="text-xs font-semibold text-[var(--color-foreground-secondary)] truncate mt-0.5">
+                            {stream.channelDisplayName}
+                        </div>
+                        {/* Tags */}
+                        {/* Tags */}
+                        {(() => {
+                            // Prepare tags list
+                            const displayTags: string[] = [];
+
+                            // Add language tag first if valid
+                            if (stream.language) {
+                                const langName = new Intl.DisplayNames(['en'], { type: 'language' }).of(stream.language) || stream.language;
+                                displayTags.push(langName);
+                            }
+
+                            // Add other tags, filtering out duplicates (case-insensitive check against language)
+                            if (stream.tags && stream.tags.length > 0) {
+                                const langLower = stream.language?.toLowerCase();
+                                const langNameLower = displayTags[0]?.toLowerCase();
+                                stream.tags.forEach(tag => {
+                                    // Don't add if it's the same as the language code or name
+                                    if (tag.toLowerCase() !== langLower && tag.toLowerCase() !== langNameLower) {
+                                        displayTags.push(tag);
+                                    }
+                                });
+                            }
+
+                            if (displayTags.length === 0) return null;
+
+                            // Calculate limit based on length
+                            // Heuristic: Check length of first 3 tags
+                            let totalChars = 0;
+                            const checkCount = Math.min(displayTags.length, 3);
+                            for (let i = 0; i < checkCount; i++) {
+                                totalChars += displayTags[i].length;
+                            }
+
+                            // If tags are "long" (avg > 8 chars or total > 24), limit to 3. Else 4.
+                            const maxTags = totalChars > 24 ? 3 : 4;
+                            const finalTags = displayTags.slice(0, maxTags);
+
+                            return (
+                                <div className="flex flex-wrap gap-1.5 mt-2">
+                                    {finalTags.map((tag, index) => (
+                                        <span
+                                            key={`${tag}-${index}`}
+                                            className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-[#24272C] text-[#EFEFF1] hover:bg-[#32353B] transition-colors whitespace-nowrap"
+                                        >
+                                            {tag}
+                                        </span>
+                                    ))}
+                                </div>
+                            );
+                        })()}
                     </div>
                 </CardContent>
             </Card>

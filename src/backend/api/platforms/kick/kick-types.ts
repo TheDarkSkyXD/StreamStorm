@@ -76,6 +76,7 @@ export interface KickApiLivestream {
     broadcaster_user_id: number;
     channel_id: number;
     slug: string;
+    broadcaster_display_name?: string; // Properly capitalized username (e.g., "NickLee")
     stream_title: string;
     language: string;
     has_mature_content: boolean;
@@ -84,6 +85,7 @@ export interface KickApiLivestream {
     profile_picture: string | null; // Channel avatar URL (kick.com/img/...)
     started_at: string;
     custom_tags: string[];
+    tags?: string[];
     category: KickApiChannelCategory;
 }
 
