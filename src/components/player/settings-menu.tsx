@@ -16,6 +16,7 @@ export interface SettingsMenuProps {
     isTheater?: boolean;
     playbackRate?: number;
     onPlaybackRateChange?: (rate: number) => void;
+    onOpenChange?: (isOpen: boolean) => void;
 }
 
 const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -28,10 +29,16 @@ export function SettingsMenu({
     onToggleTheater,
     isTheater,
     playbackRate = 1,
-    onPlaybackRateChange
+    onPlaybackRateChange,
+    onOpenChange
 }: SettingsMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [activeSubMenu, setActiveSubMenu] = useState<'main' | 'quality' | 'speed'>('main');
+
+    // Notify parent of open state changes
+    React.useEffect(() => {
+        onOpenChange?.(isOpen);
+    }, [isOpen, onOpenChange]);
 
     const toggleOpen = () => {
         setIsOpen(!isOpen);
@@ -56,12 +63,12 @@ export function SettingsMenu({
 
     return (
         <div className="relative">
-            <Tooltip>
+            <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="text-white hover:bg-white/20"
+                        className="text-white hover:bg-white/20 cursor-pointer"
                         onClick={(e) => {
                             e.stopPropagation();
                             toggleOpen();

@@ -24,18 +24,23 @@ export function VolumeControl({ volume, muted, onVolumeChange, onMuteToggle, cla
 
     const displayVolume = muted ? 0 : volume;
 
+    // Dynamic tooltip text based on mute state
+    const getMuteTooltipText = () => {
+        return muted ? 'Unmute (m)' : 'Mute (m)';
+    };
+
     return (
         <div
             className={`flex items-center group/volume ${className || ''}`}
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => !isDragging && setIsHovering(false)}
         >
-            <Tooltip>
+            <Tooltip delayDuration={0}>
                 <TooltipTrigger asChild>
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="text-white hover:bg-white/20 rounded-full select-none z-10"
+                        className="text-white hover:bg-white/20 rounded-full select-none z-10 cursor-pointer"
                         onClick={(e) => {
                             e.stopPropagation();
                             onMuteToggle();
@@ -45,7 +50,7 @@ export function VolumeControl({ volume, muted, onVolumeChange, onMuteToggle, cla
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent>
-                    <p>{muted || volume === 0 ? 'Unmute (m)' : 'Mute (m)'}</p>
+                    <p>{getMuteTooltipText()}</p>
                 </TooltipContent>
             </Tooltip>
 
@@ -90,12 +95,19 @@ export function VolumeControl({ volume, muted, onVolumeChange, onMuteToggle, cla
                         style={{ width: `${displayVolume}%` }}
                     />
                     {/* Thumb (white circle) - positioned to stay within bounds */}
-                    <div
-                        className="absolute w-3 h-3 bg-white rounded-full shadow-md cursor-pointer"
-                        style={{
-                            left: `calc(${displayVolume / 100} * (100% - 12px))`,
-                        }}
-                    />
+                    <Tooltip delayDuration={0} open={isDragging || undefined}>
+                        <TooltipTrigger asChild>
+                            <div
+                                className="absolute w-3 h-3 bg-white rounded-full shadow-md cursor-pointer"
+                                style={{
+                                    left: `calc(${displayVolume / 100} * (100% - 12px))`,
+                                }}
+                            />
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                            <p>{Math.round(displayVolume)}%</p>
+                        </TooltipContent>
+                    </Tooltip>
                 </div>
             </div>
         </div>

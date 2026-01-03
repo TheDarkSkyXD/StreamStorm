@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { PlayPauseButton } from './play-pause-button';
 import { VolumeControl } from './volume-control';
 import { SettingsMenu } from './settings-menu';
@@ -86,161 +86,242 @@ export function PlayerControls(props: PlayerControlsProps) {
     } = props;
 
     const [isVisible, setIsVisible] = useState(true);
-    const hideTimeoutRef = useRef<NodeJS.Timeout>(null);
+    const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const isHoveringControlsRef = useRef(false);
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-    // Auto-hide controls logic
-    useEffect(() => {
-        const showControls = () => {
+    // Clear timeout helper
+    const clearHideTimeout = useCallback(() => {
+        if (hideTimeoutRef.current) {
+            clearTimeout(hideTimeoutRef.current);
+            hideTimeoutRef.current = null;
+        }
+    }, []);
+
+    // Start idle timeout
+    const startIdleTimeout = useCallback(() => {
+        clearHideTimeout();
+        if (isPlaying && !isSettingsOpen) {
+            const timeout = isHoveringControlsRef.current ? 3000 : 1000;
+            hideTimeoutRef.current = setTimeout(() => {
+                setIsVisible(false);
+            }, timeout);
+        }
+    }, [isPlaying, clearHideTimeout, isSettingsOpen]);
+
+    // Handle mouse move anywhere on the overlay
+    const handleMouseMove = useCallback(() => {
+        setIsVisible(true);
+        startIdleTimeout();
+    }, [startIdleTimeout]);
+
+    // Handle mouse leaving the player area (200ms quick hide)
+    const handleMouseLeave = useCallback(() => {
+        clearHideTimeout();
+        if (isPlaying && !isSettingsOpen) {
+            hideTimeoutRef.current = setTimeout(() => {
+                setIsVisible(false);
+            }, 200);
+        }
+    }, [isPlaying, clearHideTimeout, isSettingsOpen]);
+
+    // Handle mouse entering the player area
+    const handleMouseEnter = useCallback(() => {
+        clearHideTimeout();
+        setIsVisible(true);
+        startIdleTimeout();
+    }, [clearHideTimeout, startIdleTimeout]);
+
+    // Handle controls specific hover
+    const handleControlsEnter = useCallback(() => {
+        isHoveringControlsRef.current = true;
+        startIdleTimeout();
+    }, [startIdleTimeout]);
+
+    const handleControlsLeave = useCallback(() => {
+        isHoveringControlsRef.current = false;
+        startIdleTimeout();
+    }, [startIdleTimeout]);
+
+    const handleSettingsOpenChange = useCallback((open: boolean) => {
+        setIsSettingsOpen(open);
+        if (open) {
+            clearHideTimeout();
             setIsVisible(true);
-            if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+        } else {
+            startIdleTimeout();
+        }
+    }, [clearHideTimeout, startIdleTimeout]);
 
-            if (isPlaying) {
-                hideTimeoutRef.current = setTimeout(() => {
-                    setIsVisible(false);
-                }, 3000); // Hide after 3 seconds of inactivity
-            }
-        };
+    // Click/Double-click race condition handling
+    const clickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-        // Initial trigger
-        showControls();
+    const handleOverlayClick = useCallback(() => {
+        if (clickTimeoutRef.current) {
+            clearTimeout(clickTimeoutRef.current);
+            clickTimeoutRef.current = null;
+            return;
+        }
+        clickTimeoutRef.current = setTimeout(() => {
+            onTogglePlay();
+            clickTimeoutRef.current = null;
+        }, 250);
+    }, [onTogglePlay]);
 
-        const handleMouseMove = () => showControls();
+    const handleOverlayDoubleClick = useCallback(() => {
+        if (clickTimeoutRef.current) {
+            clearTimeout(clickTimeoutRef.current);
+            clickTimeoutRef.current = null;
+        }
+        onToggleFullscreen();
+    }, [onToggleFullscreen]);
 
-        // Attach listener to parent container if possible, creating context needed.
-        // For now we assume this component is inside the container that captures events,
-        // OR this component fills the container. 
-        // Since this component is an overly, we'll let parent handle the mouse movement logic 
-        // or assume parent renders this conditionally/passes visible prop?
-        // 
-        // Actually, Phase 3.2.5 says "Implement auto-hide controls". 
-        // It's cleaner if the container handles mouse move. 
-        // But let's add listeners to document or window if this is fullscreen?
-        // Let's implement simpler: Parent `VideoPlayer` should probably handle visibility state 
-        // and pass it down, OR `PlayerControls` wraps the interactive area.
-        // Let's make `PlayerControls` self-managing for now by listening to window mousemove when mounted?
-        // Better: listen to mousemove on the parent container.
-        //
-        // For now, let's keep it visible if paused, and use a prop `visible` from parent if we want strict control.
-        // But since I'm implementing it here:
-        // If not playing, always visible.
-    }, [isPlaying]);
+    // Reset when playing state changes
+    useEffect(() => {
+        if (!isPlaying) {
+            clearHideTimeout();
+            setIsVisible(true);
+        } else {
+            startIdleTimeout();
+        }
+    }, [isPlaying, clearHideTimeout, startIdleTimeout]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => clearHideTimeout();
+    }, [clearHideTimeout]);
 
     const isLive = !duration || duration === Infinity;
 
     return (
+        /* Parent Overlay - Handles Mouse Tracking & Video Clicks */
         <div
-            className={`
-            absolute inset-x-0 bottom-0 z-40 bg-gradient-to-t from-black/90 to-transparent pt-20 pb-4 px-4
-            transition-opacity duration-300 ease-in-out
-            ${isVisible || !isPlaying ? 'opacity-100' : 'opacity-0'}
-        `}
-            onMouseEnter={() => {
-                if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-                setIsVisible(true);
-            }}
-            onMouseLeave={() => {
-                if (isPlaying) {
-                    hideTimeoutRef.current = setTimeout(() => setIsVisible(false), 2000);
-                }
-            }}
+            ref={containerRef}
+            className={`absolute inset-0 z-30 flex flex-col justify-end ${isVisible || !isPlaying ? 'cursor-default' : 'cursor-none'}`}
+            onMouseMove={handleMouseMove}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+            onClick={handleOverlayClick}
+            onDoubleClick={handleOverlayDoubleClick}
         >
-            {/* VOD Progress Bar */}
-            {
-                !isLive && onSeek && (
-                    <div className="w-full px-4 mb-2">
-                        <ProgressBar
-                            currentTime={currentTime}
-                            duration={duration}
-                            onSeek={onSeek}
-                            buffered={buffered}
+            {/* Controls bar at the bottom */}
+            <div
+                className={`
+                w-full bg-gradient-to-t from-black/90 to-transparent pt-20 pb-4 px-4
+                transition-opacity duration-200 ease-in-out pointer-events-none z-40
+                ${isVisible || !isPlaying ? 'opacity-100' : 'opacity-0'}
+            `}
+                onClick={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => e.stopPropagation()}
+            >
+                {/* VOD Progress Bar */}
+                {
+                    !isLive && onSeek && (
+                        <div
+                            className="w-full px-4 mb-2 pointer-events-auto"
+                            onMouseEnter={handleControlsEnter}
+                            onMouseLeave={handleControlsLeave}
+                        >
+                            <ProgressBar
+                                currentTime={currentTime}
+                                duration={duration}
+                                onSeek={onSeek}
+                                buffered={buffered}
+                            />
+                        </div>
+                    )
+                }
+
+                <div
+                    className="flex items-center justify-between w-full max-w-screen-2xl mx-auto pointer-events-auto"
+                    onMouseEnter={handleControlsEnter}
+                    onMouseLeave={handleControlsLeave}
+                >
+                    <div className="flex items-center gap-2">
+                        <PlayPauseButton
+                            isPlaying={isPlaying}
+                            isLoading={isLoading}
+                            onToggle={onTogglePlay}
                         />
+
+                        <VolumeControl
+                            volume={volume}
+                            muted={muted}
+                            onVolumeChange={onVolumeChange}
+                            onMuteToggle={onToggleMute}
+                        />
+
+                        {/* Live Badge or Timestamp */}
+                        {isLive ? (
+                            <div className="flex items-center gap-1.5 px-2 py-1 bg-red-600 rounded text-xs font-bold uppercase tracking-wider text-white ml-2 select-none">
+                                <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                                Live
+                            </div>
+                        ) : (
+                            <div className="text-white text-2xl font-bold ml-2 select-none">
+                                {formatDuration(currentTime)} / {formatDuration(duration)}
+                            </div>
+                        )}
                     </div>
-                )
-            }
 
-            <div className="flex items-center justify-between w-full max-w-screen-2xl mx-auto">
-                <div className="flex items-center gap-2">
-                    <PlayPauseButton
-                        isPlaying={isPlaying}
-                        isLoading={isLoading}
-                        onToggle={onTogglePlay}
-                    />
+                    <div className="flex items-center gap-2">
+                        <SettingsMenu
+                            qualities={qualities}
+                            currentQualityId={currentQualityId}
+                            onQualityChange={onQualityChange}
+                            onTogglePip={onTogglePip}
+                            onToggleTheater={onToggleTheater}
+                            isTheater={isTheater}
+                            playbackRate={playbackRate}
+                            onPlaybackRateChange={isLive ? undefined : onPlaybackRateChange}
+                            onOpenChange={handleSettingsOpenChange}
+                        />
 
-                    <VolumeControl
-                        volume={volume}
-                        muted={muted}
-                        onVolumeChange={onVolumeChange}
-                        onMuteToggle={onToggleMute}
-                    />
+                        {onToggleTheater && !isFullscreen && (
+                            <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-white hover:bg-white/20 cursor-pointer"
+                                        onClick={onToggleTheater}
+                                    >
+                                        {isTheater ? (
+                                            <TheaterFilledIcon className="w-5 h-5" />
+                                        ) : (
+                                            <TheaterOutlineIcon className="w-5 h-5" />
+                                        )}
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{isTheater ? 'Exit Theater Mode (t)' : 'Theater Mode (t)'}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
 
-                    {/* Live Badge or Timestamp */}
-                    {isLive ? (
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-red-600 rounded text-xs font-bold uppercase tracking-wider text-white ml-2 select-none">
-                            <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-                            Live
-                        </div>
-                    ) : (
-                        <div className="text-white text-2xl font-bold ml-2 select-none">
-                            {formatDuration(currentTime)} / {formatDuration(duration)}
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <SettingsMenu
-                        qualities={qualities}
-                        currentQualityId={currentQualityId}
-                        onQualityChange={onQualityChange}
-                        onTogglePip={onTogglePip}
-                        onToggleTheater={onToggleTheater}
-                        isTheater={isTheater}
-                        playbackRate={playbackRate}
-                        onPlaybackRateChange={isLive ? undefined : onPlaybackRateChange}
-                    />
-
-                    {onToggleTheater && !isFullscreen && (
-                        <Tooltip>
+                        <Tooltip delayDuration={0}>
                             <TooltipTrigger asChild>
                                 <Button
                                     variant="ghost"
                                     size="icon"
-                                    className={`text-white hover:bg-white/20`}
-                                    onClick={onToggleTheater}
+                                    className="text-white hover:bg-white/20 cursor-pointer"
+                                    onClick={onToggleFullscreen}
                                 >
-                                    {isTheater ? (
-                                        <TheaterFilledIcon className="w-5 h-5" />
+                                    {isFullscreen ? (
+                                        <Minimize className="w-5 h-5" />
                                     ) : (
-                                        <TheaterOutlineIcon className="w-5 h-5" />
+                                        <Maximize className="w-5 h-5" />
                                     )}
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
-                                <p>Theater Mode (t)</p>
+                                <p>{isFullscreen ? 'Exit Fullscreen (f)' : 'Fullscreen (f)'}</p>
                             </TooltipContent>
                         </Tooltip>
-                    )}
-
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-white hover:bg-white/20"
-                                onClick={onToggleFullscreen}
-                            >
-                                {isFullscreen ? (
-                                    <Minimize className="w-5 h-5" />
-                                ) : (
-                                    <Maximize className="w-5 h-5" />
-                                )}
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>{isFullscreen ? 'Exit Fullscreen (f)' : 'Fullscreen (f)'}</p>
-                        </TooltipContent>
-                    </Tooltip>
+                    </div>
                 </div>
             </div>
-        </div >
+        </div>
     );
 }

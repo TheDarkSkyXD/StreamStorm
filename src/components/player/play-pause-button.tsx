@@ -12,12 +12,12 @@ interface PlayPauseButtonProps {
 
 export function PlayPauseButton({ isPlaying, isLoading, onToggle, className }: PlayPauseButtonProps) {
     return (
-        <Tooltip>
+        <Tooltip delayDuration={0}>
             <TooltipTrigger asChild>
                 <Button
                     variant="ghost"
                     size="icon"
-                    className={`text-white hover:bg-white/20 rounded-full select-none ${className || ''}`}
+                    className={`text-white hover:bg-white/20 rounded-full select-none cursor-pointer ${className || ''}`}
                     onClick={(e) => {
                         e.stopPropagation();
                         onToggle();
