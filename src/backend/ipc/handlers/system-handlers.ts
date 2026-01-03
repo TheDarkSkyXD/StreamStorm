@@ -1,5 +1,4 @@
-import { app, ipcMain, shell, Notification, BrowserWindow, nativeTheme, net } from 'electron';
-import * as https from 'https';
+import { app, ipcMain, shell, Notification, BrowserWindow, nativeTheme } from 'electron';
 import { IPC_CHANNELS } from '../../../shared/ipc-channels';
 
 export function registerSystemHandlers(mainWindow: BrowserWindow): void {
@@ -93,47 +92,22 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
     /**
      * IMAGE PROXY HANDLER
      * 
-     * This handler fetches images that are blocked due to CORS or hotlinking restrictions
+     * Fetches images that may be blocked due to CORS or hotlinking restrictions
      * and returns them as base64 data URLs.
      * 
-     * KICK CDN HOTLINKING PROTECTION:
-     * - files.kick.com (profile images, banners): Requires Referer header
-     * - images.kick.com (video/VOD thumbnails): Requires Referer header due to hotlinking protection
+     * CURRENT STATUS:
+     * - Kick CDN (files.kick.com, images.kick.com): Uses Electron's net.request with
+     *   proper Referer headers to bypass hotlinking protection.
+     * - Twitch CDN (jtvnw.net, twitch.tv): Proxied with appropriate Referer/Origin headers.
+     * - Other domains: Proxied with generic headers.
      * 
-     * WHY THIS IS NECESSARY:
-     * - Kick CDN returns 403 Forbidden for requests without a valid Referer header
-     * - Browser/Electron renderer processes cannot set Referer headers for cross-origin requests
-     * - Desktop apps need to display user profile images, offline banners, and video thumbnails
-     * 
-     * APPROACH:
-     * - Uses Electron's main process `net.request` which can set arbitrary headers
-     * - Spoofs Referer header to appear as a request from kick.com
-     * - Converts response to base64 data URL for use in renderer
-     * 
-     * ⚠️ SECURITY & COMPLIANCE CONSIDERATIONS:
-     * 
-     * 1. HEADER SPOOFING:
-     *    - Modifies User-Agent and Referer headers to bypass origin checks
-     *    - This circumvents the Fetch Metadata Request Headers security mechanism
-     * 
-     * 2. TERMS OF SERVICE:
-     *    - This approach may violate Kick's Terms of Service
-     *    - Kick has an official API (https://docs.kick.com) but as of Dec 2025,
-     *      it does not provide a documented method for unauthenticated CDN access
-     *    - Consider checking https://developers.kick.com for future API updates
-     * 
-     * 3. ALTERNATIVES CONSIDERED:
-     *    - Official Kick API: Does not currently support CDN image access
-     *    - CORS proxy server: Would require hosting infrastructure
-     *    - Disable images: Poor UX for a streaming application
-     * 
-     * 4. MITIGATION:
-     *    - This feature is opt-in via preferences.advanced.enableImageProxy
-     *    - Users can disable it if they have compliance concerns
-     *    - The feature gracefully degrades (shows placeholder) if disabled
+     * WHY NET.REQUEST FOR KICK CDN:
+     * - Electron's onBeforeSendHeaders doesn't reliably set Referer for image requests
+     *   (known Electron bug: https://github.com/electron/electron/issues/33092)
+     * - net.request runs in the main process and can set arbitrary headers
+     * - This bypasses Kick's strict hotlinking protection
      * 
      * @see https://docs.kick.com - Kick's official API documentation
-     * @see https://developers.kick.com - Kick developer registration
      */
     ipcMain.handle(IPC_CHANNELS.IMAGE_PROXY, async (_event, { url }: { url: string }): Promise<string | null> => {
         try {
@@ -144,109 +118,92 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
                 return null;
             }
 
-            // Determine the appropriate headers based on the domain
-            // Both files.kick.com and images.kick.com require Referer headers due to hot linking protection
-            // SECURITY: Use strict matching to prevent subdomain spoofing (e.g. files.kick.com.attacker.com)
+            // Determine CDN type for appropriate headers
+            // SECURITY: Use strict hostname matching to prevent subdomain spoofing
             const isKickCDN =
                 parsedUrl.hostname === 'files.kick.com' ||
                 parsedUrl.hostname.endsWith('.files.kick.com') ||
                 parsedUrl.hostname === 'images.kick.com' ||
                 parsedUrl.hostname.endsWith('.images.kick.com');
 
-            // For Kick CDN, use Node.js https module (more reliable than Electron's net for this)
-            if (isKickCDN) {
-                return new Promise<string | null>((resolve) => {
-                    let resolved = false;
-
-                    const resolveOnce = (value: string | null) => {
-                        if (!resolved) {
-                            resolved = true;
-                            clearTimeout(timeoutId);
-                            resolve(value);
-                        }
-                    };
-
-                    let currentReq: any = null;
-
-                    // 10 second timeout to prevent hanging indefinitely
-                    const timeoutId = setTimeout(() => {
-                        if (currentReq) {
-                            currentReq.destroy();
-                        }
-                        console.warn('⚠️ Image proxy (https): Request timed out for', url.substring(0, 60));
-                        resolveOnce(null);
-                    }, 10000);
-
-                    const options = {
-                        headers: {
-                            'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
-                            'Accept-Language': 'en-US,en;q=0.9',
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
-                            'Referer': 'https://kick.com/',
-                        }
-                    };
-
-                    currentReq = https.get(url, options, (response) => {
-                        // Handle redirects
-                        if (response.statusCode === 301 || response.statusCode === 302 || response.statusCode === 307) {
-                            const redirectUrl = response.headers.location;
-                            if (redirectUrl) {
-                                response.destroy(); // Clean up original response
-                                // Follow redirect with same options
-                                currentReq = https.get(redirectUrl, options, (redirectResponse) => {
-                                    handleResponse(redirectResponse);
-                                }).on('error', (error) => {
-                                    console.error('❌ Image proxy redirect error:', error.message);
-                                    resolveOnce(null);
-                                });
-                                return;
-                            }
-                        }
-
-                        handleResponse(response);
-                    });
-
-                    function handleResponse(response: any) {
-                        if (response.statusCode !== 200) {
-                            console.warn(`⚠️ Image proxy: Failed to fetch ${url.substring(0, 80)}... Status: ${response.statusCode}`);
-                            resolveOnce(null);
-                            return;
-                        }
-
-                        const chunks: Buffer[] = [];
-                        const contentType = response.headers['content-type'] || 'image/jpeg';
-
-                        response.on('data', (chunk: Buffer) => {
-                            chunks.push(chunk);
-                        });
-
-                        response.on('end', () => {
-                            const buffer = Buffer.concat(chunks);
-                            const base64 = buffer.toString('base64');
-                            resolveOnce(`data:${contentType};base64,${base64}`);
-                        });
-
-                        response.on('error', (error: Error) => {
-                            console.error('❌ Image proxy response error:', error.message);
-                            resolveOnce(null);
-                        });
-                    }
-
-                    currentReq.on('error', (error: Error) => {
-                        console.error('❌ Image proxy request error:', error.message);
-                        resolveOnce(null);
-                    });
-                });
-            }
-
-            // For other CDNs (Twitch, etc), use regular fetch
-            // SECURITY: Use strict matching to prevent subdomain spoofing
             const isTwitchCDN =
                 parsedUrl.hostname === 'jtvnw.net' ||
                 parsedUrl.hostname.endsWith('.jtvnw.net') ||
                 parsedUrl.hostname === 'twitch.tv' ||
                 parsedUrl.hostname.endsWith('.twitch.tv');
 
+            // For Kick CDN, use Electron's net.request (most reliable for setting Referer)
+            if (isKickCDN) {
+                const { net } = require('electron');
+
+                return new Promise<string | null>((resolve) => {
+                    const request = net.request({
+                        method: 'GET',
+                        url: url,
+                    });
+
+                    // Set headers that bypass Kick's hotlinking protection
+                    request.setHeader('Accept', 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8');
+                    request.setHeader('Accept-Language', 'en-US,en;q=0.9');
+                    request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
+                    request.setHeader('Referer', 'https://kick.com/');
+                    request.setHeader('Origin', 'https://kick.com');
+
+                    let resolved = false;
+                    const resolveOnce = (value: string | null) => {
+                        if (!resolved) {
+                            resolved = true;
+                            resolve(value);
+                        }
+                    };
+
+                    // 10 second timeout
+                    const timeout = setTimeout(() => {
+                        request.abort();
+                        console.warn(`⚠️ Image proxy: Timeout for ${url.substring(0, 60)}...`);
+                        resolveOnce(null);
+                    }, 10000);
+
+                    request.on('response', (response: any) => {
+                        if (response.statusCode !== 200) {
+                            clearTimeout(timeout);
+                            console.warn(`⚠️ Image proxy: Failed to fetch Kick CDN image: ${response.statusCode}`);
+                            resolveOnce(null);
+                            return;
+                        }
+
+                        const chunks: Buffer[] = [];
+                        const contentType = response.headers['content-type'] || 'image/webp';
+
+                        response.on('data', (chunk: Buffer) => {
+                            chunks.push(chunk);
+                        });
+
+                        response.on('end', () => {
+                            clearTimeout(timeout);
+                            const buffer = Buffer.concat(chunks);
+                            const base64 = buffer.toString('base64');
+                            resolveOnce(`data:${contentType};base64,${base64}`);
+                        });
+
+                        response.on('error', (error: Error) => {
+                            clearTimeout(timeout);
+                            console.error('❌ Image proxy response error:', error.message);
+                            resolveOnce(null);
+                        });
+                    });
+
+                    request.on('error', (error: Error) => {
+                        clearTimeout(timeout);
+                        console.error('❌ Image proxy request error:', error.message);
+                        resolveOnce(null);
+                    });
+
+                    request.end();
+                });
+            }
+
+            // For other CDNs (Twitch, etc), use standard fetch
             const headers: Record<string, string> = {
                 'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.9',
@@ -279,3 +236,4 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
         }
     });
 }
+

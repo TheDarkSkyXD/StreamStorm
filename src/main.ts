@@ -63,29 +63,26 @@ function markCleanShutdown(): void {
 }
 
 /**
- * Setup request interceptors for CDN domains that require special headers
- * This modifies outgoing requests at the Chromium level before they're sent
+ * Setup request interceptors for Kick CDN domains that require special headers.
+ * 
+ * NOTE: This is a SECONDARY fallback mechanism. The primary approach is the IPC proxy
+ * in system-handlers.ts which uses Electron's net.request (more reliable).
+ * 
+ * This interceptor catches any direct image loads that bypass the ProxiedImage component.
  */
 function setupRequestInterceptors(): void {
-  // Intercept requests to Kick CDN and add proper headers
   session.defaultSession.webRequest.onBeforeSendHeaders(
     {
       urls: [
         'https://files.kick.com/*',
+        'https://*.files.kick.com/*',
         'https://images.kick.com/*',
+        'https://*.images.kick.com/*',
       ]
     },
     (details, callback) => {
-      // Add headers that make the request appear to come from kick.com
-      const modifiedHeaders = {
-        ...details.requestHeaders,
-        'Referer': 'https://kick.com/',
-        'Origin': 'https://kick.com',
-        'Sec-Fetch-Dest': 'image',
-        'Sec-Fetch-Mode': 'no-cors',
-        'Sec-Fetch-Site': 'same-site',
-      };
-
+      const modifiedHeaders = { ...details.requestHeaders };
+      modifiedHeaders['Referer'] = 'https://kick.com/';
       callback({ requestHeaders: modifiedHeaders });
     }
   );
