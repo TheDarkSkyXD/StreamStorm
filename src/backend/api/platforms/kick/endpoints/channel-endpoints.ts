@@ -159,10 +159,16 @@ export async function getPublicChannel(slug: string): Promise<UnifiedChannel | n
             lastStreamTitle = data.previous_livestreams[0]?.session_title;
         }
 
+        const userId = data.user_id || data.id;
+        if (!userId) {
+            console.warn(`[KickChannel] Missing user_id/id for ${slug}`);
+            return null;
+        }
+
         return {
-            id: data.user_id.toString(),
+            id: userId.toString(),
             platform: 'kick',
-            username: data.slug,
+            username: data.slug || slug,
             displayName: user.username || data.slug,
             avatarUrl: user.profile_pic || '',
             // Try to extract a responsive WebP image from srcset as they may bypass CDN restrictions
