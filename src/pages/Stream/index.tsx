@@ -107,8 +107,10 @@ export function StreamPage() {
         return;
       }
     }
+    // Exit theater mode when stream goes offline for better offline screen visibility
+    setTheaterModeActive(false);
     setPlayerError(error);
-  }, [isUsingProxy, platform, retryWithoutProxy]);
+  }, [isUsingProxy, platform, retryWithoutProxy, setTheaterModeActive]);
 
   // Reset player error when playback changes
   useEffect(() => {
