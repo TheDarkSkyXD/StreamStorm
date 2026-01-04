@@ -127,7 +127,7 @@ export function TwitchVodPlayer(props: TwitchVodPlayerProps) {
             video.removeEventListener('progress', handleProgress);
             video.removeEventListener('ratechange', handleRateChange);
         };
-    }, [isReady]);
+    }, [isReady, syncFromVideoElement]);
 
     // Volume initialization is handled by useVolume hook
 

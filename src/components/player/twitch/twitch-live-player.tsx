@@ -46,7 +46,8 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
     const { volume, isMuted, handleVolumeChange, handleToggleMute, syncFromVideoElement } = useVolume({
         videoRef: videoRef as React.RefObject<HTMLVideoElement>,
         initialMuted,
-        watch: streamUrl
+        watch: `${streamUrl}-${initialMuted}`, // Reset when either changes
+        forcedMuted: initialMuted
     });
 
     // Hooks
@@ -104,7 +105,7 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
             video.removeEventListener('playing', handlePlaying);
             video.removeEventListener('ratechange', handleRateChange);
         };
-    }, [isReady]);
+    }, [isReady, syncFromVideoElement]);
 
     // Volume initialization is handled by useVolume hook
 

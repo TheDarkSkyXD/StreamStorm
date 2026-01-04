@@ -44,7 +44,7 @@ export function ClipCard({ clip, onClick, platform, channelName, channelData }: 
 
                 {/* Date: Bottom Right */}
                 <div className="absolute bottom-2 right-2 bg-black/80 px-1.5 py-0.5 rounded text-xs text-white font-medium">
-                    {formatTimeAgo(clip.date)}
+                    {formatTimeAgo(clip.created_at || clip.date)}
                 </div>
 
                 {/* Hover overlay */}

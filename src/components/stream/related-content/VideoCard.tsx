@@ -33,7 +33,7 @@ export function VideoCard({ video, platform, channelName, channelData }: VideoCa
             channelDisplayName: video.channelName || channelData?.displayName || channelName,
             channelAvatar: video.channelAvatar || channelData?.avatarUrl || undefined,
             views: video.views,
-            date: video.date,
+            date: video.created_at || video.date,
             category: video.category || video.gameName || undefined,
             duration: video.duration,
             isSubOnly: video.isSubOnly || undefined,
@@ -88,7 +88,7 @@ export function VideoCard({ video, platform, channelName, channelData }: VideoCa
 
                 {/* Date: Bottom Right */}
                 <div className="absolute bottom-2 right-2 bg-black/80 px-1.5 py-0.5 rounded text-xs text-white font-medium">
-                    {video.isLive ? 'Today' : formatTimeAgo(video.date)}
+                    {video.isLive ? 'Today' : formatTimeAgo(video.created_at || video.date)}
                 </div>
 
                 {/* Hover overlay - show lock for sub-only, play for regular */}

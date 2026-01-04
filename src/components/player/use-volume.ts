@@ -5,15 +5,19 @@ interface UseVolumeOptions {
     videoRef: React.RefObject<HTMLVideoElement>;
     initialMuted?: boolean;
     watch?: any; // Dependency to trigger re-application (e.g. streamUrl)
+    forcedMuted?: boolean; // External override to force mute (e.g. when clip dialog is open)
 }
 
 /**
  * Hook for managing persistent volume across all players.
  * Syncs volume state with the global store and the video element.
  */
-export function useVolume({ videoRef, initialMuted = false, watch }: UseVolumeOptions) {
-    const { volume, isMuted, setVolume, setMuted, toggleMute } = useVolumeStore();
+export function useVolume({ videoRef, initialMuted = false, watch, forcedMuted = false }: UseVolumeOptions) {
+    const { volume, isMuted: storeMuted, setVolume, setMuted, toggleMute } = useVolumeStore();
     const isFirstMount = useRef(true);
+
+    // Calculate effective muted state (store preference OR forced override)
+    const isEffectiveMuted = forcedMuted || storeMuted;
 
     // Apply stored volume and handle initial muted state
     useEffect(() => {
@@ -22,15 +26,21 @@ export function useVolume({ videoRef, initialMuted = false, watch }: UseVolumeOp
 
         video.volume = volume / 100;
 
-        // On first mount, use initialMuted prop; afterward use store state
+        // On first mount, determine muted state from forcedMuted/store; afterward use effective state
         if (isFirstMount.current) {
-            video.muted = initialMuted;
-            setMuted(initialMuted); // Sync store with initial value
+            // If forcedMuted, start muted without saving to store
+            // Otherwise respect the store's persisted preference
+            const startMuted = forcedMuted || storeMuted;
+            video.muted = startMuted;
+
+            // Don't update store on mount - it already has the user's preference
+            // (Store initialization with initialMuted should happen in the store itself)
+
             isFirstMount.current = false;
         } else {
-            video.muted = isMuted;
+            video.muted = isEffectiveMuted;
         }
-    }, [videoRef, volume, isMuted, setMuted, watch]); // eslint-disable-line react-hooks/exhaustive-deps -- initialMuted intentionally excluded, only used on first mount
+    }, [videoRef, volume, storeMuted, setMuted, watch, forcedMuted]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Handle volume change from UI
     const handleVolumeChange = useCallback((volumeOrFn: number | ((prev: number) => number)) => {
@@ -47,7 +57,9 @@ export function useVolume({ videoRef, initialMuted = false, watch }: UseVolumeOp
         video.volume = vol / 100;
         setVolume(vol); // Store handles its own clamping/functional update but we pass the resolved value here
 
-        if (vol > 0 && video.muted) {
+        // If user changes volume while muted (and not forced), unmute
+        // If forced muted, we allow volume change but stay muted
+        if (vol > 0 && video.muted && !forcedMuted) {
             video.muted = false;
             setMuted(false);
         }
@@ -55,29 +67,37 @@ export function useVolume({ videoRef, initialMuted = false, watch }: UseVolumeOp
             video.muted = true;
             setMuted(true);
         }
-    }, [setVolume, setMuted]);
+    }, [setVolume, setMuted, forcedMuted]);
 
     // Handle mute toggle from UI
     const handleToggleMute = useCallback(() => {
         const video = videoRef.current;
         if (!video) return;
 
+        // Block mute toggle when forcedMuted is active to prevent
+        // user confusion (video would remain muted regardless)
+
+        if (forcedMuted) return;
+
         video.muted = !video.muted;
         setMuted(video.muted);
-    }, [setMuted]);
+    }, [setMuted, forcedMuted]);
 
     // Sync store when video element fires volumechange event
     const syncFromVideoElement = useCallback(() => {
         const video = videoRef.current;
         if (!video) return;
 
-        setMuted(video.muted);
+        // Do not sync mute state if forced, as it doesn't reflect user preference
+        if (!forcedMuted) {
+            setMuted(video.muted);
+        }
         setVolume(video.volume * 100);
-    }, [setVolume, setMuted]);
+    }, [setVolume, setMuted, forcedMuted]);
 
     return {
         volume,
-        isMuted,
+        isMuted: isEffectiveMuted, // Return effective mute state so UI reflects it
         handleVolumeChange,
         handleToggleMute,
         syncFromVideoElement,

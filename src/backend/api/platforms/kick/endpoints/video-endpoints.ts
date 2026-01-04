@@ -96,6 +96,7 @@ export async function getVideosByChannelSlug(
                     duration: v.duration ? formatDuration(v.duration) : '0:00',
                     views: (v.views || v.view_count || '0').toString(),
                     date: new Date(v.created_at).toISOString(),
+                    created_at: v.created_at, // Raw ISO date for consistency
                     thumbnailUrl: v.thumbnail?.src || v.thumbnail?.url || v.thumbnail_url || v.thumb || v.video?.thumb || '',
                     source: v.source || '', // Direct HLS m3u8 URL - this is the most reliable way to play VODs
                     url: v.source || `https://kick.com/video/${v.slug}`,

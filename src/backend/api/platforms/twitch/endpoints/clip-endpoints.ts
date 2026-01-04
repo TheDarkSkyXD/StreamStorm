@@ -23,6 +23,15 @@ export async function getClipsByBroadcaster(
         params.set('after', options.after);
     }
 
+    // Time range filtering for clips
+    if (options.started_at) {
+        params.set('started_at', options.started_at);
+    }
+
+    if (options.ended_at) {
+        params.set('ended_at', options.ended_at);
+    }
+
     const data = await client.request<TwitchApiResponse<TwitchApiClip>>(
         `/clips?${params.toString()}`
     );

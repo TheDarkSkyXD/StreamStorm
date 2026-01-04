@@ -376,6 +376,8 @@ const electronAPI = {
       channelId?: string;
       limit?: number;
       cursor?: string;
+      sort?: 'date' | 'views';
+      timeRange?: 'day' | 'week' | 'month' | 'all';
     }): Promise<{ success: boolean; data?: any[]; cursor?: string; debug?: string; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.CLIPS_GET_BY_CHANNEL, params),
 

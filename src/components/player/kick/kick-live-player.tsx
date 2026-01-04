@@ -57,7 +57,8 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
     const { volume, isMuted, handleVolumeChange, handleToggleMute, syncFromVideoElement } = useVolume({
         videoRef: videoRef as React.RefObject<HTMLVideoElement>,
         initialMuted,
-        watch: streamUrl
+        watch: `${streamUrl}-${initialMuted}`, // Reset when either changes
+        forcedMuted: initialMuted
     });
 
     // Hooks
@@ -204,7 +205,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
             video.removeEventListener('progress', handleProgress);
             video.removeEventListener('ratechange', handleRateChange);
         };
-    }, [isReady, startedAt]);
+    }, [isReady, startedAt, syncFromVideoElement]);
 
     // Volume initialization is handled by useVolume hook
 

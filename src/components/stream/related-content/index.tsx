@@ -24,8 +24,47 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
     const [clips, setClips] = useState<VideoOrClip[]>([]);
     const [selectedClip, setSelectedClip] = useState<VideoOrClip | null>(null);
     const [clipPlaybackUrl, setClipPlaybackUrl] = useState<string | null>(null);
-    const [sortBy, setSortBy] = useState<SortOption>('views');
-    const [timeRange, setTimeRange] = useState<TimeRange>('all');
+    const [sortBy, setSortBy] = useState<SortOption>(() => {
+        try {
+            // Load saved preference from localStorage
+            const saved = localStorage.getItem('content-sort-preference');
+            return (saved === 'recent' || saved === 'views') ? saved : 'views';
+        } catch (error) {
+            console.warn('Failed to load sort preference:', error);
+            return 'views';
+        }
+    });
+
+    // Persist sort preference to localStorage when it changes
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('content-sort-preference', sortBy);
+        } catch (error) {
+            console.error('Failed to save sort preference:', error);
+        }
+    }, [sortBy]);
+
+    const [timeRange, setTimeRange] = useState<TimeRange>(() => {
+        try {
+            // Load saved preference from localStorage
+            const saved = localStorage.getItem('clips-filter-preference');
+            return (saved === 'day' || saved === 'week' || saved === 'month' || saved === 'all') ? saved : 'all';
+        } catch (error) {
+            console.warn('Failed to load time range preference:', error);
+            return 'all';
+        }
+    });
+
+    // Persist time range preference to localStorage when it changes
+
+    useEffect(() => {
+        try {
+            localStorage.setItem('clips-filter-preference', timeRange);
+        } catch (error) {
+            console.error('Failed to save time range preference:', error);
+        }
+    }, [timeRange]);
 
     // Pagination State
     const [videoCursor, setVideoCursor] = useState<string | undefined>(undefined);

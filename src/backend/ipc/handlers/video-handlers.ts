@@ -209,6 +209,7 @@ export function registerVideoHandlers(): void {
                         duration: formatTwitchDuration(v.duration),
                         views: v.view_count.toString(),
                         date: new Date(v.created_at).toISOString(),
+                        created_at: v.created_at, // Raw ISO date
                         thumbnailUrl: v.thumbnail_url.replace('%{width}', '320').replace('%{height}', '180'),
                         platform: 'twitch',
                         gameName: gameName,
@@ -342,6 +343,7 @@ export function registerVideoHandlers(): void {
                         duration: formatSeconds(c.duration),
                         views: c.view_count.toString(),
                         date: new Date(c.created_at).toISOString(),
+                        created_at: c.created_at, // Raw ISO date
                         thumbnailUrl: c.thumbnail_url,
                         embedUrl: c.embed_url,
                         url: c.url,
@@ -355,70 +357,167 @@ export function registerVideoHandlers(): void {
                 };
 
             } else if (params.platform === 'kick') {
-                console.log(`[KickClip] Fetching clips for channel: ${params.channelName}`);
-                const clips = await kickClient.getClips(params.channelName, {
-                    limit: params.limit,
-                    cursor: params.cursor,
-                    sort: params.sort // Pass sort to Kick API
-                });
-                const count = clips.data ? clips.data.length : 0;
-                console.log(`[KickClip] Fetched ${count} clips for ${params.channelName}`);
+                // Strategy: Multi-page fetch to cover the time range
+                const isViewSortWithTimeParams = params.sort === 'views' && params.timeRange && params.timeRange !== 'all';
+                let clipsData: any[] = [];
+                let outputCursor: string | undefined = undefined;
 
-                // Pre-check VOD availability for each clip
-                // Fetch channel videos and create a set of available livestream IDs
-                if (clips.data && clips.data.length > 0) {
-                    try {
-                        console.log(`[KickClip] Pre-checking VOD availability for ${count} clips`);
-                        const videos = await kickClient.getVideos(params.channelName, {
-                            limit: 100 // Fetch enough videos to match recent clips
+                if (isViewSortWithTimeParams) {
+                    console.log(`[KickClip] executing "Deep Fetch" strategy for ${params.timeRange} view sort`);
+
+                    // Determine cutoff date
+                    const now = new Date();
+                    let cutoffDate = new Date(0);
+                    switch (params.timeRange) {
+                        case 'day': cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000); break;
+                        case 'week': cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000); break;
+                        case 'month': cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000); break;
+                    }
+
+                    // Loop fetch
+                    let currentCursor = params.cursor;
+                    let keepFetching = true;
+                    let pagesFetched = 0;
+                    const MAX_PAGES = 30; // Increased to 30 pages to cover more history (potential 3000 clips)
+
+                    while (keepFetching && pagesFetched < MAX_PAGES) {
+                        console.log(`[KickClip] Deep Fetch Page ${pagesFetched + 1} (cursor: ${currentCursor})`);
+                        const response = await kickClient.getClips(params.channelName, {
+                            limit: 100,
+                            cursor: currentCursor,
+                            sort: 'date',
+                            timeRange: params.timeRange
                         });
 
-                        // Create a set of available video IDs using centralized helper
+                        const pageClips = response.data || [];
+                        const count = pageClips.length;
+
+                        if (count === 0) {
+                            console.log('[KickClip] Page empty, stopping fetch');
+                            keepFetching = false;
+                        } else {
+                            clipsData.push(...pageClips);
+                            currentCursor = response.cursor;
+                            pagesFetched++;
+
+                            // Log date range of this page
+                            const firstDate = pageClips[0].created_at || pageClips[0].date;
+                            const lastDate = pageClips[count - 1].created_at || pageClips[count - 1].date;
+                            console.log(`[KickClip] Page ${pagesFetched} range: ${firstDate} -> ${lastDate}`);
+
+                            // Check if current page has clips older than cutoff
+                            const lastClipDate = new Date(lastDate);
+                            if (lastClipDate < cutoffDate) {
+                                console.log(`[KickClip] Reached cutoff date (${cutoffDate.toISOString()}), stopping.`);
+                                keepFetching = false;
+                            }
+
+                            if (!currentCursor) {
+                                console.log('[KickClip] No next cursor, stopping.');
+                                keepFetching = false;
+                            }
+                        }
+                    }
+
+                    // Filter by Date
+                    const beforeFilter = clipsData.length;
+                    clipsData = clipsData.filter(c => {
+                        const d = new Date(c.created_at || c.date);
+                        return d >= cutoffDate;
+                    });
+                    console.log(`[KickClip] Deep Fetch Result: ${beforeFilter} -> ${clipsData.length} clips within ${params.timeRange}`);
+
+                    // Sort by Views
+                    console.log(`[KickClip] Sorting ${clipsData.length} clips by views...`);
+                    clipsData.sort((a, b) => {
+                        const vA = parseInt(String(a.views).replace(/,/g, ''), 10) || 0;
+                        const vB = parseInt(String(b.views).replace(/,/g, ''), 10) || 0;
+                        return vB - vA;
+                    });
+
+                    // Log top 5 for verification
+                    clipsData.slice(0, 5).forEach((c, i) => {
+                        console.log(`[KickClip] #${i + 1}: ${c.views} views - ${c.title}`);
+                    });
+
+                    // Optimization: For "Last Day" or any filtered view sort, if we found huge number of clips,
+                    // satisfy the request by returning the top viewed ones.
+                    // We only check VODs for the top 50 to save API calls.
+                    // Since pagination is disabled in this mode (outputCursor = undefined), returning top 50 is reasonable
+                    // or we return all but only VOD-check the top 50.
+                    // Let's return all but prioritize top 50 for checking.
+
+
+                    // For this mode, we effectively clear pagination since we fetched "everything relevant"
+                    outputCursor = undefined;
+
+                } else {
+                    // Standard single page fetch
+                    const response = await kickClient.getClips(params.channelName, {
+                        limit: params.limit,
+                        cursor: params.cursor,
+                        sort: params.sort,
+                        timeRange: params.timeRange
+                    });
+                    clipsData = response.data || [];
+                    outputCursor = response.cursor;
+
+                    // Client-side sort fallback if needed (e.g. All Time views sort)
+                    if (params.sort === 'views' && clipsData.length > 0) {
+                        clipsData.sort((a, b) => {
+                            const viewsA = parseInt(String(a.views).replace(/,/g, ''), 10) || 0;
+                            const viewsB = parseInt(String(b.views).replace(/,/g, ''), 10) || 0;
+                            return viewsB - viewsA;
+                        });
+                    }
+                }
+
+                // VOD Availability Check (only for the clips we are returning)
+                // Limit checking to top 50 to avoid massive API spam if list is huge
+                const clipsToCheck = clipsData.slice(0, 50);
+
+                if (clipsToCheck.length > 0) {
+                    try {
+                        const videos = await kickClient.getVideos(params.channelName, { limit: 50 });
                         const availableVodIds = new Set<string>();
                         if (videos.data) {
                             for (const video of videos.data) {
                                 const vodId = getKickVideoLivestreamId(video);
-                                if (vodId) {
-                                    availableVodIds.add(vodId);
-                                }
+                                if (vodId) availableVodIds.add(vodId);
                             }
                         }
-                        console.log(`[KickClip] Found ${availableVodIds.size} available VODs`);
 
-                        // Update each clip's vodId based on availability
-                        clips.data = clips.data.map((clip: any) => {
-                            const hasVod = clip.vodId && availableVodIds.has(clip.vodId.toString());
-                            if (!hasVod && clip.vodId) {
-                                console.log(`[KickClip] VOD not available for clip: ${clip.id} (livestream_id: ${clip.vodId})`);
+                        // Update ALL clipsData (though only checked subset)
+                        // If a clip wasn't in "clipsToCheck", we assume VOD might be there or just leave it?
+                        // Actually, safely we map what we checked.
+                        // Optimization: Just check set for all, assuming the 50 videos cover recent history.
+                        // If we fetched deep history (1 month), the recent 50 videos might NOT cover it.
+                        // But verifying 1-month old VODs requires fetching ALL videos... too expensive.
+                        // We will just check against recent videos.
+
+                        clipsData = clipsData.map((clip, index) => {
+                            // Only verify clips we actually checked (top 50)
+                            if (index >= 50) {
+                                return clip; // Leave vodId as-is for unchecked clips
                             }
-                            return {
-                                ...clip,
-                                vodId: hasVod ? clip.vodId : '' // Clear vodId if VOD doesn't exist
-                            };
+                            const hasVod = clip.vodId && availableVodIds.has(clip.vodId.toString());
+                            return { ...clip, vodId: hasVod ? clip.vodId : '' };
                         });
-                    } catch (vodCheckError) {
-                        console.warn('[KickClip] Could not pre-check VOD availability:', vodCheckError);
-                        // Continue without VOD check - clips will still have vodId set
+                    } catch (e) {
+                        console.warn('[KickClip] VOD check failed', e);
                     }
                 }
 
-                // Apply client-side sorting (as fallback since Kick API may not reliably sort by views)
-                if (clips.data && clips.data.length > 0 && params.sort === 'views') {
-                    console.log(`[KickClip] Sorting ${clips.data.length} clips by views (client-side)`);
-                    clips.data = [...clips.data].sort((a: any, b: any) => {
-                        const viewsA = parseInt(a.views) || 0;
-                        const viewsB = parseInt(b.views) || 0;
-                        return viewsB - viewsA; // Descending (most views first)
-                    });
-                }
-
-                return { success: true, ...clips };
+                return {
+                    success: true,
+                    data: clipsData,
+                    cursor: outputCursor
+                };
             }
-            throw new Error(`Unsupported platform: ${params.platform}`);
+            throw new Error(`Unsupported platform: ${params.platform} `);
         } catch (error) {
             console.error('❌ Failed to get clips:', error);
             return {
-                success: false,
                 error: error instanceof Error ? error.message : 'Failed to fetch clips'
             };
         }
@@ -463,7 +562,7 @@ export function registerVideoHandlers(): void {
                     }
                 };
             }
-            throw new Error(`Unsupported platform: ${params.platform}`);
+            throw new Error(`Unsupported platform: ${params.platform} `);
         } catch (error) {
             console.error('❌ Failed to get clip playback URL:', error);
             return {
@@ -482,7 +581,7 @@ export function registerVideoHandlers(): void {
         livestreamId: string;
     }) => {
         try {
-            console.log(`[KickVodLookup] Looking up VOD for livestream_id: ${params.livestreamId} on channel: ${params.channelSlug}`);
+            console.log(`[KickVodLookup] Looking up VOD for livestream_id: ${params.livestreamId} on channel: ${params.channelSlug} `);
 
             const { kickClient } = await import('../../api/platforms/kick/kick-client');
 
@@ -510,7 +609,7 @@ export function registerVideoHandlers(): void {
                     const videoLivestreamId = getKickVideoLivestreamId(video);
 
                     if (videoLivestreamId && videoLivestreamId === params.livestreamId?.toString()) {
-                        console.log(`[KickVodLookup] Found matching VOD:`, video.id, video.title);
+                        console.log(`[KickVodLookup] Found matching VOD: `, video.id, video.title);
 
                         // Return the video data with source URL for direct playback
                         // Include all metadata needed by the Video page
@@ -544,7 +643,7 @@ export function registerVideoHandlers(): void {
                 }
             }
 
-            console.log(`[KickVodLookup] VOD not found for livestream_id: ${params.livestreamId}`);
+            console.log(`[KickVodLookup] VOD not found for livestream_id: ${params.livestreamId} `);
             return {
                 success: false,
                 error: 'VOD not found - it may have been deleted or is not yet available'

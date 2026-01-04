@@ -6,6 +6,7 @@ export interface VideoOrClip {
     duration: string;
     views: string;
     date: string;
+    created_at?: string; // ISO timestamp for more accurate time-ago calculation
     thumbnailUrl: string;
     embedUrl?: string; // For clips
     url?: string; // For clips
