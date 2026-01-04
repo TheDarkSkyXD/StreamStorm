@@ -228,8 +228,31 @@ export function registerStreamHandlers(): void {
                 // 2. Local Follows (Guest/Public)
                 if (localKick.length > 0) {
                     const uniqueSlugs = [...new Set(localKick.map(f => f.channelName))];
-                    const promises = uniqueSlugs.map(slug => kickClient.getStreamBySlug(slug));
-                    const localResults = await Promise.all(promises);
+
+                    // Throttle requests to avoid 429 (Kick API is sensitive to parallel bursts)
+                    // We process in small chunks with delays
+                    const localResults: any[] = [];
+                    const CHUNK_SIZE = 3;
+
+                    for (let i = 0; i < uniqueSlugs.length; i += CHUNK_SIZE) {
+                        const chunk = uniqueSlugs.slice(i, i + CHUNK_SIZE);
+                        // console.log(`[Kick] Fetching chunk ${i / CHUNK_SIZE + 1} of local follows...`);
+
+                        const chunkPromises = chunk.map(slug => kickClient.getStreamBySlug(slug));
+                        const chunkResults = await Promise.allSettled(chunkPromises);
+                        chunkResults.forEach((result) => {
+                            if (result.status === 'fulfilled' && result.value) {
+                                localResults.push(result.value);
+                            } else if (result.status === 'rejected') {
+                                console.warn('Failed to fetch Kick stream:', result.reason);
+                            }
+                        });
+
+                        // Delay between chunks if there are more
+                        if (i + CHUNK_SIZE < uniqueSlugs.length) {
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        }
+                    }
 
                     localResults.forEach(s => {
                         if (s && !seenIds.has(s.id)) {

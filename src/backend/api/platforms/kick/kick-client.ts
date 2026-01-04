@@ -39,6 +39,10 @@ class KickClient implements KickRequestor {
      * Make an HTTP request using Electron's net module
      * Uses Chromium's networking stack which handles IPv6-only domains (like api.kick.com) properly
      */
+    /**
+     * Make an HTTP request using Electron's net module
+     * Uses Chromium's networking stack which handles IPv6-only domains (like api.kick.com) properly
+     */
     private electronRequest<T>(
         url: string,
         method: string,
@@ -58,7 +62,7 @@ class KickClient implements KickRequestor {
                 request.setHeader(key, value);
             }
 
-            // Track completion to prevent race conditions between timeout and response handlers
+            // Track completion
             let completed = false;
 
             // Timeout after 30 seconds
@@ -124,6 +128,122 @@ class KickClient implements KickRequestor {
 
             request.end();
         });
+    }
+
+    /**
+     * Make a binary HTTP request using Electron's net module (for images)
+     */
+    private electronRequestBinary(
+        url: string,
+        headers: Record<string, string>
+    ): Promise<{ buffer: Buffer; statusCode: number; contentType: string }> {
+        return new Promise((resolve, reject) => {
+            const { net } = require('electron');
+
+            const request = net.request({
+                method: 'GET',
+                url,
+            });
+
+            for (const [key, value] of Object.entries(headers)) {
+                request.setHeader(key, value);
+            }
+
+            let completed = false;
+
+            // Timeout
+            const timeout = setTimeout(() => {
+                if (completed) return;
+                completed = true;
+                request.abort();
+                reject(new Error('Request timeout'));
+            }, 15000);
+
+            request.on('response', (response: any) => {
+                if (response.statusCode !== 200) {
+                    if (completed) return;
+                    completed = true;
+                    clearTimeout(timeout);
+                    reject(new Error(`HTTP ${response.statusCode}`));
+                    return;
+                }
+
+                const chunks: Buffer[] = [];
+                const contentType = (response.headers['content-type'] && response.headers['content-type'][0])
+                    || 'image/jpeg';
+
+                response.on('data', (chunk: Buffer) => {
+                    chunks.push(chunk);
+                });
+
+                response.on('end', () => {
+                    if (completed) return;
+                    completed = true;
+                    clearTimeout(timeout);
+                    const buffer = Buffer.concat(chunks);
+                    resolve({
+                        buffer,
+                        statusCode: response.statusCode,
+                        contentType
+                    });
+                });
+
+                response.on('error', (error: Error) => {
+                    if (completed) return;
+                    completed = true;
+                    clearTimeout(timeout);
+                    reject(error);
+                });
+            });
+
+            request.on('error', (error: Error) => {
+                if (completed) return;
+                completed = true;
+                clearTimeout(timeout);
+                reject(error);
+            });
+
+            request.end();
+        });
+    }
+
+    /**
+     * Fetch an image provided a URL and return it as a base64 data URL
+     * Uses the same network stack and headers as other Kick requests
+     */
+    async fetchImage(url: string): Promise<string | null> {
+        try {
+            // 1. Setup headers exactly like the API request but with image acceptance
+            const headers: Record<string, string> = {
+                'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+                'Accept-Language': 'en-US,en;q=0.9',
+            };
+
+            // Add Auth token if we have one (user or app)
+            // This might be what's needed for 403s on some assets
+            let token = kickAuthService.getAccessToken(); // Try user token first
+
+            if (!token) {
+                token = kickAuthService.getAppAccessToken();
+            }
+
+            if (token) {
+                headers['Authorization'] = `Bearer ${token}`;
+            }
+
+            // Important: Referer/Origin for Hotlinking protection
+            headers['Referer'] = 'https://kick.com/';
+            headers['Origin'] = 'https://kick.com';
+
+            const { buffer, contentType } = await this.electronRequestBinary(url, headers);
+
+            const base64 = buffer.toString('base64');
+            return `data:${contentType};base64,${base64}`;
+
+        } catch (error) {
+            console.warn(`[KickClient] Failed to fetch image ${url}:`, error);
+            return null;
+        }
     }
 
     async request<T>(

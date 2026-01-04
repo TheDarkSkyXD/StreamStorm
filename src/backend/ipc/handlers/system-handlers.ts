@@ -134,73 +134,8 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
 
             // For Kick CDN, use Electron's net.request (most reliable for setting Referer)
             if (isKickCDN) {
-                const { net } = require('electron');
-
-                return new Promise<string | null>((resolve) => {
-                    const request = net.request({
-                        method: 'GET',
-                        url: url,
-                    });
-
-                    // Set headers that bypass Kick's hotlinking protection
-                    request.setHeader('Accept', 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8');
-                    request.setHeader('Accept-Language', 'en-US,en;q=0.9');
-                    request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36');
-                    request.setHeader('Referer', 'https://kick.com/');
-                    request.setHeader('Origin', 'https://kick.com');
-
-                    let resolved = false;
-                    const resolveOnce = (value: string | null) => {
-                        if (!resolved) {
-                            resolved = true;
-                            resolve(value);
-                        }
-                    };
-
-                    // 10 second timeout
-                    const timeout = setTimeout(() => {
-                        request.abort();
-                        console.warn(`⚠️ Image proxy: Timeout for ${url.substring(0, 60)}...`);
-                        resolveOnce(null);
-                    }, 10000);
-
-                    request.on('response', (response: any) => {
-                        if (response.statusCode !== 200) {
-                            clearTimeout(timeout);
-                            console.warn(`⚠️ Image proxy: Failed to fetch Kick CDN image: ${response.statusCode}`);
-                            resolveOnce(null);
-                            return;
-                        }
-
-                        const chunks: Buffer[] = [];
-                        const contentType = response.headers['content-type'] || 'image/webp';
-
-                        response.on('data', (chunk: Buffer) => {
-                            chunks.push(chunk);
-                        });
-
-                        response.on('end', () => {
-                            clearTimeout(timeout);
-                            const buffer = Buffer.concat(chunks);
-                            const base64 = buffer.toString('base64');
-                            resolveOnce(`data:${contentType};base64,${base64}`);
-                        });
-
-                        response.on('error', (error: Error) => {
-                            clearTimeout(timeout);
-                            console.error('❌ Image proxy response error:', error.message);
-                            resolveOnce(null);
-                        });
-                    });
-
-                    request.on('error', (error: Error) => {
-                        clearTimeout(timeout);
-                        console.error('❌ Image proxy request error:', error.message);
-                        resolveOnce(null);
-                    });
-
-                    request.end();
-                });
+                const { kickClient } = await import('../../api/platforms/kick/kick-client');
+                return await kickClient.fetchImage(url);
             }
 
             // For other CDNs (Twitch, etc), use standard fetch
