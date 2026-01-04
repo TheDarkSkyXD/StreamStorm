@@ -72,11 +72,22 @@ export function SidebarFollows({ collapsed }: SidebarFollowsProps) {
                 }
                 addedStreamIds.add(streamKey);
 
-                // Hydrate avatar if missing on stream but present on channel
+                // Hydrate avatar and display name if missing or lowercase (slug) on stream but proper on channel
                 // Create a new object to avoid mutating React Query cache
-                const streamToAdd = (!stream.channelAvatar && c.avatarUrl)
-                    ? { ...stream, channelAvatar: c.avatarUrl }
-                    : stream;
+                let streamToAdd = stream;
+                const needsAvatar = !stream.channelAvatar && c.avatarUrl;
+                // Prefer channel displayName if stream's is just the lowercase slug
+                const needsDisplayName = c.displayName &&
+                    stream.channelDisplayName === stream.channelName &&
+                    c.displayName !== stream.channelName;
+
+                if (needsAvatar || needsDisplayName) {
+                    streamToAdd = {
+                        ...stream,
+                        ...(needsAvatar && { channelAvatar: c.avatarUrl }),
+                        ...(needsDisplayName && { channelDisplayName: c.displayName }),
+                    };
+                }
                 live.push(streamToAdd);
             } else {
                 offline.push(c);

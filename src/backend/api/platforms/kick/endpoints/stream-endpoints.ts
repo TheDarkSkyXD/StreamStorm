@@ -238,7 +238,15 @@ export async function getStreamBySlug(client: KickRequestor, slug: string): Prom
                 if (response.data && response.data.length > 0) {
                     const stream = transformKickLivestream(response.data[0]);
 
-                    // Enrich with user avatar
+                    // Use channel display name if available and better than what we have
+                    if (channel.displayName && channel.displayName !== channel.username) {
+                        stream.channelDisplayName = channel.displayName;
+                    }
+                    if (channel.avatarUrl) {
+                        stream.channelAvatar = channel.avatarUrl;
+                    }
+
+                    // Enrich with user avatar and name from fresh user fetch (double check)
                     try {
                         const users = await getUsersById(client, [parseInt(stream.channelId)]);
                         if (users.length > 0) {
