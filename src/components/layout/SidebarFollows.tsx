@@ -125,7 +125,7 @@ export function SidebarFollows({ collapsed }: SidebarFollowsProps) {
     return (
         <div className="flex flex-col h-full overflow-hidden">
             {!collapsed && (
-                <div className="px-3 py-2 text-xs font-bold text-white uppercase tracking-wider flex justify-between items-center">
+                <div className="px-3 py-2 text-xs font-bold text-white tracking-wider flex justify-between items-center">
                     <span>Following</span>
                     <span className="bg-[var(--color-background-tertiary)] text-[var(--color-foreground)] px-1.5 py-0.5 rounded text-[10px]">
                         {liveChannels.length + offlineChannels.length}
@@ -182,7 +182,11 @@ export function SidebarFollows({ collapsed }: SidebarFollowsProps) {
                                         </div>
                                     </div>
                                     <div className="flex items-center text-xs text-[#b2b2b2] font-bold">
-                                        <span className="truncate" title={stream.categoryName}>{stream.categoryName}</span>
+                                        <span className="truncate" title={stream.categoryName}>
+                                            {stream.categoryName && stream.categoryName.length > 24
+                                                ? `${stream.categoryName.slice(0, 15)}...`
+                                                : stream.categoryName}
+                                        </span>
                                     </div>
                                 </div>
                             )}
