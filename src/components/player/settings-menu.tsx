@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Settings, PictureInPicture, Check } from 'lucide-react';
+import { Settings, PictureInPicture, Check, Activity } from 'lucide-react';
 import { Button } from '../ui/button';
+import { Switch } from '../ui/switch';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 import { QualityLevel } from './types';
 
@@ -17,6 +18,8 @@ export interface SettingsMenuProps {
     playbackRate?: number;
     onPlaybackRateChange?: (rate: number) => void;
     onOpenChange?: (isOpen: boolean) => void;
+    showVideoStats?: boolean;
+    onToggleVideoStats?: () => void;
 }
 
 const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -30,7 +33,9 @@ export function SettingsMenu({
     isTheater,
     playbackRate = 1,
     onPlaybackRateChange,
-    onOpenChange
+    onOpenChange,
+    showVideoStats = false,
+    onToggleVideoStats
 }: SettingsMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [activeSubMenu, setActiveSubMenu] = useState<'main' | 'quality' | 'speed'>('main');
@@ -135,6 +140,23 @@ export function SettingsMenu({
                                             Picture in Picture
                                         </span>
                                     </button>
+                                )}
+
+                                {onToggleVideoStats && (
+                                    <div className="border-t border-white/10 mt-1 pt-1">
+                                        <div className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white">
+                                            <div className="flex items-center gap-2">
+                                                <Activity className="w-4 h-4" />
+                                                <span>Video Stats</span>
+                                            </div>
+                                            <Switch
+                                                checked={showVideoStats}
+                                                onCheckedChange={() => onToggleVideoStats()}
+                                                className="data-[state=checked]:!bg-[#9146FF] data-[state=checked]:!border-[#9146FF] data-[state=checked]:!border-2 data-[state=unchecked]:!bg-transparent data-[state=unchecked]:!border-white data-[state=unchecked]:!border-2"
+                                                thumbClassName="bg-white"
+                                            />
+                                        </div>
+                                    </div>
                                 )}
                             </div>
                         )}

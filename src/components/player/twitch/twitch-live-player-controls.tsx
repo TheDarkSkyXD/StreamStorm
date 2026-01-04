@@ -51,6 +51,10 @@ interface TwitchLivePlayerControlsProps {
     // Playback Speed
     playbackRate?: number;
     onPlaybackRateChange?: (rate: number) => void;
+
+    // Stats
+    showVideoStats?: boolean;
+    onToggleVideoStats?: () => void;
 }
 
 export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
@@ -70,7 +74,8 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
         onToggleFullscreen,
         onToggleTheater,
         onTogglePip,
-
+        showVideoStats,
+        onToggleVideoStats
     } = props;
 
     const [isVisible, setIsVisible] = useState(true);
@@ -215,6 +220,8 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
                             onToggleTheater={onToggleTheater}
                             isTheater={isTheater}
                             onOpenChange={handleSettingsOpenChange}
+                            showVideoStats={showVideoStats}
+                            onToggleVideoStats={onToggleVideoStats}
                         />
 
                         {onToggleTheater && !isFullscreen && (

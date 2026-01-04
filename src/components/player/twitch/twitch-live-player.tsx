@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { QualityLevel, PlayerError, Platform } from '../types';
 import { HlsPlayer } from '../hls-player';
 import { TwitchLivePlayerControls } from './twitch-live-player-controls';
+import { VideoStatsOverlay } from './video-stats-overlay';
 import { usePlayerKeyboard } from '../use-player-keyboard';
 import { usePictureInPicture } from '../use-picture-in-picture';
 import { useFullscreen } from '../use-fullscreen';
@@ -59,6 +60,10 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
     const [isLoading, setIsLoading] = useState(true);
     const [playbackRate, setPlaybackRate] = useState(1);
     const [hasError, setHasError] = useState(false);
+    const [showVideoStats, setShowVideoStats] = useState(false);
+
+    // Refs for stats
+    const hlsRef = useRef<any>(null); // Capture Hls instance
 
     // Apply user's default quality preference
     useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
@@ -177,6 +182,9 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
                         setIsLoading(false);
                         onError?.(error);
                     }}
+                    onHlsInstance={(hls) => {
+                        hlsRef.current = hls;
+                    }}
                     className="size-full object-contain cursor-pointer"
                     controls={false}
                     onDoubleClick={toggleFullscreen}
@@ -192,6 +200,15 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
                 <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
                     <TwitchLoadingSpinner />
                 </div>
+            )}
+
+            {/* Video Stats Overlay */}
+            {showVideoStats && (
+                <VideoStatsOverlay
+                    hls={hlsRef.current}
+                    video={videoRef.current}
+                    onClose={() => setShowVideoStats(false)}
+                />
             )}
 
             {/* Controls Overlay - Live stream (no progress bar) */}
@@ -214,6 +231,8 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
                     onTogglePip={togglePipHandler}
                     playbackRate={playbackRate}
                     onPlaybackRateChange={handlePlaybackRateChange}
+                    showVideoStats={showVideoStats}
+                    onToggleVideoStats={() => setShowVideoStats(!showVideoStats)}
                 />
             )}
         </div>

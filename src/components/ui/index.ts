@@ -12,3 +12,4 @@ export {
     SelectScrollDownButton,
 } from './select';
 export { ScrollArea, ScrollBar } from './scroll-area';
+export { Switch } from './switch';
