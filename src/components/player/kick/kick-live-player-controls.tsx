@@ -202,7 +202,6 @@ export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
             onMouseMove={handleMouseMove}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
-            onClick={onTogglePlay}
             onDoubleClick={onToggleFullscreen}
         >
             {/* Controls bar at the bottom */}

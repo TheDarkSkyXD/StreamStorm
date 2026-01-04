@@ -4,7 +4,7 @@ import { persist } from 'zustand/middleware';
 interface VolumeState {
     volume: number; // 0-100
     isMuted: boolean;
-    setVolume: (volume: number) => void;
+    setVolume: (volume: number | ((prev: number) => number)) => void;
     setMuted: (muted: boolean) => void;
     toggleMute: () => void;
 }
@@ -20,8 +20,11 @@ export const useVolumeStore = create<VolumeState>()(
             isMuted: false,
 
             setVolume: (volume) => {
-                const clamped = Math.max(0, Math.min(100, volume));
-                set({ volume: clamped });
+                set((state) => {
+                    const newVolume = typeof volume === 'function' ? volume(state.volume) : volume;
+                    const clamped = Math.max(0, Math.min(100, newVolume));
+                    return { volume: clamped };
+                });
             },
 
             setMuted: (muted) => set({ isMuted: muted }),

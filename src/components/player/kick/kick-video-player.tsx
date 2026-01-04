@@ -1,3 +1,4 @@
+
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { QualityLevel, PlayerError, Platform } from '../types';
 import { HlsPlayer } from '../hls-player';
@@ -7,6 +8,7 @@ import { usePictureInPicture } from '../use-picture-in-picture';
 import { useFullscreen } from '../use-fullscreen';
 import { useResumePlayback } from '../use-resume-playback';
 import { useDefaultQuality } from '../use-default-quality';
+import { useVolume } from '../use-volume';
 
 export interface KickVideoPlayerProps {
     streamUrl: string;
@@ -51,6 +53,19 @@ export function KickVideoPlayer(props: KickVideoPlayerProps) {
     const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
     const { isPip, togglePip } = usePictureInPicture(videoRef);
 
+    // Persistent Volume Management
+    const {
+        volume,
+        isMuted,
+        handleVolumeChange: setVolume,
+        handleToggleMute: toggleMute,
+        syncFromVideoElement
+    } = useVolume({
+        videoRef: videoRef as React.RefObject<HTMLVideoElement>,
+        initialMuted,
+        watch: streamUrl
+    });
+
     // Resume playback hook (only for VODs with videoId)
     useResumePlayback({
         platform: 'kick' as Platform,
@@ -64,8 +79,7 @@ export function KickVideoPlayer(props: KickVideoPlayerProps) {
     // State
     const [isReady, setIsReady] = useState(false);
     const [isPlaying, setIsPlaying] = useState(autoPlay);
-    const [volume, setVolume] = useState(100);
-    const [isMuted, setIsMuted] = useState(initialMuted);
+    // Local volume/mute state removed
     const [availableQualities, setAvailableQualities] = useState<QualityLevel[]>([]);
     const [currentQualityId, setCurrentQualityId] = useState<string>('auto');
     const [isLoading, setIsLoading] = useState(true);
@@ -89,9 +103,8 @@ export function KickVideoPlayer(props: KickVideoPlayerProps) {
         if (!video) return;
 
         setIsPlaying(!video.paused);
-        setIsMuted(video.muted);
-        setVolume(video.volume * 100);
-    }, []);
+        syncFromVideoElement();
+    }, [syncFromVideoElement]);
 
     // Setup event listeners
     useEffect(() => {
@@ -101,8 +114,7 @@ export function KickVideoPlayer(props: KickVideoPlayerProps) {
         const handlePlay = () => setIsPlaying(true);
         const handlePause = () => setIsPlaying(false);
         const handleVolumeChange = () => {
-            setIsMuted(video.muted);
-            setVolume(video.volume * 100);
+            syncFromVideoElement();
         };
         const handleWaiting = () => setIsLoading(true);
         const handlePlaying = () => setIsLoading(false);
@@ -132,16 +144,7 @@ export function KickVideoPlayer(props: KickVideoPlayerProps) {
             video.removeEventListener('progress', handleProgress);
             video.removeEventListener('ratechange', handleRateChange);
         };
-    }, [isReady]);
-
-    // Initialize volume/mute
-    useEffect(() => {
-        const video = videoRef.current;
-        if (video) {
-            video.muted = initialMuted;
-            video.volume = 1;
-        }
-    }, [initialMuted]);
+    }, [isReady, syncFromVideoElement]);
 
     // Handlers
     const togglePlay = useCallback(() => {
@@ -154,29 +157,9 @@ export function KickVideoPlayer(props: KickVideoPlayerProps) {
         }
     }, []);
 
-    const toggleMute = useCallback(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.muted = !video.muted;
-    }, []);
-
     const togglePipHandler = useCallback(async () => {
         await togglePip();
     }, [togglePip]);
-
-    const handleVolumeChange = useCallback((newVolume: number) => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        const vol = Math.max(0, Math.min(100, newVolume));
-        video.volume = vol / 100;
-        if (vol > 0 && video.muted) {
-            video.muted = false;
-        }
-        if (vol === 0) {
-            video.muted = true;
-        }
-    }, []);
 
     const handleSeek = useCallback((time: number) => {
         const video = videoRef.current;
@@ -211,8 +194,8 @@ export function KickVideoPlayer(props: KickVideoPlayerProps) {
     usePlayerKeyboard({
         onTogglePlay: togglePlay,
         onToggleMute: toggleMute,
-        onVolumeUp: () => handleVolumeChange(volume + 10),
-        onVolumeDown: () => handleVolumeChange(volume - 10),
+        onVolumeUp: () => setVolume((v) => v + 10),
+        onVolumeDown: () => setVolume((v) => v - 10),
         onToggleFullscreen: toggleFullscreen,
         disabled: !isReady
     });
@@ -227,7 +210,7 @@ export function KickVideoPlayer(props: KickVideoPlayerProps) {
                     ref={videoRef}
                     src={streamUrl}
                     poster={poster}
-                    muted={initialMuted}
+                    muted={isMuted}
                     autoPlay={autoPlay}
                     currentLevel={currentQualityId}
                     onQualityLevels={handleQualityLevels}
@@ -257,7 +240,7 @@ export function KickVideoPlayer(props: KickVideoPlayerProps) {
                     isFullscreen={isFullscreen}
                     onTogglePlay={togglePlay}
                     onToggleMute={toggleMute}
-                    onVolumeChange={handleVolumeChange}
+                    onVolumeChange={setVolume}
                     onQualityChange={handleQualitySet}
                     onToggleFullscreen={toggleFullscreen}
                     onToggleTheater={onToggleTheater}

@@ -7,7 +7,7 @@ import { usePictureInPicture } from '../use-picture-in-picture';
 import { useFullscreen } from '../use-fullscreen';
 import { useResumePlayback } from '../use-resume-playback';
 import { useDefaultQuality } from '../use-default-quality';
-import { useVolume } from '../useVolume';
+import { useVolume } from '../use-volume';
 import { KickLoadingSpinner } from '@/components/ui/loading-spinner';
 
 export interface KickVodPlayerProps {
@@ -181,8 +181,8 @@ export function KickVodPlayer(props: KickVodPlayerProps) {
     usePlayerKeyboard({
         onTogglePlay: togglePlay,
         onToggleMute: toggleMute,
-        onVolumeUp: () => handleVolumeChange(volume + 10),
-        onVolumeDown: () => handleVolumeChange(volume - 10),
+        onVolumeUp: () => handleVolumeChange((v) => v + 10),
+        onVolumeDown: () => handleVolumeChange((v) => v - 10),
         onToggleFullscreen: toggleFullscreen,
         disabled: !isReady
     });

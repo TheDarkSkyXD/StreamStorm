@@ -1,3 +1,4 @@
+
 /**
  * MiniPlayer Component
  * A draggable, persistent mini-player for live streams that appears when navigating away from a stream
@@ -9,6 +10,7 @@ import { usePipStore } from '@/store/pip-store';
 import { HlsPlayer } from '@/components/player/hls-player';
 import { PlayerError } from '@/components/player/types';
 import { cn } from '@/lib/utils';
+import { useVolume } from './use-volume';
 
 // Mini player dimensions
 const MINI_PLAYER_WIDTH = 400;
@@ -22,6 +24,12 @@ export function MiniPlayer() {
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
 
+    // Persistent volume
+    const { isMuted, handleToggleMute, syncFromVideoElement } = useVolume({
+        videoRef: videoRef as React.RefObject<HTMLVideoElement>,
+        watch: currentStream?.streamUrl
+    });
+
     // Dragging state
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
@@ -30,7 +38,6 @@ export function MiniPlayer() {
 
     // Player state
     const [isPlaying, setIsPlaying] = useState(true);
-    const [isMuted, setIsMuted] = useState(false);
     const [isHovered, setIsHovered] = useState(false);
     const [hasError, setHasError] = useState(false);
 
@@ -104,15 +111,18 @@ export function MiniPlayer() {
 
         const handlePlay = () => setIsPlaying(true);
         const handlePause = () => setIsPlaying(false);
+        const handleVolumeChange = () => syncFromVideoElement();
 
         video.addEventListener('play', handlePlay);
         video.addEventListener('pause', handlePause);
+        video.addEventListener('volumechange', handleVolumeChange);
 
         return () => {
             video.removeEventListener('play', handlePlay);
             video.removeEventListener('pause', handlePause);
+            video.removeEventListener('volumechange', handleVolumeChange);
         };
-    }, [isPipActive]);
+    }, [isPipActive, syncFromVideoElement]);
 
     const togglePlay = useCallback(() => {
         const video = videoRef.current;
@@ -123,13 +133,6 @@ export function MiniPlayer() {
         } else {
             video.pause();
         }
-    }, []);
-
-    const toggleMute = useCallback(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.muted = !video.muted;
-        setIsMuted(video.muted);
     }, []);
 
     const handleExpand = useCallback(() => {
@@ -269,7 +272,7 @@ export function MiniPlayer() {
                                 {isPlaying ? <Pause size={16} /> : <Play size={16} />}
                             </button>
                             <button
-                                onClick={toggleMute}
+                                onClick={handleToggleMute}
                                 className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
                             >
                                 {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}

@@ -170,7 +170,6 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
             onMouseMove={handleMouseMove}
             onMouseEnter={handleMouseEnter}
             onMouseLeave={handleMouseLeave}
-            onClick={onTogglePlay}
             onDoubleClick={onToggleFullscreen}
         >
             {/* Controls bar at the bottom */}
