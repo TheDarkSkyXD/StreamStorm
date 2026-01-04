@@ -276,6 +276,7 @@ export function PlayerControls(props: PlayerControlsProps) {
                             playbackRate={playbackRate}
                             onPlaybackRateChange={isLive ? undefined : onPlaybackRateChange}
                             onOpenChange={handleSettingsOpenChange}
+                            container={containerRef.current}
                         />
 
                         {onToggleTheater && !isFullscreen && (
@@ -294,7 +295,7 @@ export function PlayerControls(props: PlayerControlsProps) {
                                         )}
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>
+                                <TooltipContent container={containerRef.current}>
                                     <p>{isTheater ? 'Exit Theater Mode (t)' : 'Theater Mode (t)'}</p>
                                 </TooltipContent>
                             </Tooltip>
@@ -315,7 +316,7 @@ export function PlayerControls(props: PlayerControlsProps) {
                                     )}
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent>
+                            <TooltipContent container={containerRef.current}>
                                 <p>{isFullscreen ? 'Exit Fullscreen (f)' : 'Fullscreen (f)'}</p>
                             </TooltipContent>
                         </Tooltip>

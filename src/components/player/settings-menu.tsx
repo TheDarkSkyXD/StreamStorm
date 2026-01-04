@@ -20,6 +20,7 @@ export interface SettingsMenuProps {
     onOpenChange?: (isOpen: boolean) => void;
     showVideoStats?: boolean;
     onToggleVideoStats?: () => void;
+    container?: HTMLElement | null;
 }
 
 const PLAYBACK_SPEEDS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 2];
@@ -35,7 +36,8 @@ export function SettingsMenu({
     onPlaybackRateChange,
     onOpenChange,
     showVideoStats = false,
-    onToggleVideoStats
+    onToggleVideoStats,
+    container
 }: SettingsMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [activeSubMenu, setActiveSubMenu] = useState<'main' | 'quality' | 'speed'>('main');
@@ -82,7 +84,7 @@ export function SettingsMenu({
                         <Settings className={`w-5 h-5 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`} />
                     </Button>
                 </TooltipTrigger>
-                <TooltipContent>
+                <TooltipContent container={container}>
                     <p>Settings</p>
                 </TooltipContent>
             </Tooltip>

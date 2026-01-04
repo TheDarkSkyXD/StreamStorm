@@ -299,6 +299,7 @@ export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
                             onToggleTheater={onToggleTheater}
                             isTheater={isTheater}
                             onOpenChange={handleSettingsOpenChange}
+                            container={containerRef.current}
                         />
 
                         {onToggleTheater && !isFullscreen && (
@@ -317,7 +318,7 @@ export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
                                         )}
                                     </Button>
                                 </TooltipTrigger>
-                                <TooltipContent>
+                                <TooltipContent container={containerRef.current}>
                                     <p>{isTheater ? 'Exit Theater Mode (t)' : 'Theater Mode (t)'}</p>
                                 </TooltipContent>
                             </Tooltip>
@@ -338,7 +339,7 @@ export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
                                     )}
                                 </Button>
                             </TooltipTrigger>
-                            <TooltipContent>
+                            <TooltipContent container={containerRef.current}>
                                 <p>{isFullscreen ? 'Exit Fullscreen (f)' : 'Fullscreen (f)'}</p>
                             </TooltipContent>
                         </Tooltip>
