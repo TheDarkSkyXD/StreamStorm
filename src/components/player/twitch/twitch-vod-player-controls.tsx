@@ -44,6 +44,10 @@ interface TwitchVodPlayerControlsProps {
     // Playback Speed
     playbackRate?: number;
     onPlaybackRateChange?: (rate: number) => void;
+
+    // Seek Preview
+    onSeekHover?: (time: number | null) => void;
+    previewImage?: string;
 }
 
 export function TwitchVodPlayerControls(props: TwitchVodPlayerControlsProps) {
@@ -68,7 +72,9 @@ export function TwitchVodPlayerControls(props: TwitchVodPlayerControlsProps) {
         onSeek,
         buffered,
         playbackRate,
-        onPlaybackRateChange
+        onPlaybackRateChange,
+        onSeekHover,
+        previewImage
     } = props;
 
     const [isVisible, setIsVisible] = useState(true);
@@ -117,6 +123,8 @@ export function TwitchVodPlayerControls(props: TwitchVodPlayerControlsProps) {
                     duration={duration}
                     onSeek={onSeek}
                     buffered={buffered}
+                    onSeekHover={onSeekHover}
+                    previewImage={previewImage}
                 />
             </div>
 

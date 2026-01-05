@@ -16,7 +16,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type Hls from 'hls.js';
-import { QualityLevel } from './types';
+import { QualityLevel } from '../types';
 
 // Network Information API types (not in default TypeScript lib)
 interface NetworkInformation extends EventTarget {

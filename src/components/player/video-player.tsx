@@ -3,12 +3,12 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { QualityLevel, PlayerError, Platform } from './types';
 import { HlsPlayer } from './hls-player';
 import { PlayerControls } from './player-controls';
-import { usePlayerKeyboard } from './use-player-keyboard';
-import { usePictureInPicture } from './use-picture-in-picture';
-import { useFullscreen } from './use-fullscreen';
-import { useResumePlayback } from './use-resume-playback';
-import { useDefaultQuality } from './use-default-quality';
-import { useVolume } from './use-volume';
+import { usePlayerKeyboard } from './hooks/use-player-keyboard';
+import { usePictureInPicture } from './hooks/use-picture-in-picture';
+import { useFullscreen } from './hooks/use-fullscreen';
+import { useResumePlayback } from './hooks/use-resume-playback';
+import { useDefaultQuality } from './hooks/use-default-quality';
+import { useVolume } from './hooks/use-volume';
 
 export interface VideoPlayerProps {
     streamUrl: string;
@@ -90,6 +90,22 @@ export function VideoPlayer(props: VideoPlayerProps) {
     const [buffered, setBuffered] = useState<TimeRanges | undefined>(undefined);
     const [playbackRate, setPlaybackRate] = useState(1);
     const [hasError, setHasError] = useState(false); // Track if player has errored
+    const [previewImage, setPreviewImage] = useState<string | undefined>(undefined);
+
+    // Handle seek hover to update preview image
+    const handleSeekHover = useCallback((time: number | null) => {
+        if (time === null) {
+            setPreviewImage(undefined);
+            return;
+        }
+
+        // Default behavior: use thumbnail or poster
+        if (thumbnail) {
+            setPreviewImage(thumbnail);
+        } else if (poster) {
+            setPreviewImage(poster);
+        }
+    }, [thumbnail, poster]);
 
     // Apply user's default quality preference
     useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
@@ -256,6 +272,8 @@ export function VideoPlayer(props: VideoPlayerProps) {
                     buffered={buffered}
                     playbackRate={playbackRate}
                     onPlaybackRateChange={handlePlaybackRateChange}
+                    onSeekHover={handleSeekHover}
+                    previewImage={previewImage}
                 />
             )}
         </div>

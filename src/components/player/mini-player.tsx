@@ -10,7 +10,7 @@ import { usePipStore } from '@/store/pip-store';
 import { HlsPlayer } from '@/components/player/hls-player';
 import { PlayerError } from '@/components/player/types';
 import { cn } from '@/lib/utils';
-import { useVolume } from './use-volume';
+import { useVolume } from './hooks/use-volume';
 
 // Mini player dimensions
 const MINI_PLAYER_WIDTH = 400;

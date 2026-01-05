@@ -111,11 +111,9 @@ export function useVideoLifecycle({
     lazyLoad = false,
     lazyThreshold = 0.1,
 }: VideoLifecycleOptions): VideoLifecycleState {
-    const stateRef = useRef<InternalLifecycleState>({
-        isLoaded: false,
-        isInView: !lazyLoad, // If not lazy loading, consider always in view
-        isCleaned: false,
-    });
+    const [isLoaded, setIsLoaded] = useState(false);
+    const [isInView, setIsInView] = useState(!lazyLoad);
+    const [isCleaned, setIsCleaned] = useState(false);
 
     const observerRef = useRef<IntersectionObserver | null>(null);
     const containerRef = useRef<HTMLElement | null>(null);
@@ -131,7 +129,7 @@ export function useVideoLifecycle({
     // Handle lazy loading with Intersection Observer
     useEffect(() => {
         if (!lazyLoad) {
-            stateRef.current.isInView = true;
+            // Update via state setter if converted to useState
             return;
         }
 
@@ -139,18 +137,18 @@ export function useVideoLifecycle({
         if (!video) return;
 
         // Get the container element (parent of video)
-        containerRef.current = video.parentElement;
-        if (!containerRef.current) return;
+        const container = video.parentElement;
+        if (!container) return;
 
         observerRef.current = new IntersectionObserver(
             (entries) => {
                 entries.forEach(entry => {
                     const isInView = entry.isIntersecting;
-                    stateRef.current.isInView = isInView;
+                    setIsInView(isInView);
 
-                    if (isInView && !stateRef.current.isLoaded && src) {
+                    if (isInView && !isLoaded && src) {
                         console.debug('[VideoLifecycle] Video entered view, loading');
-                        stateRef.current.isLoaded = true;
+                        setIsLoaded(true);
                         // The actual loading is handled by HlsPlayer component
                     }
                 });
@@ -158,15 +156,15 @@ export function useVideoLifecycle({
             { threshold: lazyThreshold }
         );
 
-        observerRef.current.observe(containerRef.current);
+        observerRef.current.observe(container);
 
         return () => {
-            if (observerRef.current && containerRef.current) {
-                observerRef.current.unobserve(containerRef.current);
+            if (observerRef.current) {
+                observerRef.current.unobserve(container);
                 observerRef.current.disconnect();
             }
         };
-    }, [lazyLoad, lazyThreshold, src, videoRef]);
+    }, [lazyLoad, lazyThreshold, src, videoRef, isLoaded]);
 
     // Handle active/inactive state
     useEffect(() => {
@@ -207,19 +205,10 @@ export function useVideoLifecycle({
         return () => clearInterval(interval);
     }, []);
 
-    // Cleanup on source change
+    // Reset state when source changes
     useEffect(() => {
-        // Reset cleaned state for new source so cleanup can run again
-        stateRef.current.isCleaned = false;
-
-        return () => {
-            // Mark as cleaned to prevent double cleanup
-            if (stateRef.current.isCleaned) return;
-            stateRef.current.isCleaned = true;
-
-            // Reset loaded state for new source
-            stateRef.current.isLoaded = false;
-        };
+        setIsCleaned(false);
+        setIsLoaded(false);
     }, [src]);
 
     // Cleanup on unmount
@@ -228,7 +217,7 @@ export function useVideoLifecycle({
             console.debug('[VideoLifecycle] Component unmounting, cleaning up');
 
             cleanupVideoElement(videoRef.current, hlsRef.current);
-            stateRef.current.isCleaned = true;
+            setIsCleaned(true);
 
             onCleanup?.();
         };
@@ -237,12 +226,14 @@ export function useVideoLifecycle({
     // Public cleanup function
     const cleanup = useCallback(() => {
         cleanupVideoElement(videoRef.current, hlsRef.current);
-        stateRef.current.isCleaned = true;
+        setIsCleaned(true);
         onCleanup?.();
     }, [videoRef, hlsRef, onCleanup]);
 
     return {
-        ...stateRef.current,
+        isLoaded,
+        isInView,
+        isCleaned,
         cleanup,
     };
 }
@@ -301,9 +292,9 @@ export function useVideoChurnDetection(): {
     isChurning: boolean;
     mountCount: number;
 } {
-    const mountCountRef = useRef(0);
+    const [mountCount, setMountCount] = useState(0);
     const lastMountTimeRef = useRef(Date.now());
-    const isChurningRef = useRef(false);
+    const [isChurning, setIsChurning] = useState(false);
 
     useEffect(() => {
         const now = Date.now();
@@ -311,15 +302,18 @@ export function useVideoChurnDetection(): {
 
         // If mounted again within 1 second, increment churn counter
         if (timeSinceLastMount < 1000) {
-            mountCountRef.current++;
-            if (mountCountRef.current >= 3) {
-                isChurningRef.current = true;
-                console.warn('[VideoLifecycle] Video churn detected - component is being rapidly recreated');
-            }
+            setMountCount(prev => {
+                const newCount = prev + 1;
+                if (newCount >= 3) {
+                    setIsChurning(true);
+                    console.warn('[VideoLifecycle] Video churn detected - component is being rapidly recreated');
+                }
+                return newCount;
+            });
         } else {
             // Reset counters if enough time has passed
-            mountCountRef.current = 1;
-            isChurningRef.current = false;
+            setMountCount(1);
+            setIsChurning(false);
         }
 
         lastMountTimeRef.current = now;
@@ -330,7 +324,7 @@ export function useVideoChurnDetection(): {
     }, []);
 
     return {
-        isChurning: isChurningRef.current,
-        mountCount: mountCountRef.current,
+        isChurning,
+        mountCount,
     };
 }

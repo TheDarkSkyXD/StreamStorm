@@ -3,11 +3,11 @@ import { QualityLevel, PlayerError, Platform } from '../types';
 import { HlsPlayer } from '../hls-player';
 import { TwitchLivePlayerControls } from './twitch-live-player-controls';
 import { VideoStatsOverlay } from './video-stats-overlay';
-import { usePlayerKeyboard } from '../use-player-keyboard';
-import { usePictureInPicture } from '../use-picture-in-picture';
-import { useFullscreen } from '../use-fullscreen';
-import { useDefaultQuality } from '../use-default-quality';
-import { useVolume } from '../use-volume';
+import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
+import { usePictureInPicture } from '../hooks/use-picture-in-picture';
+import { useFullscreen } from '../hooks/use-fullscreen';
+import { useDefaultQuality } from '../hooks/use-default-quality';
+import { useVolume } from '../hooks/use-volume';
 import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
 
 export interface TwitchLivePlayerProps {

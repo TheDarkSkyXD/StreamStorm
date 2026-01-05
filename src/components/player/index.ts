@@ -43,21 +43,21 @@ export {
 } from './twitch';
 
 // Hooks
-export { useFullscreen } from './use-fullscreen';
-export { usePictureInPicture } from './use-picture-in-picture';
-export { usePlayerKeyboard } from './use-player-keyboard';
-export { useResumePlayback } from './use-resume-playback';
-export { useDefaultQuality } from './use-default-quality';
+export { useFullscreen } from './hooks/use-fullscreen';
+export { usePictureInPicture } from './hooks/use-picture-in-picture';
+export { usePlayerKeyboard } from './hooks/use-player-keyboard';
+export { useResumePlayback } from './hooks/use-resume-playback';
+export { useDefaultQuality } from './hooks/use-default-quality';
 
 // Performance Optimization Hooks (Phase 3.7)
-export { useAdaptiveQuality } from './use-adaptive-quality';
-export { useBackgroundThrottle, useMultistreamThrottle } from './use-background-throttle';
+export { useAdaptiveQuality } from './hooks/use-adaptive-quality';
+export { useBackgroundThrottle, useMultistreamThrottle } from './hooks/use-background-throttle';
 export {
     useVideoLifecycle,
     useMultiVideoLifecycle,
     useVideoChurnDetection,
     cleanupVideoElement
-} from './use-video-lifecycle';
+} from './hooks/use-video-lifecycle';
 
 // Types
 export * from './types';

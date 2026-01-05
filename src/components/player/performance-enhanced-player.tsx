@@ -26,9 +26,9 @@ import React, { useRef, useState, useCallback } from 'react';
 import type Hls from 'hls.js';
 import { KickLivePlayer } from './kick/kick-live-player';
 import { TwitchLivePlayer } from './twitch/twitch-live-player';
-import { useAdaptiveQuality } from './use-adaptive-quality';
-import { useBackgroundThrottle, ThrottleAction } from './use-background-throttle';
-import { useVideoLifecycle } from './use-video-lifecycle';
+import { useAdaptiveQuality } from './hooks/use-adaptive-quality';
+import { useBackgroundThrottle, ThrottleAction } from './hooks/use-background-throttle';
+import { useVideoLifecycle } from './hooks/use-video-lifecycle';
 import { QualityLevel, PlayerError } from './types';
 import { Platform } from '@/shared/auth-types';
 

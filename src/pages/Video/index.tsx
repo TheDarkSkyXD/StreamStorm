@@ -302,6 +302,7 @@ export function VideoPage() {
                                 className="size-full"
                                 videoId={videoId}
                                 title={videoTitle}
+                                thumbnail={videoMetadata?.thumbnailUrl || passedChannelAvatar || undefined}
                             />
                         ) : (
                             <TwitchVodPlayer
@@ -310,6 +311,7 @@ export function VideoPage() {
                                 className="size-full"
                                 videoId={videoId}
                                 title={videoTitle}
+                                thumbnail={videoMetadata?.thumbnailUrl || passedChannelAvatar || undefined}
                             />
                         )
                     ) : error ? (

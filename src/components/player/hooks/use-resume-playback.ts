@@ -25,7 +25,7 @@ export function useResumePlayback({
 }: UseResumePlaybackOptions) {
     const { getPosition, savePosition } = usePlaybackPositionStore();
     const hasRestoredRef = useRef(false);
-    const saveIntervalRef = useRef<NodeJS.Timeout>(null);
+    const saveIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // Restore position when video is ready
     const restorePosition = useCallback(() => {
@@ -39,8 +39,12 @@ export function useResumePlayback({
             if (video.readyState >= 1 && video.duration > 0) {
                 // Don't restore if they were very close to the end
                 if (savedPosition.position < video.duration * 0.95) {
-                    video.currentTime = savedPosition.position;
-                    hasRestoredRef.current = true;
+                    try {
+                        video.currentTime = savedPosition.position;
+                        hasRestoredRef.current = true;
+                    } catch (error) {
+                        console.error('Failed to restore playback position:', error);
+                    }
                 }
             }
         }
@@ -51,7 +55,7 @@ export function useResumePlayback({
         if (!enabled || !videoRef.current) return;
 
         const video = videoRef.current;
-        if (video.duration > 0 && !video.paused) {
+        if (video.duration > 0 && video.currentTime > 0) {
             savePosition(
                 platform,
                 videoId,
@@ -63,6 +67,15 @@ export function useResumePlayback({
         }
     }, [enabled, platform, videoId, title, thumbnail, savePosition, videoRef]);
 
+    // Store latest callbacks to avoid effect re-runs
+    const restorePositionRef = useRef(restorePosition);
+    const saveCurrentPositionRef = useRef(saveCurrentPosition);
+
+    useEffect(() => {
+        restorePositionRef.current = restorePosition;
+        saveCurrentPositionRef.current = saveCurrentPosition;
+    }, [restorePosition, saveCurrentPosition]);
+
     // Setup event listeners and interval saving
     useEffect(() => {
         if (!enabled) return;
@@ -72,17 +85,17 @@ export function useResumePlayback({
 
         // Restore position when metadata is loaded
         const handleLoadedMetadata = () => {
-            restorePosition();
+            restorePositionRef.current();
         };
 
         // Save on pause
         const handlePause = () => {
-            saveCurrentPosition();
+            saveCurrentPositionRef.current();
         };
 
         // Save before leaving
         const handleBeforeUnload = () => {
-            saveCurrentPosition();
+            saveCurrentPositionRef.current();
         };
 
         video.addEventListener('loadedmetadata', handleLoadedMetadata);
@@ -90,11 +103,11 @@ export function useResumePlayback({
         window.addEventListener('beforeunload', handleBeforeUnload);
 
         // Periodic save every 30 seconds
-        saveIntervalRef.current = setInterval(saveCurrentPosition, 30000);
+        saveIntervalRef.current = setInterval(() => saveCurrentPositionRef.current(), 30000);
 
         // If metadata is already loaded, try to restore
         if (video.readyState >= 1) {
-            restorePosition();
+            restorePositionRef.current();
         }
 
         return () => {
@@ -107,9 +120,9 @@ export function useResumePlayback({
             }
 
             // Final save on unmount
-            saveCurrentPosition();
+            saveCurrentPositionRef.current();
         };
-    }, [enabled, restorePosition, saveCurrentPosition, videoRef]);
+    }, [enabled, videoRef]);
 
     // Reset restoration flag when videoId changes
     useEffect(() => {

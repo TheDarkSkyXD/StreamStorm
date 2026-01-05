@@ -24,7 +24,14 @@ export function usePlayerKeyboard({
 
         const handleKeyDown = (e: KeyboardEvent) => {
             // Ignore if typing in an input
-            if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
+            // Ignore if typing in an input
+            const target = e.target as HTMLElement;
+            if (
+                ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName) ||
+                target.isContentEditable
+            ) {
+                return;
+            }
 
             switch (e.key.toLowerCase()) {
                 case 'k':
@@ -41,8 +48,7 @@ export function usePlayerKeyboard({
                     onToggleFullscreen();
                     break;
                 case 't':
-                case 'alt': // Alt+T often used, but 't' is standard on Twitch
-                    if (e.key === 't' && onToggleTheater) {
+                    if (onToggleTheater) {
                         e.preventDefault();
                         onToggleTheater();
                     }

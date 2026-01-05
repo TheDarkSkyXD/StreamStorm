@@ -3,12 +3,12 @@ import Hls from 'hls.js';
 import { QualityLevel, PlayerError, Platform } from '../types';
 import { HlsPlayer } from '../hls-player';
 import { KickLivePlayerControls } from './kick-live-player-controls';
-import { usePlayerKeyboard } from '../use-player-keyboard';
-import { usePictureInPicture } from '../use-picture-in-picture';
-import { useFullscreen } from '../use-fullscreen';
-import { useResumePlayback } from '../use-resume-playback';
-import { useDefaultQuality } from '../use-default-quality';
-import { useVolume } from '../use-volume';
+import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
+import { usePictureInPicture } from '../hooks/use-picture-in-picture';
+import { useFullscreen } from '../hooks/use-fullscreen';
+import { useResumePlayback } from '../hooks/use-resume-playback';
+import { useDefaultQuality } from '../hooks/use-default-quality';
+import { useVolume } from '../hooks/use-volume';
 import { KickLoadingSpinner } from '@/components/ui/loading-spinner';
 
 export interface KickLivePlayerProps {

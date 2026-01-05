@@ -83,7 +83,7 @@ export function useBackgroundThrottle({
     const wasPlayingRef = useRef<boolean>(false);
     const wasMutedRef = useRef<boolean>(false);
     const previousQualityRef = useRef<string | null>(null);
-    const throttleTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const throttleTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const hiddenTimestampRef = useRef<number | null>(null);
 
     // Apply throttle action
@@ -93,8 +93,8 @@ export function useBackgroundThrottle({
 
         switch (throttleAction) {
             case 'pause':
+                wasPlayingRef.current = !video.paused;
                 if (!video.paused) {
-                    wasPlayingRef.current = true;
                     video.pause();
                     console.debug('[BackgroundThrottle] Paused video');
                 }
@@ -300,15 +300,7 @@ export function useBackgroundThrottle({
     // Store playing state on mount for restoration
     // Note: Using videoRef.current in deps is unconventional but necessary
     // to re-run when the underlying video element changes
-    const videoElement = videoRef.current;
-    useEffect(() => {
-        const video = videoRef.current;
-        if (video) {
-            wasPlayingRef.current = !video.paused;
-            wasMutedRef.current = video.muted;
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [videoElement]);
+
 
     return state;
 }
@@ -329,7 +321,7 @@ export function useMultistreamThrottle({
     /** Throttle action - only 'mute' and 'none' are supported in multistream mode */
     throttleAction?: 'mute' | 'none';
 }): { isThrottled: boolean } {
-    const [isThrottled, setIsThrottled] = useState(!isFocused);
+    const [isThrottled, setIsThrottled] = useState(false);
 
     useEffect(() => {
         if (!enabled) return;

@@ -44,6 +44,10 @@ interface KickVodPlayerControlsProps {
     // Playback Speed
     playbackRate?: number;
     onPlaybackRateChange?: (rate: number) => void;
+
+    // Seek Preview
+    onSeekHover?: (time: number | null) => void;
+    previewImage?: string;
 }
 
 export function KickVodPlayerControls(props: KickVodPlayerControlsProps) {
@@ -68,7 +72,9 @@ export function KickVodPlayerControls(props: KickVodPlayerControlsProps) {
         onSeek,
         buffered,
         playbackRate,
-        onPlaybackRateChange
+        onPlaybackRateChange,
+        onSeekHover,
+        previewImage
     } = props;
 
     const [isVisible, setIsVisible] = useState(true);
@@ -117,6 +123,8 @@ export function KickVodPlayerControls(props: KickVodPlayerControlsProps) {
                     duration={duration}
                     onSeek={onSeek}
                     buffered={buffered}
+                    onSeekHover={onSeekHover}
+                    previewImage={previewImage}
                 />
             </div>
 

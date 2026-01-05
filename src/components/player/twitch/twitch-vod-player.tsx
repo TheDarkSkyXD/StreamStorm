@@ -1,13 +1,14 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { useSeekPreview } from '@/components/player/hooks/use-seek-preview';
 import { QualityLevel, PlayerError, Platform } from '../types';
 import { HlsPlayer } from '../hls-player';
 import { TwitchVodPlayerControls } from './twitch-vod-player-controls';
-import { usePlayerKeyboard } from '../use-player-keyboard';
-import { usePictureInPicture } from '../use-picture-in-picture';
-import { useFullscreen } from '../use-fullscreen';
-import { useResumePlayback } from '../use-resume-playback';
-import { useDefaultQuality } from '../use-default-quality';
-import { useVolume } from '../use-volume';
+import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
+import { usePictureInPicture } from '../hooks/use-picture-in-picture';
+import { useFullscreen } from '../hooks/use-fullscreen';
+import { useResumePlayback } from '../hooks/use-resume-playback';
+import { useDefaultQuality } from '../hooks/use-default-quality';
+import { useVolume } from '../hooks/use-volume';
 import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
 
 export interface TwitchVodPlayerProps {
@@ -79,7 +80,14 @@ export function TwitchVodPlayer(props: TwitchVodPlayerProps) {
     const [duration, setDuration] = useState(0);
     const [buffered, setBuffered] = useState<TimeRanges | undefined>(undefined);
     const [playbackRate, setPlaybackRate] = useState(1);
+
     const [hasError, setHasError] = useState(false);
+
+    // Seek Preview Hook
+    const { previewImage, handleSeekHover } = useSeekPreview({
+        streamUrl,
+        thumbnail: thumbnail || poster
+    });
 
     // Apply user's default quality preference
     useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
@@ -246,6 +254,8 @@ export function TwitchVodPlayer(props: TwitchVodPlayerProps) {
                     buffered={buffered}
                     playbackRate={playbackRate}
                     onPlaybackRateChange={handlePlaybackRateChange}
+                    onSeekHover={handleSeekHover}
+                    previewImage={previewImage}
                 />
             )}
         </div>

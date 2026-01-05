@@ -53,6 +53,8 @@ interface KickPlayerControlsProps {
     currentTime?: number;
     duration?: number;
     onSeek?: (time: number) => void;
+    onSeekHover?: (time: number | null) => void;
+    previewImage?: string;
     buffered?: TimeRanges;
 
     // Playback Speed
@@ -132,6 +134,8 @@ export function KickPlayerControls(props: KickPlayerControlsProps) {
                             currentTime={currentTime}
                             duration={duration}
                             onSeek={onSeek}
+                            onSeekHover={props.onSeekHover}
+                            previewImage={props.previewImage}
                             buffered={buffered}
                         />
                     </div>

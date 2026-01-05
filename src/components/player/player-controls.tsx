@@ -53,6 +53,8 @@ interface PlayerControlsProps {
     currentTime?: number;
     duration?: number;
     onSeek?: (time: number) => void;
+    onSeekHover?: (time: number | null) => void;
+    previewImage?: string;
     buffered?: TimeRanges;
 
     // Playback Speed
@@ -227,6 +229,8 @@ export function PlayerControls(props: PlayerControlsProps) {
                                 currentTime={currentTime}
                                 duration={duration}
                                 onSeek={onSeek}
+                                onSeekHover={props.onSeekHover}
+                                previewImage={props.previewImage}
                                 buffered={buffered}
                             />
                         </div>

@@ -53,6 +53,8 @@ interface TwitchPlayerControlsProps {
     currentTime?: number;
     duration?: number;
     onSeek?: (time: number) => void;
+    onSeekHover?: (time: number | null) => void;
+    previewImage?: string;
     buffered?: TimeRanges;
 
     // Playback Speed
@@ -196,6 +198,8 @@ export function TwitchPlayerControls(props: TwitchPlayerControlsProps) {
                             currentTime={currentTime}
                             duration={duration}
                             onSeek={onSeek}
+                            onSeekHover={props.onSeekHover}
+                            previewImage={props.previewImage}
                             buffered={buffered}
                         />
                     </div>

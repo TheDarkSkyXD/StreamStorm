@@ -1,10 +1,13 @@
 import React, { useRef, useState, useCallback, useMemo } from 'react';
 import { formatDuration } from '@/lib/utils';
+import { SeekPreview } from '../seek-preview';
 
 interface TwitchProgressBarProps {
     currentTime: number;
     duration: number;
     onSeek: (time: number) => void;
+    onSeekHover?: (time: number | null) => void;
+    previewImage?: string;
     buffered?: TimeRanges;
     className?: string;
 }
@@ -13,6 +16,8 @@ export function TwitchProgressBar({
     currentTime,
     duration,
     onSeek,
+    onSeekHover,
+    previewImage,
     buffered,
     className = ''
 }: TwitchProgressBarProps) {
@@ -30,8 +35,15 @@ export function TwitchProgressBar({
         const rect = containerRef.current.getBoundingClientRect();
         if (rect.width === 0) return;
         const pos = (e.clientX - rect.left) / rect.width;
-        setHoverPosition(Math.max(0, Math.min(1, pos)));
-    }, []);
+        const boundedPos = Math.max(0, Math.min(1, pos));
+        setHoverPosition(boundedPos);
+        onSeekHover?.(boundedPos * duration);
+    }, [duration, onSeekHover]);
+
+    const handleMouseLeave = useCallback(() => {
+        setIsHovering(false);
+        onSeekHover?.(null);
+    }, [onSeekHover]);
 
     const handleClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         if (!containerRef.current || !duration) return;
@@ -49,7 +61,7 @@ export function TwitchProgressBar({
             className={`group relative w-full h-4 cursor-pointer flex items-center select-none touch-none ${className}`}
             ref={containerRef}
             onMouseEnter={() => setIsHovering(true)}
-            onMouseLeave={() => setIsHovering(false)}
+            onMouseLeave={handleMouseLeave}
             onMouseMove={handleMouseMove}
             onClick={handleClick}
         >
@@ -93,18 +105,14 @@ export function TwitchProgressBar({
                 }}
             />
 
-            {/* Hover Tooltip/Time */}
+            {/* Seek Preview Component */}
             {isHovering && duration > 0 && (
-                <div
-                    className="absolute bottom-full mb-2 -translate-x-1/2 text-white text-[10px] font-bold px-1.5 py-0.5 rounded border pointer-events-none whitespace-nowrap z-50"
-                    style={{
-                        left: `${hoverPosition * 100}%`,
-                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                        borderColor: `${twitchPurple}50`
-                    }}
-                >
-                    {formatDuration(hoverPosition * duration)}
-                </div>
+                <SeekPreview
+                    time={hoverPosition * duration}
+                    position={hoverPosition}
+                    previewImage={previewImage}
+                    className="border-[#9146ff]/30"
+                />
             )}
         </div>
     );

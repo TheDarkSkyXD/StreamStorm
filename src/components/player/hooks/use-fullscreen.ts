@@ -18,9 +18,12 @@ export function useFullscreen(containerRef: RefObject<HTMLElement | null>) {
         if (!container) return;
 
         try {
-            if (!document.fullscreenElement) {
+            if (document.fullscreenElement === container) {
+                await document.exitFullscreen();
+            } else if (!document.fullscreenElement) {
                 await container.requestFullscreen();
             } else {
+                // Different element is fullscreen - exit it first
                 await document.exitFullscreen();
             }
         } catch (error) {

@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { useAuthStore } from '@/store/auth-store';
-import type { QualityLevel } from './types';
+import type { QualityLevel } from '../types';
 import type { VideoQuality } from '@/shared/auth-types';
 
 /**
  * Quality mapping from user preference to resolution heights
- * User preferences: 'auto' | '1080p' | '720p' | '480p' | '360p'
+ * User preferences: 'auto' | '1080p' | '720p' | '480p' | '360p' | '160p'
  */
 const QUALITY_HEIGHT_MAP: Record<Exclude<VideoQuality, 'auto'>, number> = {
     '1080p': 1080,
@@ -87,9 +87,9 @@ export function useDefaultQuality(
             return lowerOrEqual.id;
         }
 
-        // 5. If we only have lower qualities, pick the highest available
+        // 5. If we only have higher qualities, pick the lowest available (closest to target)
         if (sortedByHeight.length > 0) {
-            return sortedByHeight[0].id;
+            return sortedByHeight[sortedByHeight.length - 1].id;
         }
 
         // 6. Fallback: If no heights are available (all 0), try to pick based on bitrate

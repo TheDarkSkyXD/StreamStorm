@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { useVolumeStore } from '@/store/volume-store';
+import { useVolumeStore } from '../../../store/volume-store';
 
 interface UseVolumeOptions {
     videoRef: React.RefObject<HTMLVideoElement>;
