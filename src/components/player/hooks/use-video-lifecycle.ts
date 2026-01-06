@@ -180,12 +180,28 @@ export function useVideoLifecycle({
     }, [isActive, videoRef]);
 
     // Memory pressure detection (experimental)
+    // Uses requestIdleCallback to avoid blocking the main thread during user interactions
     useEffect(() => {
         // Check if the Memory API is available (Chrome only)
         // @ts-ignore - memory property exists in Chrome
         if (!performance.memory) return;
 
-        const checkMemoryPressure = () => {
+        let idleCallbackId: number | null = null;
+        let scheduledTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+        const checkMemoryPressure = (deadline?: IdleDeadline) => {
+            // Only proceed if we have enough idle time or if we need to check regardless
+            if (deadline && deadline.timeRemaining() < 1) {
+                // Not enough idle time, retry soon in the next idle period
+                if ('requestIdleCallback' in window) {
+                    idleCallbackId = window.requestIdleCallback(checkMemoryPressure, { timeout: 60000 });
+                } else {
+                    // Fallback: try again soon
+                    scheduledTimeoutId = setTimeout(() => checkMemoryPressure(), 1000);
+                }
+                return;
+            }
+
             // @ts-ignore
             const memInfo = performance.memory;
             const usedRatio = memInfo.usedJSHeapSize / memInfo.jsHeapSizeLimit;
@@ -197,12 +213,39 @@ export function useVideoLifecycle({
                 // Could trigger quality reduction or pause non-focused streams
                 // This is informational - actual response depends on implementation
             }
+
+            // Schedule next regular check (30 seconds)
+            scheduleNextCheck();
         };
 
-        // Check periodically (every 30 seconds)
-        const interval = setInterval(checkMemoryPressure, 30000);
+        const scheduleNextCheck = () => {
+            // Schedule next check in 30 seconds, but only during idle time
+            scheduledTimeoutId = setTimeout(() => {
+                if ('requestIdleCallback' in window) {
+                    idleCallbackId = window.requestIdleCallback(checkMemoryPressure, { timeout: 60000 });
+                } else {
+                    checkMemoryPressure();
+                }
+            }, 30000);
+        };
 
-        return () => clearInterval(interval);
+        // Initial check after 10 seconds (allow app to settle)
+        scheduledTimeoutId = setTimeout(() => {
+            if ('requestIdleCallback' in window) {
+                idleCallbackId = window.requestIdleCallback(checkMemoryPressure, { timeout: 60000 });
+            } else {
+                checkMemoryPressure();
+            }
+        }, 10000);
+
+        return () => {
+            if (idleCallbackId !== null && 'cancelIdleCallback' in window) {
+                window.cancelIdleCallback(idleCallbackId);
+            }
+            if (scheduledTimeoutId !== null) {
+                clearTimeout(scheduledTimeoutId);
+            }
+        };
     }, []);
 
     // Reset state when source changes

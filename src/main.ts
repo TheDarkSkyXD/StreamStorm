@@ -8,7 +8,7 @@
 // Load environment variables from .env file FIRST (before other imports)
 import 'dotenv/config';
 
-import { app, BrowserWindow, session } from 'electron';
+import { app, BrowserWindow, session, Menu } from 'electron';
 import started from 'electron-squirrel-startup';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -90,6 +90,10 @@ function setupRequestInterceptors(): void {
 
 // App lifecycle events
 app.on('ready', async () => {
+  // Disable the default application menu since we use a custom frameless window
+  // This saves memory and avoids unnecessary menu resource allocation
+  Menu.setApplicationMenu(null);
+
   // Check if last shutdown was clean - if not, clear cache to fix potential corruption
   // "Invalid cache (current) size" errors happen when cache metadata is inconsistent
   const cleanShutdown = wasCleanShutdown();
