@@ -1,5 +1,6 @@
 import { app, ipcMain, shell, Notification, BrowserWindow, nativeTheme } from 'electron';
 import { IPC_CHANNELS } from '../../../shared/ipc-channels';
+import { kickClient } from '../../api/platforms/kick/kick-client';
 
 export function registerSystemHandlers(mainWindow: BrowserWindow): void {
     /**
@@ -124,7 +125,10 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
                 parsedUrl.hostname === 'files.kick.com' ||
                 parsedUrl.hostname.endsWith('.files.kick.com') ||
                 parsedUrl.hostname === 'images.kick.com' ||
-                parsedUrl.hostname.endsWith('.images.kick.com');
+                parsedUrl.hostname.endsWith('.images.kick.com') ||
+                // Official API uses kick.com/img/... for profile pictures
+                (parsedUrl.hostname === 'kick.com' && parsedUrl.pathname.startsWith('/img/')) ||
+                (parsedUrl.hostname === 'www.kick.com' && parsedUrl.pathname.startsWith('/img/'));
 
             const isTwitchCDN =
                 parsedUrl.hostname === 'jtvnw.net' ||
@@ -132,10 +136,22 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
                 parsedUrl.hostname === 'twitch.tv' ||
                 parsedUrl.hostname.endsWith('.twitch.tv');
 
-            // For Kick CDN, use Electron's net.request (most reliable for setting Referer)
+            // For Kick CDN: Use kickClient.fetchImage() which has a robust implementation
+            // that uses Electron's net.request with proper headers to bypass hotlinking protection.
+            // This handles:
+            // - files.kick.com (profile pictures, emotes, banners)
+            // - images.kick.com (thumbnails, video previews)
+            // - kick.com/img/... URLs (official API profile pictures)
+            //
+            // The method uses a dedicated session with direct mode (bypasses proxy) and sets:
+            // - Referer: https://kick.com/
+            // - Origin: https://kick.com
+            // - User-Agent: Chrome browser string
+            // - Sec-Fetch-* headers for proper CDN compatibility
+            // - OAuth token if available (may help with some protected assets)
             if (isKickCDN) {
-                const { kickClient } = await import('../../api/platforms/kick/kick-client');
-                return await kickClient.fetchImage(url);
+                const result = await kickClient.fetchImage(url);
+                return result; // Returns base64 data URL or null on failure
             }
 
             // For other CDNs (Twitch, etc), use standard fetch
