@@ -24,4 +24,4 @@ root.render(
     </React.StrictMode>
 );
 
-console.log('🌩️ StreamStorm is running in renderer process');
+console.debug('🌩️ StreamStorm is running in renderer process');

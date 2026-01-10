@@ -27,5 +27,5 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   registerChannelHandlers();
   registerVideoHandlers();
 
-  console.log('✅ All IPC handlers registered successfully');
+  console.debug('✅ All IPC handlers registered successfully');
 }

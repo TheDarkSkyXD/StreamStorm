@@ -330,7 +330,7 @@ class KickClient implements KickRequestor {
                     }
 
                     if (response.statusCode === 401) {
-                        console.log(`🔄 Kick ${isAppToken ? 'App' : 'User'} token expired, refreshing...`);
+                        console.debug(`🔄 Kick ${isAppToken ? 'App' : 'User'} token expired, refreshing...`);
 
                         if (!isAppToken) {
                             // Only attempt refresh for user tokens for now

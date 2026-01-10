@@ -51,7 +51,7 @@ class StorageService {
 
         // Check if safeStorage encryption is available
         this.isEncryptionAvailable = safeStorage.isEncryptionAvailable();
-        console.log(
+        console.debug(
             `🔐 Storage service initialized. Encryption available: ${this.isEncryptionAvailable}`
         );
     }
@@ -97,7 +97,7 @@ class StorageService {
         tokens[platform] = encrypted;
         this.store.set('authTokens', tokens);
 
-        console.log(`✅ Token saved for ${platform}`);
+        console.debug(`✅ Token saved for ${platform}`);
     }
 
     /**
@@ -152,7 +152,7 @@ class StorageService {
         const tokens = this.store.get('authTokens') || {};
         delete tokens[platform];
         this.store.set('authTokens', tokens);
-        console.log(`🗑️ Token cleared for ${platform}`);
+        console.debug(`🗑️ Token cleared for ${platform}`);
     }
 
     /**
@@ -161,7 +161,7 @@ class StorageService {
     clearAllTokens(): void {
         this.store.set('authTokens', {});
         this.store.set('appTokens', {});
-        console.log('🗑️ All tokens cleared');
+        console.debug('🗑️ All tokens cleared');
     }
 
     // ========== App Token Management (Electron Store) ==========
@@ -177,7 +177,7 @@ class StorageService {
         tokens[platform] = encrypted;
         this.store.set('appTokens', tokens);
 
-        console.log(`✅ App Token saved for ${platform}`);
+        console.debug(`✅ App Token saved for ${platform}`);
     }
 
     /**
@@ -282,7 +282,7 @@ class StorageService {
      */
     addLocalFollow(follow: Omit<LocalFollow, 'id' | 'followedAt'>): LocalFollow {
         const newFollow = dbService.addFollow(follow);
-        console.log(`➕ Added local follow: ${follow.displayName}`);
+        console.debug(`➕ Added local follow: ${follow.displayName}`);
         return newFollow;
     }
 
@@ -292,7 +292,7 @@ class StorageService {
     removeLocalFollow(id: string): boolean {
         const success = dbService.removeFollow(id);
         if (success) {
-            console.log(`➖ Removed local follow: ${id}`);
+            console.debug(`➖ Removed local follow: ${id}`);
         }
         return success;
     }
@@ -327,7 +327,7 @@ class StorageService {
                 count++;
             }
         }
-        console.log(`📥 Imported ${count} new follows`);
+        console.debug(`📥 Imported ${count} new follows`);
         return count;
     }
 
@@ -336,7 +336,7 @@ class StorageService {
      */
     clearLocalFollows(): void {
         dbService.clearFollows();
-        console.log('🗑️ All local follows cleared');
+        console.debug('🗑️ All local follows cleared');
     }
 
     // ========== Preferences Management (Electron Store) ==========
@@ -412,7 +412,7 @@ class StorageService {
         // Also clear DB
         dbService.clearKeyValue(); // Though we aren't using this part anymore, good to be safe
         dbService.clearFollows();
-        console.log('🗑️ All storage cleared');
+        console.debug('🗑️ All storage cleared');
     }
 
     /**

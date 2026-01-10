@@ -70,7 +70,7 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
                         url.includes('cdn-perfprod.com') ||
                         url.includes('luminous.dev')
                     ) && !forceNoProxy;
-                    console.log(`[useStreamPlayback] Loaded URL:`, {
+                    console.debug(`[useStreamPlayback] Loaded URL:`, {
                         url: url.substring(0, 80) + '...',
                         isProxy: usingProxy,
                         forceNoProxy
@@ -101,7 +101,7 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
     }, [platform, identifier, reloadKey, forceNoProxy]);
 
     const retryWithoutProxy = useCallback(() => {
-        console.log('[useStreamPlayback] Retrying without proxy (fallback to direct)');
+        console.debug('[useStreamPlayback] Retrying without proxy (fallback to direct)');
         setForceNoProxy(true);
         setPlayback(null);
         setError(null);

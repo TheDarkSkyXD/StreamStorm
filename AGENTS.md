@@ -86,6 +86,24 @@ Available Exa MCP tools:
 - `linkedin_search_exa`: Professional profiles and company pages
 - `crawling_exa`: Extract full content from specific URLs
 
+## Logging Conventions
+
+**Always use `console.debug()` instead of `console.log()` for development/debug logging.**
+
+- `console.debug()` logs are automatically stripped in production builds
+- `console.log()` should be avoided as it persists in production, causing performance overhead and noise
+- Use `console.error()` and `console.warn()` for actual errors and warnings that should appear in production
+- When reviewing or modifying code, convert any existing `console.log()` calls to `console.debug()`
+
+Example:
+```typescript
+// ❌ Bad - persists in production
+console.log('Stream loaded:', streamId);
+
+// ✅ Good - stripped in production
+console.debug('Stream loaded:', streamId);
+```
+
 ## Notes
 - The detailed per-area rules (TypeScript migration patterns, Vue component conventions, Electron IPC patterns, database schemas) will live in subfolder AGENTS.md files as they are created.
 - For discovery and precedence behavior, see the "closest-wins" approach above.

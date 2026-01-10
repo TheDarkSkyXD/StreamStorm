@@ -122,7 +122,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
         // Cancel any existing OAuth flow for this platform to prevent state mismatch
         const existingFlow = pendingOAuthFlows.get(platform);
         if (existingFlow) {
-            console.log(`⚠️ Cancelling previous OAuth flow for ${platform}`);
+            console.debug(`⚠️ Cancelling previous OAuth flow for ${platform}`);
             existingFlow.cancel();
             pendingOAuthFlows.delete(platform);
         }
@@ -150,11 +150,11 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
 
             // Check if this flow was cancelled (a newer flow started)
             if (isCancelled) {
-                console.log(`🛑 OAuth flow for ${platform} was cancelled`);
+                console.debug(`🛑 OAuth flow for ${platform} was cancelled`);
                 return;
             }
 
-            console.log(`📥 Received OAuth callback for ${platform}`);
+            console.debug(`📥 Received OAuth callback for ${platform}`);
 
             // Exchange the code for a token
             const token = await tokenExchangeService.exchangeCodeForToken({
@@ -167,7 +167,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
             // Save the token
             storageService.saveToken(platform, token);
 
-            console.log(`✅ Successfully authenticated with ${platform}`);
+            console.debug(`✅ Successfully authenticated with ${platform}`);
 
             // Fetch user info after token is saved
             if (platform === 'twitch') {
@@ -198,7 +198,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
         } catch (error) {
             // Don't report errors for cancelled flows
             if (isCancelled) {
-                console.log(`🛑 Ignoring error from cancelled OAuth flow for ${platform}`);
+                console.debug(`🛑 Ignoring error from cancelled OAuth flow for ${platform}`);
                 return;
             }
 
@@ -224,7 +224,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
 
     // Handle opening Twitch OAuth
     ipcMain.handle(IPC_CHANNELS.AUTH_OPEN_TWITCH, async () => {
-        console.log('🔐 Opening Twitch login...');
+        console.debug('🔐 Opening Twitch login...');
         try {
             await handleOAuthFlow('twitch');
             return { success: true };
@@ -239,7 +239,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
 
     // Handle opening Kick OAuth
     ipcMain.handle(IPC_CHANNELS.AUTH_OPEN_KICK, async () => {
-        console.log('🔐 Opening Kick login...');
+        console.debug('🔐 Opening Kick login...');
         try {
             await handleOAuthFlow('kick');
             return { success: true };
@@ -256,7 +256,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
 
     // Handle Twitch logout
     ipcMain.handle(IPC_CHANNELS.AUTH_LOGOUT_TWITCH, async () => {
-        console.log('🚪 Logging out from Twitch...');
+        console.debug('🚪 Logging out from Twitch...');
         try {
             await twitchAuthService.logout();
             safeSend(IPC_CHANNELS.AUTH_ON_CALLBACK, {
@@ -273,7 +273,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
 
     // Handle Twitch token refresh
     ipcMain.handle(IPC_CHANNELS.AUTH_REFRESH_TWITCH, async () => {
-        console.log('🔄 Refreshing Twitch token...');
+        console.debug('🔄 Refreshing Twitch token...');
         try {
             const token = await twitchAuthService.refreshToken();
             if (token) {
@@ -288,7 +288,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
 
     // Handle fetching Twitch user info
     ipcMain.handle(IPC_CHANNELS.AUTH_FETCH_TWITCH_USER, async () => {
-        console.log('👤 Fetching Twitch user info...');
+        console.debug('👤 Fetching Twitch user info...');
         try {
             const user = await twitchAuthService.fetchCurrentUser();
             if (user) {
@@ -321,7 +321,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
 
     // Handle Kick logout (specific channel)
     ipcMain.handle(IPC_CHANNELS.AUTH_LOGOUT_KICK, async () => {
-        console.log('🚪 Logging out from Kick...');
+        console.debug('🚪 Logging out from Kick...');
         try {
             await kickAuthService.logout();
             safeSend(IPC_CHANNELS.AUTH_ON_CALLBACK, {
@@ -338,7 +338,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
 
     // Handle Kick user fetch
     ipcMain.handle(IPC_CHANNELS.AUTH_FETCH_KICK_USER, async () => {
-        console.log('👤 Fetching Kick user info...');
+        console.debug('👤 Fetching Kick user info...');
         try {
             const user = await kickAuthService.fetchCurrentUser();
             if (user) {
@@ -355,7 +355,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
 
     // Start device code flow - returns codes for user to enter
     ipcMain.handle(IPC_CHANNELS.AUTH_DCF_START, async () => {
-        console.log('🔐 Starting Device Code Flow for Twitch...');
+        console.debug('🔐 Starting Device Code Flow for Twitch...');
         try {
             const config = getOAuthConfig('twitch');
 
@@ -392,7 +392,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
         interval: number;
         expiresIn: number;
     }) => {
-        console.log('🔄 Polling for Twitch authorization...');
+        console.debug('🔄 Polling for Twitch authorization...');
         try {
             const token = await deviceCodeFlowService.pollForToken(
                 deviceCode,
@@ -431,7 +431,7 @@ export function registerAuthHandlers(mainWindow: BrowserWindow): void {
 
     // Cancel device code flow
     ipcMain.handle(IPC_CHANNELS.AUTH_DCF_CANCEL, () => {
-        console.log('🛑 Cancelling device code flow...');
+        console.debug('🛑 Cancelling device code flow...');
         deviceCodeFlowService.stopPolling();
         return { success: true };
     });

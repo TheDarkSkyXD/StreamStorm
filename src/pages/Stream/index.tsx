@@ -59,7 +59,7 @@ export function StreamPage() {
   }, []);
 
   const handlePlayerError = useCallback((error: PlayerError) => {
-    console.log(`[StreamPage] handlePlayerError called:`, {
+    console.debug(`[StreamPage] handlePlayerError called:`, {
       code: error.code,
       isUsingProxy,
       platform,
@@ -68,10 +68,10 @@ export function StreamPage() {
 
     // PROXY_ERROR is specific to proxy server failures (500 errors)
     if (error.code === 'PROXY_ERROR') {
-      console.log('[StreamPage] Proxy server error detected');
+      console.debug('[StreamPage] Proxy server error detected');
 
       if (isUsingProxy && platform === 'twitch') {
-        console.log('[StreamPage] Triggering fallback to direct stream');
+        console.debug('[StreamPage] Triggering fallback to direct stream');
         setProxyFallbackNotice('Proxy server unavailable. Falling back to direct stream (ads may show).');
         retryWithoutProxy();
         // Auto-hide notification after 8 seconds
@@ -87,7 +87,7 @@ export function StreamPage() {
 
       // If we were using proxy and got a network/offline error, try fallback to direct
       if (isUsingProxy && platform === 'twitch') {
-        console.log('[StreamPage] Proxy stream failed, falling back to direct stream');
+        console.debug('[StreamPage] Proxy stream failed, falling back to direct stream');
         setProxyFallbackNotice('Proxy connection failed. Falling back to direct stream.');
         retryWithoutProxy();
         if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
@@ -99,7 +99,7 @@ export function StreamPage() {
 
       // Also try fallback for other network errors when using proxy
       if (isUsingProxy && platform === 'twitch') {
-        console.log('[StreamPage] Proxy stream network error, falling back to direct stream');
+        console.debug('[StreamPage] Proxy stream network error, falling back to direct stream');
         setProxyFallbackNotice('Proxy error. Switching to direct stream.');
         retryWithoutProxy();
         if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
@@ -218,7 +218,7 @@ export function StreamPage() {
                 streamUrl={effectiveStreamUrl}
                 autoPlay={true}
                 muted={isClipDialogOpen}
-                onReady={() => console.log('Kick Live Player ready')}
+                onReady={() => console.debug('Kick Live Player ready')}
                 onError={handlePlayerError}
                 isTheater={isTheater}
                 onToggleTheater={() => setTheaterModeActive(!isTheater)}
@@ -229,7 +229,7 @@ export function StreamPage() {
                 streamUrl={effectiveStreamUrl}
                 autoPlay={true}
                 muted={isClipDialogOpen}
-                onReady={() => console.log('Twitch Live Player ready')}
+                onReady={() => console.debug('Twitch Live Player ready')}
                 onError={handlePlayerError}
                 isTheater={isTheater}
                 onToggleTheater={() => setTheaterModeActive(!isTheater)}

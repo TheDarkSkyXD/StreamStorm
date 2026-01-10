@@ -120,7 +120,7 @@ export function useSeekPreview({ streamUrl, thumbnail }: UseSeekPreviewProps) {
                     });
 
                     hls.currentLevel = lowestLevel;
-                    console.log('[SeekPreview] Using quality level:', lowestLevel, 'height:', minHeight);
+                    console.debug('[SeekPreview] Using quality level:', lowestLevel, 'height:', minHeight);
                 }
             });
 

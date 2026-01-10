@@ -217,7 +217,7 @@ class OAuthCallbackServer {
                     // Port in use, try next port
                     this.currentPort++;
                     if (this.currentPort < DEFAULT_PORT + PORT_RANGE_SIZE) {
-                        console.log(`⚠️ Port ${port} in use, trying ${this.currentPort}...`);
+                        console.debug(`⚠️ Port ${port} in use, trying ${this.currentPort}...`);
                         this.server?.close();
                         this.server?.listen(this.currentPort);
                     } else {
@@ -231,7 +231,7 @@ class OAuthCallbackServer {
             // Start listening
             this.currentPort = port;
             this.server.listen(port, () => {
-                console.log(`🔐 OAuth callback server listening on http://localhost:${this.currentPort}`);
+                console.debug(`🔐 OAuth callback server listening on http://localhost:${this.currentPort}`);
             });
 
             // Set timeout
@@ -252,7 +252,7 @@ class OAuthCallbackServer {
         if (this.server) {
             this.server.close();
             this.server = null;
-            console.log('🔐 OAuth callback server stopped');
+            console.debug('🔐 OAuth callback server stopped');
         }
     }
 

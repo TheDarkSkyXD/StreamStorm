@@ -78,8 +78,8 @@ export class TwitchProxyService {
         // Instead of encoding the whole thing, just use the channel name
         const url = `${proxyBase}/playlist/${channel}.m3u8?allow_source=true&allow_audio_only=true&fast_bread=true`;
 
-        console.log(`[TwitchProxyService] Constructed proxy URL for ${channelLogin}`);
-        console.log(`[TwitchProxyService] URL: ${url}`);
+        console.debug(`[TwitchProxyService] Constructed proxy URL for ${channelLogin}`);
+        console.debug(`[TwitchProxyService] URL: ${url}`);
 
         return {
             url,

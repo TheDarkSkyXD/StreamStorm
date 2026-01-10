@@ -79,7 +79,7 @@ class DeviceCodeFlowService {
             scopes: scopes.join(' '),
         });
 
-        console.log('🔐 Requesting device code from Twitch...');
+        console.debug('🔐 Requesting device code from Twitch...');
 
         const response = await fetch(DEVICE_AUTH_ENDPOINT, {
             method: 'POST',
@@ -98,8 +98,8 @@ class DeviceCodeFlowService {
 
         this.currentDeviceCode = data.device_code;
 
-        console.log(`✅ Device code received. User code: ${data.user_code}`);
-        console.log(`🔗 Verification URL: ${data.verification_uri}`);
+        console.debug(`✅ Device code received. User code: ${data.user_code}`);
+        console.debug(`🔗 Verification URL: ${data.verification_uri}`);
 
         return {
             deviceCode: data.device_code,
@@ -167,7 +167,7 @@ class DeviceCodeFlowService {
                                 : tokenData.scope?.split(' '),
                         };
 
-                        console.log('✅ User authorized! Token obtained.');
+                        console.debug('✅ User authorized! Token obtained.');
                         onStatusChange?.('authorized', 'Authorization successful!');
                         resolve(token);
                         return;
@@ -183,7 +183,7 @@ class DeviceCodeFlowService {
                             break;
                         case 'slow_down':
                             // We're polling too fast - increase interval
-                            console.log('⚠️ Polling too fast, slowing down...');
+                            console.debug('⚠️ Polling too fast, slowing down...');
                             interval += 5;
                             break;
                         case 'access_denied':

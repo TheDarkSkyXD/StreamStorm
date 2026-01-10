@@ -72,7 +72,7 @@ export class TwitchRequestor {
 
             // Handle unauthorized (try token refresh)
             if (response.status === 401) {
-                console.log('🔄 Token expired, refreshing...');
+                console.debug('🔄 Token expired, refreshing...');
                 const refreshed = await twitchAuthService.refreshToken();
                 if (refreshed) {
                     // Retry the request with new token

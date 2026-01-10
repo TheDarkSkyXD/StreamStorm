@@ -39,7 +39,7 @@ class KickAuthService {
             // Save the new token
             storageService.saveToken(this.platform, newToken);
 
-            console.log('✅ Kick token refreshed successfully');
+            console.debug('✅ Kick token refreshed successfully');
             return newToken;
         } catch (error) {
             console.error('❌ Kick token refresh failed:', error);
@@ -61,7 +61,7 @@ class KickAuthService {
         const expirationBuffer = 5 * 60 * 1000; // 5 minutes
 
         if (expiresAt > 0 && Date.now() >= expiresAt - expirationBuffer) {
-            console.log('🔄 Kick token expired or expiring soon, refreshing...');
+            console.debug('🔄 Kick token expired or expiring soon, refreshing...');
             const refreshed = await this.refreshToken();
             return refreshed !== null;
         }
@@ -103,7 +103,7 @@ class KickAuthService {
 
             if (!response.ok) {
                 if (response.status === 401) {
-                    console.log('🔄 Token expired, attempting refresh...');
+                    console.debug('🔄 Token expired, attempting refresh...');
                     const refreshed = await this.refreshToken();
                     if (refreshed) {
                         return this.fetchCurrentUser(refreshed.accessToken);
@@ -124,7 +124,7 @@ class KickAuthService {
             };
 
             // Log the raw response for debugging
-            console.log('📥 Kick API /users response:', JSON.stringify(responseData, null, 2));
+            console.debug('📥 Kick API /users response:', JSON.stringify(responseData, null, 2));
 
             if (!responseData.data || responseData.data.length === 0) {
                 console.warn('⚠️ No user data returned from Kick API');
@@ -132,7 +132,7 @@ class KickAuthService {
             }
 
             const apiUser = responseData.data[0];
-            console.log('📥 Kick user data:', {
+            console.debug('📥 Kick user data:', {
                 user_id: apiUser.user_id,
                 name: apiUser.name,
                 profile_picture: apiUser.profile_picture,
@@ -143,7 +143,7 @@ class KickAuthService {
             // Update stored user data
             storageService.saveKickUser(user);
 
-            console.log('✅ Kick user fetched successfully:', user.username, 'Profile pic:', user.profilePic || '(none)');
+            console.debug('✅ Kick user fetched successfully:', user.username, 'Profile pic:', user.profilePic || '(none)');
             return user;
         } catch (error) {
             console.error('❌ Failed to fetch Kick user:', error);
@@ -232,7 +232,7 @@ class KickAuthService {
 
         // If no token or expired, get a new one
         if (!token || storageService.isAppTokenExpired(this.platform)) {
-            console.log('🔄 Kick App token missing or expired, fetching new one...');
+            console.debug('🔄 Kick App token missing or expired, fetching new one...');
             try {
                 // We use tokenExchangeService which handles client_credentials grant
                 const newToken = await tokenExchangeService.getAppAccessToken(this.platform);

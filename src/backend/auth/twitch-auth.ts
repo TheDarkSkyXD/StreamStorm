@@ -47,7 +47,7 @@ class TwitchAuthService {
             // Save the new token
             storageService.saveToken(this.platform, newToken);
 
-            console.log('✅ Twitch token refreshed successfully');
+            console.debug('✅ Twitch token refreshed successfully');
             return newToken;
         } catch (error) {
             console.error('❌ Twitch token refresh failed:', error);
@@ -71,7 +71,7 @@ class TwitchAuthService {
         const expirationBuffer = 5 * 60 * 1000; // 5 minutes
 
         if (Date.now() >= expiresAt - expirationBuffer) {
-            console.log('🔄 Twitch token expired or expiring soon, refreshing...');
+            console.debug('🔄 Twitch token expired or expiring soon, refreshing...');
             const refreshed = await this.refreshToken();
             return refreshed !== null;
         }
@@ -83,7 +83,7 @@ class TwitchAuthService {
         );
 
         if (!isValid) {
-            console.log('🔄 Twitch token invalid, attempting refresh...');
+            console.debug('🔄 Twitch token invalid, attempting refresh...');
             const refreshed = await this.refreshToken();
             return refreshed !== null;
         }
@@ -100,7 +100,7 @@ class TwitchAuthService {
             return true;
         }
 
-        console.log('🔄 Twitch app token missing or expired, fetching new one...');
+        console.debug('🔄 Twitch app token missing or expired, fetching new one...');
 
         try {
             const token = await tokenExchangeService.getAppAccessToken(this.platform);
@@ -156,7 +156,7 @@ class TwitchAuthService {
 
             if (!response.ok) {
                 if (response.status === 401) {
-                    console.log('🔄 Token expired, attempting refresh...');
+                    console.debug('🔄 Token expired, attempting refresh...');
                     const refreshed = await this.refreshToken();
                     if (refreshed) {
                         return this.fetchCurrentUser(refreshed.accessToken);

@@ -37,7 +37,7 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
         let hls: Hls | null = null;
         const isHls = src.includes('.m3u8');
 
-        console.log('[ClipPlayer] Loading source:', src, 'isHLS:', isHls);
+        console.debug('[ClipPlayer] Loading source:', src, 'isHLS:', isHls);
 
         if (isHls && Hls.isSupported()) {
             // Use HLS.js for HLS streams
@@ -62,7 +62,7 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
             hls.attachMedia(video);
 
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                console.log('[ClipPlayer] HLS manifest parsed, ready to play');
+                console.debug('[ClipPlayer] HLS manifest parsed, ready to play');
                 setIsReady(true);
                 if (autoPlay) {
                     video.play().catch(e => console.warn('[ClipPlayer] Autoplay failed:', e));
@@ -79,7 +79,7 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
                             hls?.destroy();
                             break;
                         case Hls.ErrorTypes.MEDIA_ERROR:
-                            console.log('[ClipPlayer] Trying to recover from media error');
+                            console.debug('[ClipPlayer] Trying to recover from media error');
                             hls?.recoverMediaError();
                             break;
                         default:
@@ -93,7 +93,7 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
 
         } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
             // Native HLS support (Safari)
-            console.log('[ClipPlayer] Using native HLS');
+            console.debug('[ClipPlayer] Using native HLS');
             video.src = src;
             video.addEventListener('loadedmetadata', () => {
                 setIsReady(true);
@@ -102,7 +102,7 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
             video.addEventListener('error', () => onError?.());
         } else {
             // MP4 or other native formats
-            console.log('[ClipPlayer] Using native video playback');
+            console.debug('[ClipPlayer] Using native video playback');
             video.src = src;
             video.addEventListener('loadedmetadata', () => {
                 setIsReady(true);
@@ -113,7 +113,7 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
 
         return () => {
             if (hls) {
-                console.log('[ClipPlayer] Destroying HLS instance');
+                console.debug('[ClipPlayer] Destroying HLS instance');
                 hls.destroy();
             }
             hlsRef.current = null;

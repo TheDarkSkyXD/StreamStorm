@@ -54,14 +54,14 @@ export async function searchChannels(
 
     // 1. Try exact slug match (Public API - No Auth)
     try {
-        console.log(`[KickSearch] Step 1: Checking exact slug match for "${normalizedQuery}"`);
+        console.debug(`[KickSearch] Step 1: Checking exact slug match for "${normalizedQuery}"`);
         const channel = await getPublicChannel(normalizedQuery);
         if (channel) {
-            console.log(`[KickSearch] Step 1: Found channel "${channel.username}"`);
+            console.debug(`[KickSearch] Step 1: Found channel "${channel.username}"`);
             const key = channel.username.toLowerCase();
             results.set(key, mergeChannel(results.get(key), channel, true)); // Step 1 is authoritative for live status
         } else {
-            console.log(`[KickSearch] Step 1: No channel found for "${normalizedQuery}"`);
+            console.debug(`[KickSearch] Step 1: No channel found for "${normalizedQuery}"`);
         }
     } catch (e) {
         console.warn(`[KickSearch] Step 1: Error fetching public channel "${normalizedQuery}"`, e);
@@ -73,7 +73,7 @@ export async function searchChannels(
     // - https://kick.com/api/search?searched_word=query (main, needs 3+ chars)
     // - https://kick.com/api/search/channel?searched_word=query (might work for short)
     try {
-        console.log(`[KickSearch] Step 2: Querying public search endpoint for "${normalizedQuery}"`);
+        console.debug(`[KickSearch] Step 2: Querying public search endpoint for "${normalizedQuery}"`);
 
         // Try alternative endpoint first for short queries
         const searchEndpoints = normalizedQuery.length < 3
@@ -122,7 +122,7 @@ export async function searchChannels(
                                 try {
                                     const parsed = JSON.parse(body);
                                     if (parsed && (Array.isArray(parsed) || parsed.channels || parsed.data)) {
-                                        console.log(`[KickSearch] Step 2: Got results from ${searchUrl}`);
+                                        console.debug(`[KickSearch] Step 2: Got results from ${searchUrl}`);
                                         resolve(parsed);
                                     } else {
                                         resolve(null);
@@ -137,7 +137,7 @@ export async function searchChannels(
                             } else {
                                 // Try next endpoint on 4xx errors
                                 if (response.statusCode >= 400 && response.statusCode < 500) {
-                                    console.log(`[KickSearch] Step 2: ${searchUrl} returned ${response.statusCode}, trying next...`);
+                                    console.debug(`[KickSearch] Step 2: ${searchUrl} returned ${response.statusCode}, trying next...`);
                                 }
                                 resolve(null);
                             }
@@ -146,7 +146,7 @@ export async function searchChannels(
 
                     request.on('error', (error: Error) => {
                         clearTimeout(timeout);
-                        console.log(`[KickSearch] Step 2: ${searchUrl} error, trying next...`);
+                        console.debug(`[KickSearch] Step 2: ${searchUrl} error, trying next...`);
                         resolve(null);
                     });
 
@@ -158,7 +158,7 @@ export async function searchChannels(
         }
 
         if (!data) {
-            console.log(`[KickSearch] Step 2: No results from any search endpoint`);
+            console.debug(`[KickSearch] Step 2: No results from any search endpoint`);
         }
 
         // Handle different response formats:
@@ -174,12 +174,12 @@ export async function searchChannels(
             } else if (data.data && Array.isArray(data.data)) {
                 channelsArray = data.data;
             } else {
-                console.log(`[KickSearch] Step 2: Unknown response structure, keys:`, Object.keys(data));
+                console.debug(`[KickSearch] Step 2: Unknown response structure, keys:`, Object.keys(data));
             }
         }
 
         if (channelsArray.length > 0) {
-            console.log(`[KickSearch] Step 2: Found ${channelsArray.length} results`);
+            console.debug(`[KickSearch] Step 2: Found ${channelsArray.length} results`);
 
             for (const item of channelsArray) {
 
@@ -189,7 +189,7 @@ export async function searchChannels(
 
                 // Skip banned accounts - they shouldn't appear in search results
                 if (item.is_banned === true) {
-                    console.log(`[KickSearch] Step 2: Skipping banned channel "${channelSlug}"`);
+                    console.debug(`[KickSearch] Step 2: Skipping banned channel "${channelSlug}"`);
                     continue;
                 }
 
@@ -242,10 +242,10 @@ export async function searchChannels(
     // 3. Try official exact slug match (Official API - Requires Auth)
     if (client.isAuthenticated()) {
         try {
-            console.log(`[KickSearch] Step 3: Checking official API for "${normalizedQuery}"`);
+            console.debug(`[KickSearch] Step 3: Checking official API for "${normalizedQuery}"`);
             const channel = await getChannel(client, normalizedQuery);
             if (channel) {
-                console.log(`[KickSearch] Step 3: Found channel "${channel.username}"`);
+                console.debug(`[KickSearch] Step 3: Found channel "${channel.username}"`);
                 const key = channel.username.toLowerCase();
                 results.set(key, mergeChannel(results.get(key), channel, true)); // Step 3 is authoritative for live status
             }
@@ -257,9 +257,9 @@ export async function searchChannels(
     // 4. Try to get fuzzy matches from Top Streams
     // This helps find live channels even if the query is partial or fuzzy.
     try {
-        console.log(`[KickSearch] Step 4: Checking top streams for fuzzy match`);
+        console.debug(`[KickSearch] Step 4: Checking top streams for fuzzy match`);
         const topStreams = await getTopStreamsCached(client);
-        console.log(`[KickSearch] Step 4: Found ${topStreams.length} top streams to filter`);
+        console.debug(`[KickSearch] Step 4: Found ${topStreams.length} top streams to filter`);
 
         for (const stream of topStreams) {
             const chName = stream.channelName.toLowerCase();
@@ -267,7 +267,7 @@ export async function searchChannels(
 
             if (chName.includes(normalizedQuery) || chDisp.includes(normalizedQuery)) {
                 const key = stream.channelName.toLowerCase();
-                console.log(`[KickSearch] Step 4: Found fuzzy match "${stream.channelName}" in top streams`);
+                console.debug(`[KickSearch] Step 4: Found fuzzy match "${stream.channelName}" in top streams`);
                 const newChannel: UnifiedChannel = {
                     id: stream.channelId,
                     platform: 'kick',
@@ -296,7 +296,7 @@ export async function searchChannels(
             .slice(0, 5); // Only check top 5 to keep it fast
 
         if (channelsToCheck.length > 0) {
-            console.log(`[KickSearch] Step 5: Verifying live status for ${channelsToCheck.length} channels`);
+            console.debug(`[KickSearch] Step 5: Verifying live status for ${channelsToCheck.length} channels`);
 
             // Check in parallel with timeout
             const liveChecks = await Promise.allSettled(
@@ -317,7 +317,7 @@ export async function searchChannels(
                     const existing = results.get(key);
                     if (existing) {
                         results.set(key, { ...existing, isLive: true });
-                        console.log(`[KickSearch] Step 5: Confirmed ${key} is LIVE`);
+                        console.debug(`[KickSearch] Step 5: Confirmed ${key} is LIVE`);
                     }
                 }
             }
@@ -327,7 +327,7 @@ export async function searchChannels(
     }
 
     const finalResults = Array.from(results.values());
-    console.log(`[KickSearch] Final results for "${query}": ${finalResults.length} channels`);
+    console.debug(`[KickSearch] Final results for "${query}": ${finalResults.length} channels`);
     return { data: finalResults };
 }
 

@@ -119,7 +119,7 @@ export function useDefaultQuality(
 
             // Only change if different from current (which defaults to 'auto')
             if (targetQuality !== currentQualityId) {
-                console.log(`[useDefaultQuality] Applying default quality: ${defaultQuality} -> Level ${targetQuality}`);
+                console.debug(`[useDefaultQuality] Applying default quality: ${defaultQuality} -> Level ${targetQuality}`);
                 onQualityChange(targetQuality);
             }
 

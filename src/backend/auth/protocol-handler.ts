@@ -35,7 +35,7 @@ class ProtocolHandler {
      */
     registerProtocol(): boolean {
         if (this.isRegistered) {
-            console.log('🔗 Protocol already registered');
+            console.debug('🔗 Protocol already registered');
             return true;
         }
 
@@ -55,7 +55,7 @@ class ProtocolHandler {
             }
 
             this.isRegistered = true;
-            console.log(`✅ Registered protocol: ${PROTOCOL_SCHEME}://`);
+            console.debug(`✅ Registered protocol: ${PROTOCOL_SCHEME}://`);
 
             // Handle protocol URLs on Windows and Linux
             this.setupProtocolUrlHandler();
@@ -74,7 +74,7 @@ class ProtocolHandler {
         if (this.isRegistered) {
             app.removeAsDefaultProtocolClient(PROTOCOL_SCHEME);
             this.isRegistered = false;
-            console.log(`🗑️ Unregistered protocol: ${PROTOCOL_SCHEME}://`);
+            console.debug(`🗑️ Unregistered protocol: ${PROTOCOL_SCHEME}://`);
         }
     }
 
@@ -129,7 +129,7 @@ class ProtocolHandler {
      * Parses the URL and calls the appropriate callback handler
      */
     handleProtocolUrl(url: string): void {
-        console.log(`📥 Received protocol URL: ${url}`);
+        console.debug(`📥 Received protocol URL: ${url}`);
 
         try {
             const parsed = new URL(url);
@@ -186,7 +186,7 @@ class ProtocolHandler {
      */
     onCallback(platform: Platform, handler: OAuthCallbackHandler): void {
         this.callbackHandlers.set(platform, handler);
-        console.log(`📝 Registered callback handler for ${platform}`);
+        console.debug(`📝 Registered callback handler for ${platform}`);
     }
 
     /**

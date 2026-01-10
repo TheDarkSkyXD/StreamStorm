@@ -67,7 +67,7 @@ export class TwitchStreamResolver {
             try {
                 const proxyService = new TwitchProxyService(proxyConfig);
                 const result = proxyService.getProxiedStreamUrl(channelLogin);
-                console.log(`[TwitchResolver] Using proxy: ${proxyConfig.selectedProxy}`);
+                console.debug(`[TwitchResolver] Using proxy: ${proxyConfig.selectedProxy}`);
                 return result;
             } catch (proxyError) {
                 // Use ProxyConfigError code for reliable error classification
@@ -88,7 +88,7 @@ export class TwitchStreamResolver {
 
                 // Fallback to direct if configured
                 if (proxyConfig.fallbackToDirect) {
-                    console.log('[TwitchResolver] Falling back to direct stream');
+                    console.debug('[TwitchResolver] Falling back to direct stream');
                     return this.getStreamPlaybackUrl(channelLogin);
                 }
                 throw proxyError;

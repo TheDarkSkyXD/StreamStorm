@@ -169,12 +169,12 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             hlsRef.current = hls;
             if (onHlsInstance) onHlsInstance(hls);
 
-            console.log('Initializing HLS for:', src);
+            console.debug('Initializing HLS for:', src);
             hls.loadSource(src);
             hls.attachMedia(video);
 
             hls.on(Hls.Events.MANIFEST_PARSED, (event, data) => {
-                console.log('[HLS] Manifest parsed, levels:', data.levels.length);
+                console.debug('[HLS] Manifest parsed, levels:', data.levels.length);
 
                 if (autoPlay && isMountedRef.current) {
                     safePlay();
@@ -298,7 +298,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                             const lastAttempt = lastRecoveryAttemptRef.current;
 
                             if (!lastAttempt || now - lastAttempt > 5000) {
-                                console.log('[HLS] Fatal media error encountered, attempting recovery...');
+                                console.debug('[HLS] Fatal media error encountered, attempting recovery...');
                                 lastRecoveryAttemptRef.current = now;
                                 hls?.recoverMediaError();
                             } else {
@@ -395,7 +395,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
 
         } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
             // Native HLS (Safari)
-            console.log('Using native HLS');
+            console.debug('Using native HLS');
             video.src = src;
             handleLoadedMetadata = () => {
                 if (autoPlay && isMountedRef.current) safePlay();
@@ -412,7 +412,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             video.addEventListener('error', handleError);
         } else {
             // Standard Native Playback (e.g. MP4)
-            console.log('Using standard native playback');
+            console.debug('Using standard native playback');
             video.src = src;
             handleLoadedMetadata = () => {
                 if (autoPlay && isMountedRef.current) safePlay();

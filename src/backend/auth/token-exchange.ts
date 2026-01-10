@@ -51,12 +51,12 @@ class TokenExchangeService {
     async exchangeCodeForToken(params: TokenExchangeParams): Promise<AuthToken> {
         const config = getOAuthConfig(params.platform);
 
-        console.log(`🔄 Exchanging code for token (${params.platform})`);
-        console.log(`📤 Token endpoint: ${config.tokenEndpoint}`);
-        console.log(`📤 Client ID: ${config.clientId ? config.clientId.substring(0, 8) + '...' : 'NOT SET'}`);
-        console.log(`📤 Redirect URI: ${params.redirectUri}`);
-        console.log(`📤 Code: ${params.code.substring(0, 10)}...`);
-        console.log(`📤 PKCE enabled: ${config.usesPkce}`);
+        console.debug(`🔄 Exchanging code for token (${params.platform})`);
+        console.debug(`📤 Token endpoint: ${config.tokenEndpoint}`);
+        console.debug(`📤 Client ID: ${config.clientId ? config.clientId.substring(0, 8) + '...' : 'NOT SET'}`);
+        console.debug(`📤 Redirect URI: ${params.redirectUri}`);
+        console.debug(`📤 Code: ${params.code.substring(0, 10)}...`);
+        console.debug(`📤 PKCE enabled: ${config.usesPkce}`);
 
         const body = new URLSearchParams({
             grant_type: 'authorization_code',
@@ -68,7 +68,7 @@ class TokenExchangeService {
 
         // Add PKCE code verifier if used
         if (config.usesPkce && params.pkce) {
-            console.log(`📤 Code verifier: ${params.pkce.codeVerifier.substring(0, 10)}...`);
+            console.debug(`📤 Code verifier: ${params.pkce.codeVerifier.substring(0, 10)}...`);
             body.append('code_verifier', params.pkce.codeVerifier);
         }
 
@@ -101,7 +101,7 @@ class TokenExchangeService {
             const data = (await response.json()) as TokenResponse;
             const token = this.parseTokenResponse(data);
 
-            console.log(`✅ Token obtained for ${params.platform}`);
+            console.debug(`✅ Token obtained for ${params.platform}`);
             return token;
         } catch (error) {
             console.error(`❌ Token exchange error for ${params.platform}:`, error);
@@ -115,7 +115,7 @@ class TokenExchangeService {
     async getAppAccessToken(platform: Platform): Promise<AuthToken> {
         const config = getOAuthConfig(platform);
 
-        console.log(`🔄 Getting App Access Token for ${platform}`);
+        console.debug(`🔄 Getting App Access Token for ${platform}`);
 
         const body = new URLSearchParams({
             grant_type: 'client_credentials',
@@ -151,7 +151,7 @@ class TokenExchangeService {
             const data = (await response.json()) as TokenResponse;
             const token = this.parseTokenResponse(data);
 
-            console.log(`✅ App Token obtained for ${platform}`);
+            console.debug(`✅ App Token obtained for ${platform}`);
             return token;
         } catch (error) {
             console.error(`❌ App token exchange error for ${platform}:`, error);
@@ -165,7 +165,7 @@ class TokenExchangeService {
     async refreshToken(params: TokenRefreshParams): Promise<AuthToken> {
         const config = getOAuthConfig(params.platform);
 
-        console.log(`🔄 Refreshing token for ${params.platform}`);
+        console.debug(`🔄 Refreshing token for ${params.platform}`);
 
         const body = new URLSearchParams({
             grant_type: 'refresh_token',
@@ -202,7 +202,7 @@ class TokenExchangeService {
             const data = (await response.json()) as TokenResponse;
             const token = this.parseTokenResponse(data);
 
-            console.log(`✅ Token refreshed for ${params.platform}`);
+            console.debug(`✅ Token refreshed for ${params.platform}`);
             return token;
         } catch (error) {
             console.error(`❌ Token refresh error for ${params.platform}:`, error);
@@ -221,7 +221,7 @@ class TokenExchangeService {
             return false;
         }
 
-        console.log(`🗑️ Revoking token for ${params.platform}`);
+        console.debug(`🗑️ Revoking token for ${params.platform}`);
 
         const body = new URLSearchParams({
             client_id: config.clientId,
@@ -246,7 +246,7 @@ class TokenExchangeService {
                 // So we don't throw here, just warn
             }
 
-            console.log(`✅ Token revoked for ${params.platform}`);
+            console.debug(`✅ Token revoked for ${params.platform}`);
             return true;
         } catch (error) {
             console.error(`❌ Token revocation error for ${params.platform}:`, error);

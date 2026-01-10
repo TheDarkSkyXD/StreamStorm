@@ -99,15 +99,15 @@ app.on('ready', async () => {
   const cleanShutdown = wasCleanShutdown();
 
   if (!cleanShutdown) {
-    console.log('🔍 Detected unclean shutdown, clearing cache to prevent corruption...');
+    console.debug('🔍 Detected unclean shutdown, clearing cache to prevent corruption...');
     try {
       await session.defaultSession.clearCache();
-      console.log('🧹 Cleared disk cache');
+      console.debug('🧹 Cleared disk cache');
     } catch (e) {
       console.warn('⚠️ Failed to clear cache:', e);
     }
   } else {
-    console.log('✅ Clean shutdown detected, preserving cache');
+    console.debug('✅ Clean shutdown detected, preserving cache');
   }
 
   // Mark session as started (remove sentinel until clean shutdown)
@@ -121,7 +121,7 @@ app.on('ready', async () => {
 
   const mainWindow = windowManager.createMainWindow();
   registerIpcHandlers(mainWindow);
-  console.log('🌩️ StreamStorm main process started');
+  console.debug('🌩️ StreamStorm main process started');
 });
 
 app.on('window-all-closed', () => {

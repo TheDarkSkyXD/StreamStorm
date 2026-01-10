@@ -104,11 +104,11 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
 
             // If Twitch has a token but it's expired, try to refresh it
             if (status.twitch.hasToken && status.twitch.isExpired) {
-                console.log('🔄 Twitch token expired, attempting auto-refresh...');
+                console.debug('🔄 Twitch token expired, attempting auto-refresh...');
                 try {
                     const refreshResult = await window.electronAPI.auth.refreshTwitchToken();
                     if (refreshResult.success) {
-                        console.log('✅ Twitch token refreshed successfully');
+                        console.debug('✅ Twitch token refreshed successfully');
                         // Re-fetch status after refresh
                         status = await window.electronAPI.auth.getStatus();
                     } else {
@@ -172,7 +172,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     loginTwitch: async () => {
         // Prevent rapid clicking - if already loading, ignore
         if (get().twitchLoading) {
-            console.log('⚠️ Twitch login already in progress, ignoring');
+            console.debug('⚠️ Twitch login already in progress, ignoring');
             return;
         }
 
@@ -227,7 +227,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     logoutTwitch: async () => {
         // Prevent rapid clicking - if already loading, ignore
         if (get().twitchLoading) {
-            console.log('⚠️ Twitch operation already in progress, ignoring');
+            console.debug('⚠️ Twitch operation already in progress, ignoring');
             return;
         }
 
@@ -260,7 +260,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     loginKick: async () => {
         // Prevent rapid clicking - if already loading, ignore
         if (get().kickLoading) {
-            console.log('⚠️ Kick login already in progress, ignoring');
+            console.debug('⚠️ Kick login already in progress, ignoring');
             return;
         }
 
@@ -309,7 +309,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
     logoutKick: async () => {
         // Prevent rapid clicking - if already loading, ignore
         if (get().kickLoading) {
-            console.log('⚠️ Kick operation already in progress, ignoring');
+            console.debug('⚠️ Kick operation already in progress, ignoring');
             return;
         }
 
@@ -380,7 +380,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
             set((state) => ({
                 localFollows: [...state.localFollows, newFollow],
             }));
-            console.log('➕ Added follow:', follow.displayName);
+            console.debug('➕ Added follow:', follow.displayName);
             return newFollow;
         } catch (error) {
             console.error('Failed to add follow:', error);
@@ -395,7 +395,7 @@ export const useAuthStore = create<AuthState>()((set, get) => ({
                 set((state) => ({
                     localFollows: state.localFollows.filter((f) => f.id !== id),
                 }));
-                console.log('➖ Removed follow:', id);
+                console.debug('➖ Removed follow:', id);
             }
             return removed;
         } catch (error) {

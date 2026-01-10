@@ -159,7 +159,7 @@ export function registerVideoHandlers(): void {
 
                 if (!userId) {
                     // Fallback to lookup by name
-                    console.log(`[TwitchVideo] Fetching user for channel: ${params.channelName}`);
+                    console.debug(`[TwitchVideo] Fetching user for channel: ${params.channelName}`);
                     const users = await twitchClient.getUsersByLogin([params.channelName.toLowerCase()]);
                     if (!users.length) {
                         console.error(`[TwitchVideo] Channel not found: ${params.channelName}`);
@@ -168,14 +168,14 @@ export function registerVideoHandlers(): void {
                     userId = users[0].id;
                 }
 
-                console.log(`[TwitchVideo] Fetching videos for User ID: ${userId}`);
+                console.debug(`[TwitchVideo] Fetching videos for User ID: ${userId}`);
 
                 const videos = await twitchClient.getVideosByUser(userId, {
                     first: params.limit,
                     after: params.cursor
                     // type: 'archive' // Removed to show all video types (uplods, highlights, archives)
                 });
-                console.log(`[TwitchVideo] Fetched ${videos.data.length} videos for ${params.channelName} (User ID: ${userId})`);
+                console.debug(`[TwitchVideo] Fetched ${videos.data.length} videos for ${params.channelName} (User ID: ${userId})`);
 
                 // Sort by views if requested (Twitch API doesn't support views sort)
                 let sortedVideos = videos.data;
@@ -237,7 +237,7 @@ export function registerVideoHandlers(): void {
 
                 // Apply client-side sorting (as fallback since Kick API may not reliably sort by views)
                 if (videos.data && videos.data.length > 0 && params.sort === 'views') {
-                    console.log(`[KickVideo] Sorting ${videos.data.length} videos by views (client-side)`);
+                    console.debug(`[KickVideo] Sorting ${videos.data.length} videos by views (client-side)`);
                     videos.data = [...videos.data].sort((a: any, b: any) => {
                         const viewsA = parseInt(a.views) || 0;
                         const viewsB = parseInt(b.views) || 0;
@@ -305,13 +305,13 @@ export function registerVideoHandlers(): void {
                     startedAt = now.toISOString();
                 }
 
-                console.log(`[TwitchClip] Fetching clips for User ID: ${userId} with timeRange: ${params.timeRange || 'all'} (startedAt: ${startedAt || 'none'})`);
+                console.debug(`[TwitchClip] Fetching clips for User ID: ${userId} with timeRange: ${params.timeRange || 'all'} (startedAt: ${startedAt || 'none'})`);
                 const clips = await twitchClient.getClipsByBroadcaster(userId, {
                     first: params.limit,
                     after: params.cursor,
                     started_at: startedAt
                 });
-                console.log(`[TwitchClip] Fetched ${clips.data.length} clips for ${params.channelName}`);
+                console.debug(`[TwitchClip] Fetched ${clips.data.length} clips for ${params.channelName}`);
 
                 // Sort by views if requested (Twitch clips API doesn't support views sort for broadcaster endpoint)
                 let sortedClips = clips.data;
@@ -363,7 +363,7 @@ export function registerVideoHandlers(): void {
                 let outputCursor: string | undefined = undefined;
 
                 if (isViewSortWithTimeParams) {
-                    console.log(`[KickClip] executing "Deep Fetch" strategy for ${params.timeRange} view sort`);
+                    console.debug(`[KickClip] executing "Deep Fetch" strategy for ${params.timeRange} view sort`);
 
                     // Determine cutoff date
                     const now = new Date();
@@ -381,7 +381,7 @@ export function registerVideoHandlers(): void {
                     const MAX_PAGES = 30; // Increased to 30 pages to cover more history (potential 3000 clips)
 
                     while (keepFetching && pagesFetched < MAX_PAGES) {
-                        console.log(`[KickClip] Deep Fetch Page ${pagesFetched + 1} (cursor: ${currentCursor})`);
+                        console.debug(`[KickClip] Deep Fetch Page ${pagesFetched + 1} (cursor: ${currentCursor})`);
                         const response = await kickClient.getClips(params.channelName, {
                             limit: 100,
                             cursor: currentCursor,
@@ -393,7 +393,7 @@ export function registerVideoHandlers(): void {
                         const count = pageClips.length;
 
                         if (count === 0) {
-                            console.log('[KickClip] Page empty, stopping fetch');
+                            console.debug('[KickClip] Page empty, stopping fetch');
                             keepFetching = false;
                         } else {
                             clipsData.push(...pageClips);
@@ -403,17 +403,17 @@ export function registerVideoHandlers(): void {
                             // Log date range of this page
                             const firstDate = pageClips[0].created_at || pageClips[0].date;
                             const lastDate = pageClips[count - 1].created_at || pageClips[count - 1].date;
-                            console.log(`[KickClip] Page ${pagesFetched} range: ${firstDate} -> ${lastDate}`);
+                            console.debug(`[KickClip] Page ${pagesFetched} range: ${firstDate} -> ${lastDate}`);
 
                             // Check if current page has clips older than cutoff
                             const lastClipDate = new Date(lastDate);
                             if (lastClipDate < cutoffDate) {
-                                console.log(`[KickClip] Reached cutoff date (${cutoffDate.toISOString()}), stopping.`);
+                                console.debug(`[KickClip] Reached cutoff date (${cutoffDate.toISOString()}), stopping.`);
                                 keepFetching = false;
                             }
 
                             if (!currentCursor) {
-                                console.log('[KickClip] No next cursor, stopping.');
+                                console.debug('[KickClip] No next cursor, stopping.');
                                 keepFetching = false;
                             }
                         }
@@ -425,10 +425,10 @@ export function registerVideoHandlers(): void {
                         const d = new Date(c.created_at || c.date);
                         return d >= cutoffDate;
                     });
-                    console.log(`[KickClip] Deep Fetch Result: ${beforeFilter} -> ${clipsData.length} clips within ${params.timeRange}`);
+                    console.debug(`[KickClip] Deep Fetch Result: ${beforeFilter} -> ${clipsData.length} clips within ${params.timeRange}`);
 
                     // Sort by Views
-                    console.log(`[KickClip] Sorting ${clipsData.length} clips by views...`);
+                    console.debug(`[KickClip] Sorting ${clipsData.length} clips by views...`);
                     clipsData.sort((a, b) => {
                         const vA = parseInt(String(a.views).replace(/,/g, ''), 10) || 0;
                         const vB = parseInt(String(b.views).replace(/,/g, ''), 10) || 0;
@@ -437,7 +437,7 @@ export function registerVideoHandlers(): void {
 
                     // Log top 5 for verification
                     clipsData.slice(0, 5).forEach((c, i) => {
-                        console.log(`[KickClip] #${i + 1}: ${c.views} views - ${c.title}`);
+                        console.debug(`[KickClip] #${i + 1}: ${c.views} views - ${c.title}`);
                     });
 
                     // Optimization: For "Last Day" or any filtered view sort, if we found huge number of clips,
@@ -539,20 +539,20 @@ export function registerVideoHandlers(): void {
                 return { success: true, data: result };
             } else if (params.platform === 'kick') {
                 // Kick clips have a direct video_url (passed as clipUrl)
-                console.log('[KickClip] Playback request - clipId:', params.clipId);
-                console.log('[KickClip] Playback request - clipUrl:', params.clipUrl);
-                console.log('[KickClip] Playback request - thumbnailUrl:', params.thumbnailUrl);
+                console.debug('[KickClip] Playback request - clipId:', params.clipId);
+                console.debug('[KickClip] Playback request - clipUrl:', params.clipUrl);
+                console.debug('[KickClip] Playback request - thumbnailUrl:', params.thumbnailUrl);
 
                 if (!params.clipUrl) {
                     console.error('[KickClip] No clipUrl provided for Kick clip playback');
                     throw new Error('Clip URL required for Kick clip playback');
                 }
 
-                console.log('[KickClip] Returning playback URL:', params.clipUrl);
+                console.debug('[KickClip] Returning playback URL:', params.clipUrl);
 
                 // Detect format based on URL - Kick clips use HLS (.m3u8)
                 const format = params.clipUrl.includes('.m3u8') ? 'hls' : 'mp4';
-                console.log('[KickClip] Detected format:', format);
+                console.debug('[KickClip] Detected format:', format);
 
                 return {
                     success: true,
@@ -581,7 +581,7 @@ export function registerVideoHandlers(): void {
         livestreamId: string;
     }) => {
         try {
-            console.log(`[KickVodLookup] Looking up VOD for livestream_id: ${params.livestreamId} on channel: ${params.channelSlug} `);
+            console.debug(`[KickVodLookup] Looking up VOD for livestream_id: ${params.livestreamId} on channel: ${params.channelSlug} `);
 
             const { kickClient } = await import('../../api/platforms/kick/kick-client');
 
@@ -609,7 +609,7 @@ export function registerVideoHandlers(): void {
                     const videoLivestreamId = getKickVideoLivestreamId(video);
 
                     if (videoLivestreamId && videoLivestreamId === params.livestreamId?.toString()) {
-                        console.log(`[KickVodLookup] Found matching VOD: `, video.id, video.title);
+                        console.debug(`[KickVodLookup] Found matching VOD: `, video.id, video.title);
 
                         // Return the video data with source URL for direct playback
                         // Include all metadata needed by the Video page
@@ -643,7 +643,7 @@ export function registerVideoHandlers(): void {
                 }
             }
 
-            console.log(`[KickVodLookup] VOD not found for livestream_id: ${params.livestreamId} `);
+            console.debug(`[KickVodLookup] VOD not found for livestream_id: ${params.livestreamId} `);
             return {
                 success: false,
                 error: 'VOD not found - it may have been deleted or is not yet available'

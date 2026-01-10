@@ -267,7 +267,7 @@ export function useAdaptiveQuality({
         const targetQualityId = findQualityForTier(effectiveTier, qualities);
 
         if (targetQualityId && targetQualityId !== currentQualityId && targetQualityId !== 'auto') {
-            console.log(`[AdaptiveQuality] Adjusting quality: ${currentQualityId} -> ${targetQualityId} (tier: ${effectiveTier}, buffer: ${bufferHealth})`);
+            console.debug(`[AdaptiveQuality] Adjusting quality: ${currentQualityId} -> ${targetQualityId} (tier: ${effectiveTier}, buffer: ${bufferHealth})`);
 
             onQualityChange(targetQualityId);
             lastChangeTimeRef.current = now;

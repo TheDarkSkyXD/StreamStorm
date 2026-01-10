@@ -17,7 +17,7 @@ export class DatabaseService {
             fs.mkdirSync(dbDir, { recursive: true });
         }
 
-        console.log(`📂 Initializing SQLite database at: ${dbPath}`);
+        console.debug(`📂 Initializing SQLite database at: ${dbPath}`);
 
         this.db = new Database(dbPath); // verbose: console.log for debug?
         this.errCheck();
@@ -57,7 +57,7 @@ export class DatabaseService {
             CREATE INDEX IF NOT EXISTS idx_follows_channel_id ON local_follows(channel_id);
         `);
 
-        console.log('✅ SQLite Schema initialized');
+        console.debug('✅ SQLite Schema initialized');
     }
 
     // ========== Key-Value Operations ==========

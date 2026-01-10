@@ -94,7 +94,7 @@ async function verifyAndEnrichTwitchChannels(channels: any[]): Promise<Map<strin
                             data: null,
                             timestamp: now
                         });
-                        console.log(`[ChannelVerify] Twitch channel "${login}" does not exist (deleted account)`);
+                        console.debug(`[ChannelVerify] Twitch channel "${login}" does not exist (deleted account)`);
                     }
                 }
             }
@@ -189,7 +189,7 @@ async function verifyAndEnrichKickChannels(channels: any[]): Promise<Map<string,
                             data: null,
                             timestamp: now
                         });
-                        console.log(`[ChannelVerify] Kick channel "${slug}" does not exist (deleted account)`);
+                        console.debug(`[ChannelVerify] Kick channel "${slug}" does not exist (deleted account)`);
                     }
                 }
             } catch (error) {
@@ -292,12 +292,12 @@ export function registerSearchHandlers(): void {
             if (!params.platform || params.platform === 'kick') {
                 searchPromises.push(
                     (async () => {
-                        console.log(`[SearchHandler] Searching Kick for "${params.query}"`);
+                        console.debug(`[SearchHandler] Searching Kick for "${params.query}"`);
                         const result = await kickClient.searchChannels(params.query);
-                        console.log(`[SearchHandler] Kick returned ${result.data.length} raw results`);
+                        console.debug(`[SearchHandler] Kick returned ${result.data.length} raw results`);
 
                         let channels = result.data.filter(isValidChannel);
-                        console.log(`[SearchHandler] Kick after validation: ${channels.length} channels`);
+                        console.debug(`[SearchHandler] Kick after validation: ${channels.length} channels`);
 
                         if (kickUser) {
                             channels = channels.filter(c => {
@@ -316,7 +316,7 @@ export function registerSearchHandlers(): void {
                             channels = await filterVerifiedChannels(channels, 'kick');
                         }
 
-                        console.log(`[SearchHandler] Kick final: ${channels.length} channels`);
+                        console.debug(`[SearchHandler] Kick final: ${channels.length} channels`);
                         return { platform: 'kick' as Platform, data: channels };
                     })().catch(err => {
                         console.warn('⚠️ Failed to search Kick channels:', err);
@@ -330,12 +330,12 @@ export function registerSearchHandlers(): void {
 
             // Log results per platform
             for (const r of results) {
-                console.log(`[SearchHandler] Platform ${r.platform} returned ${r.data.length} channels`);
+                console.debug(`[SearchHandler] Platform ${r.platform} returned ${r.data.length} channels`);
             }
 
             if (!params.platform) {
                 const allChannels = results.flatMap(r => r.data);
-                console.log(`[SearchHandler] Combined total: ${allChannels.length} channels`);
+                console.debug(`[SearchHandler] Combined total: ${allChannels.length} channels`);
 
                 // Sort by: Live status first, then relevance (Exact match -> Starts with -> Others)
                 allChannels.sort((a, b) => {
@@ -364,7 +364,7 @@ export function registerSearchHandlers(): void {
                     return 0;
                 });
 
-                console.log(`[SearchHandler] Returning ${allChannels.length} channels (limit: ${params.limit})`);
+                console.debug(`[SearchHandler] Returning ${allChannels.length} channels (limit: ${params.limit})`);
                 return { success: true, data: allChannels };
             }
 

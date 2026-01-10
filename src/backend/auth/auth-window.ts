@@ -68,8 +68,8 @@ class AuthWindowManager {
             state,
         });
 
-        console.log(`🔐 Opening auth window for ${platform}`);
-        console.log(`🔗 Redirect URI: ${redirectUri}`);
+        console.debug(`🔐 Opening auth window for ${platform}`);
+        console.debug(`🔗 Redirect URI: ${redirectUri}`);
 
         // Create the auth window
         const window = new BrowserWindow({
@@ -109,7 +109,7 @@ class AuthWindowManager {
         // Handle window close
         window.on('closed', () => {
             this.sessions.delete(platform);
-            console.log(`🔐 Auth window closed for ${platform}`);
+            console.debug(`🔐 Auth window closed for ${platform}`);
         });
 
         // Handle external links (open in default browser)
@@ -125,7 +125,7 @@ class AuthWindowManager {
         // Don't prevent navigation - let the local server show success/error page
         window.webContents.on('will-navigate', (_event, url) => {
             if (this.isCallbackUrl(url, port, platform)) {
-                console.log(`📥 Auth callback navigation detected for ${platform}`);
+                console.debug(`📥 Auth callback navigation detected for ${platform}`);
                 // Let navigation proceed to localhost server
                 // The server will respond with a success page that closes the window
             }
@@ -134,7 +134,7 @@ class AuthWindowManager {
         // Also check redirects
         window.webContents.on('will-redirect', (_event, url) => {
             if (this.isCallbackUrl(url, port, platform)) {
-                console.log(`📥 Auth redirect detected for ${platform}`);
+                console.debug(`📥 Auth redirect detected for ${platform}`);
                 // Let redirect proceed to localhost server
             }
         });
@@ -142,7 +142,7 @@ class AuthWindowManager {
         // When the localhost callback page loads, close the window after a delay
         window.webContents.on('did-navigate', (_event, url) => {
             if (this.isCallbackUrl(url, port, platform)) {
-                console.log(`✅ Auth callback page loaded for ${platform}`);
+                console.debug(`✅ Auth callback page loaded for ${platform}`);
                 // Close window after the success page displays briefly
                 setTimeout(() => {
                     this.closeAuthWindow(platform);
