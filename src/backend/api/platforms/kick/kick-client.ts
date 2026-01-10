@@ -26,6 +26,70 @@ import * as SearchEndpoints from './endpoints/search-endpoints';
 import * as VideoEndpoints from './endpoints/video-endpoints';
 import * as ClipEndpoints from './endpoints/clip-endpoints';
 
+// ========== Global Rate Limiter ==========
+// Prevents 429 Too Many Requests by limiting request rate
+
+class KickRateLimiter {
+    private requestQueue: Array<{
+        resolve: () => void;
+        timestamp: number;
+    }> = [];
+    private lastRequestTime = 0;
+    private processing = false;
+    
+    // Minimum delay between requests (ms) - 200ms = max 5 requests/second
+    private readonly minDelay = 200;
+    
+    /**
+     * Wait for rate limit slot before making request
+     */
+    async acquire(): Promise<void> {
+        const now = Date.now();
+        const timeSinceLastRequest = now - this.lastRequestTime;
+        
+        if (timeSinceLastRequest >= this.minDelay) {
+            // Enough time has passed, can proceed immediately
+            this.lastRequestTime = now;
+            return;
+        }
+        
+        // Need to wait
+        return new Promise<void>((resolve) => {
+            this.requestQueue.push({ resolve, timestamp: now });
+            this.processQueue();
+        });
+    }
+    
+    private async processQueue(): Promise<void> {
+        if (this.processing || this.requestQueue.length === 0) {
+            return;
+        }
+        
+        this.processing = true;
+        
+        while (this.requestQueue.length > 0) {
+            const now = Date.now();
+            const timeSinceLastRequest = now - this.lastRequestTime;
+            const waitTime = Math.max(0, this.minDelay - timeSinceLastRequest);
+            
+            if (waitTime > 0) {
+                await new Promise(r => setTimeout(r, waitTime));
+            }
+            
+            const next = this.requestQueue.shift();
+            if (next) {
+                this.lastRequestTime = Date.now();
+                next.resolve();
+            }
+        }
+        
+        this.processing = false;
+    }
+}
+
+// Singleton rate limiter for all Kick API requests
+const kickRateLimiter = new KickRateLimiter();
+
 // ========== Kick API Client Class ==========
 
 class KickClient implements KickRequestor {
@@ -130,19 +194,56 @@ class KickClient implements KickRequestor {
         });
     }
 
+    // Lazy-initialized direct session for CDN requests (bypasses proxy)
+    private cdnSession: Electron.Session | null = null;
+    
+    /**
+     * Get or create a session configured for direct CDN access (no proxy)
+     * This prevents 403 errors from proxy interference
+     */
+    private async getCdnSession(): Promise<Electron.Session> {
+        if (this.cdnSession) {
+            return this.cdnSession;
+        }
+        
+        const { session } = require('electron');
+        
+        // Create dedicated session for CDN requests with no proxy
+        const cdnSession: Electron.Session = session.fromPartition('persist:kick-cdn-direct');
+        
+        // Configure to bypass all proxies for CDN domains
+        await cdnSession.setProxy({
+            mode: 'direct' // Bypass all proxy settings
+        });
+        
+        // Close any existing connections to ensure new settings take effect
+        await cdnSession.closeAllConnections();
+        
+        // Cache the session
+        this.cdnSession = cdnSession;
+        
+        return cdnSession;
+    }
+
     /**
      * Make a binary HTTP request using Electron's net module (for images)
+     * Uses a dedicated session with direct connection to bypass proxy and avoid 403 errors
      */
-    private electronRequestBinary(
+    private async electronRequestBinary(
         url: string,
         headers: Record<string, string>
     ): Promise<{ buffer: Buffer; statusCode: number; contentType: string }> {
+        // Get direct session to bypass proxy
+        const directSession = await this.getCdnSession();
+        
         return new Promise((resolve, reject) => {
             const { net } = require('electron');
 
             const request = net.request({
                 method: 'GET',
                 url,
+                session: directSession, // Use direct session (no proxy)
+                useSessionCookies: false, // Don't send cookies to avoid 403 errors
             });
 
             for (const [key, value] of Object.entries(headers)) {
@@ -213,10 +314,12 @@ class KickClient implements KickRequestor {
      */
     async fetchImage(url: string): Promise<string | null> {
         try {
-            // 1. Setup headers exactly like the API request but with image acceptance
+            // 1. Setup headers exactly like browser requests for CDN compatibility
             const headers: Record<string, string> = {
                 'Accept': 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
                 'Accept-Language': 'en-US,en;q=0.9',
+                // CRITICAL: User-Agent is REQUIRED for Cloudflare/CDN to not return 403
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             };
 
             // Add Auth token if we have one (user or app)
@@ -234,6 +337,9 @@ class KickClient implements KickRequestor {
             // Important: Referer/Origin for Hotlinking protection
             headers['Referer'] = 'https://kick.com/';
             headers['Origin'] = 'https://kick.com';
+            headers['Sec-Fetch-Dest'] = 'image';
+            headers['Sec-Fetch-Mode'] = 'no-cors';
+            headers['Sec-Fetch-Site'] = 'cross-site';
 
             const { buffer, contentType } = await this.electronRequestBinary(url, headers);
 
@@ -277,6 +383,14 @@ class KickClient implements KickRequestor {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`,
+            // Add User-Agent and browser headers for Cloudflare/CDN compatibility
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Accept-Encoding': 'gzip, deflate, br',
+            'Referer': 'https://kick.com/',
+            'sec-ch-ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+            'sec-ch-ua-mobile': '?0',
+            'sec-ch-ua-platform': '"Windows"',
             ...options.headers as Record<string, string>,
         };
 
@@ -285,6 +399,9 @@ class KickClient implements KickRequestor {
 
         while (attempt <= maxRetries) {
             try {
+                // Apply rate limiting to prevent 429 errors
+                await kickRateLimiter.acquire();
+                
                 const url = endpoint.startsWith('http') ? endpoint : `${this.baseUrl}${endpoint}`;
                 const method = (options.method || 'GET').toUpperCase();
                 const body = options.body ? String(options.body) : undefined;
@@ -300,12 +417,12 @@ class KickClient implements KickRequestor {
                             throw new Error(`Kick API error: 429 (Max retries exceeded)`);
                         }
 
-                        // Calculate backoff: 1s, 2s, 4s...
+                        // Calculate backoff: 5s, 10s, 20s (longer delays for rate limiting)
                         // Use Retry-After header if available
                         const retryHeader = response.responseHeaders['retry-after'];
                         const backoff = retryHeader
                             ? parseInt(retryHeader, 10) * 1000
-                            : 1000 * Math.pow(2, attempt - 1);
+                            : 5000 * Math.pow(2, attempt - 1); // 5s, 10s, 20s
 
                         console.warn(`⚠️ Kick API 429 Too Many Requests. Retrying in ${backoff}ms (Attempt ${attempt}/${maxRetries})...`);
                         await new Promise(resolve => setTimeout(resolve, backoff));
