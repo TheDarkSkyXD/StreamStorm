@@ -1,0 +1,65 @@
+# PLATFORM API CLIENTS
+
+## OVERVIEW
+Twitch and Kick API implementations with unified type transformers.
+
+## STRUCTURE
+
+```
+platforms/
+├── kick/
+│   ├── kick-client.ts        # Main client (God Object - 571 lines)
+│   ├── kick-requestor.ts     # HTTP layer, auth tokens
+│   ├── kick-transformers.ts  # → UnifiedStream, UnifiedChannel
+│   ├── kick-types.ts         # Raw API response types
+│   └── endpoints/            # Domain-specific calls
+│       ├── stream-endpoints.ts   # Live streams (622 lines)
+│       ├── user-endpoints.ts
+│       └── video-endpoints.ts
+├── twitch/
+│   ├── twitch-client.ts      # Main client
+│   ├── twitch-requestor.ts   # Helix API auth
+│   ├── twitch-transformers.ts
+│   ├── twitch-types.ts
+│   ├── twitch-gql-helpers.ts # Supplemental GQL queries
+│   └── endpoints/
+└── ../unified/
+    ├── platform-types.ts     # UnifiedStream, UnifiedChannel, etc.
+    └── platform-client.ts    # IPlatformClient interface (target)
+```
+
+## WHERE TO LOOK
+
+| Task | Location |
+|------|----------|
+| Add Kick endpoint | `kick/endpoints/*.ts` |
+| Add Twitch endpoint | `twitch/endpoints/*.ts` |
+| Transform response | `*-transformers.ts` |
+| Unified types | `../unified/platform-types.ts` |
+
+## CONVENTIONS
+
+### Adapter Pattern
+Each client transforms raw API → Unified types via `*-transformers.ts`.
+
+### Requestor Pattern
+- Twitch: Standard `fetch`, OAuth2 app token
+- Kick: `electron.net` (IPv6 issues), dual token strategy
+
+### Method Naming
+```
+getStreamBySlug (Kick)  ↔  getStreamByLogin (Twitch)
+getTopStreams           ↔  getTopStreams
+```
+
+## ANTI-PATTERNS
+
+- **kick-client.ts**: Mixes HTTP, auth, retries, and API proxying
+- **stream-endpoints.ts**: Manual `net.request` reimplementation
+- Kick uses legacy/undocumented APIs as fallback (fragile)
+
+## NOTES
+
+- Kick API lacks official docs; reverse-engineered
+- Twitch uses Helix + GQL supplement
+- Pagination differs: Twitch (cursor), Kick (page numbers sometimes)
