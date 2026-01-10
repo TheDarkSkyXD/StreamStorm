@@ -1,110 +1,128 @@
-# AGENTS.md
+# PROJECT KNOWLEDGE BASE
 
-This is the canonical entrypoint for AI coding agents (e.g., Amp) working in this repository. It provides a concise project overview and points to the nearest per-folder AGENTS.md files that contain the actionable, context-specific rules.
+**Generated:** 2026-01-10
+**Commit:** ef88e2a
+**Branch:** test
 
-## Project Overview
+## OVERVIEW
 
-FreeTube is a private YouTube client built on Electron that allows users to watch YouTube videos without ads or tracking.
+StreamStorm is an Electron desktop app for viewing Twitch and Kick streams. Built with React 19, Vite 7, TypeScript 5.6, Zustand 5, TanStack Query/Router, Tailwind 4, and HLS.js.
 
-- Frontend: Vue 3, Vue Router, Vuex
-- Build: Webpack, TypeScript (in migration)
-- Backend: Electron (main process), NeDB database
-- Video: Shaka Player, YouTubeI.js API client
-- Styling: SCSS, FontAwesome icons
+## STRUCTURE
 
-Directory structure:
-- /src/renderer: Vue.js frontend (views, components, store)
-- /src/main: Electron main process
-- /src/preload: Electron preload scripts
-- /src/datastores: Database modules (NeDB)
-- /documentation: Feature specs and migration guides
+```
+StreamStorm/
+├── src/
+│   ├── main.ts              # Electron main process entry
+│   ├── preload/             # IPC bridge (contextBridge)
+│   ├── renderer.tsx         # React bootstrap
+│   ├── App.tsx              # Provider stack
+│   ├── routes/              # TanStack Router config
+│   ├── backend/             # Main process logic (see backend/AGENTS.md)
+│   │   ├── api/             # Platform clients (see api/platforms/AGENTS.md)
+│   │   ├── ipc/handlers/    # Modular IPC handlers
+│   │   ├── auth/            # OAuth flows, token management
+│   │   └── services/        # Database, storage
+│   ├── components/
+│   │   ├── player/          # Video playback (see player/AGENTS.md)
+│   │   ├── ui/              # Radix-based primitives
+│   │   ├── stream/          # Stream cards, grids
+│   │   ├── auth/            # Login, profile
+│   │   └── layout/          # Sidebar, TitleBar
+│   ├── store/               # Zustand stores (see store/AGENTS.md)
+│   ├── hooks/               # React hooks, TanStack Query
+│   ├── pages/               # Route components
+│   └── shared/              # Cross-process types, IPC channels
+├── documentation/           # Feature specs, roadmap (has own AGENTS.md)
+├── forge.config.ts          # Electron Forge packaging
+├── vite.*.config.ts         # Vite configs (main/preload/renderer)
+└── tailwind.config.js       # Brand colors, theme tokens
+```
 
-## Development Commands
+## WHERE TO LOOK
 
-Use npm for scripts.
+| Task | Location | Notes |
+|------|----------|-------|
+| Add IPC channel | `src/shared/ipc-channels.ts` | Define channel, add handler in `backend/ipc/handlers/` |
+| Add new page | `src/pages/` + `src/routes/router.tsx` | PascalCase dir, register route |
+| Platform API | `src/backend/api/platforms/{kick,twitch}/` | Mirror structure between platforms |
+| UI component | `src/components/ui/` | Radix + CVA pattern |
+| State management | `src/store/` | Zustand with persist middleware |
+| Video playback | `src/components/player/` | See player/AGENTS.md |
+| Auth flow | `src/backend/auth/` | OAuth, device code, tokens |
+| Database | `src/backend/services/database-service.ts` | SQLite via better-sqlite3 |
+
+## CONVENTIONS
+
+### Path Aliases (tsconfig)
+- `@/*` → `src/*`
+- `@backend/*` → `src/backend/*`
+- `@shared/*` → `src/shared/*`
+
+### File Naming
+- Components: PascalCase (`StreamCard.tsx`)
+- Hooks: camelCase with `use` prefix (`useAuth.ts`)
+- Stores: kebab-case with `-store` suffix (`auth-store.ts`)
+- Handlers: kebab-case with `-handlers` suffix
+
+### Import Order (ESLint enforced)
+1. Builtin (node:)
+2. External (react, electron)
+3. Internal (@/)
+4. Relative (./)
+
+### Platform Colors (Tailwind)
+- `storm-accent`: `#dc143c` (brand red)
+- `twitch`: `#9146ff`
+- `kick`: `#53fc18`
+- `background`: `#0f0f0f` (dark theme)
+
+## ANTI-PATTERNS (THIS PROJECT)
+
+- **NEVER** expose `ipcRenderer` directly - use preload bridge
+- **NEVER** log tokens or credentials
+- **NEVER** use `as any` or `@ts-ignore`
+- **DEPRECATED**: Generic storage channels (`store:get/set`) - use specific handlers
+- **DO NOT** call `recoverMediaError()` for non-media errors in HLS player
+
+## UNIQUE STYLES
+
+### IPC Pattern
+1. Define channel in `src/shared/ipc-channels.ts`
+2. Add typed payload in `IpcPayloads` interface
+3. Expose in `src/preload/index.ts`
+4. Register handler in `src/backend/ipc/handlers/*.ts`
+
+### Clean Shutdown Sentinel
+App writes `.clean-shutdown` file on exit. On startup, if missing, clears cache to prevent corruption.
+
+### Custom Protocol
+`streamstorm://` registered for OAuth callbacks.
+
+### Kick CDN Headers
+Request interceptor adds `Referer: https://kick.com/` for Kick image domains.
+
+## COMMANDS
 
 ```bash
-npm run dev          # Start Electron app in development mode
-npm run build        # Build production release
-npm run pack         # Pack all webpack bundles
-npm run lint         # Run ESLint and stylelint
-npm run lint-fix     # Auto-fix linting issues
-npm run type-check   # TypeScript type checking
+# Development
+npm start              # electron-forge start (Vite HMR)
 
-# Type checking (supports incremental migration)
-npm run type-check:renderer  # Frontend Vue components
-npm run type-check:backend   # Main process TypeScript
+# Quality
+npm run typecheck      # tsc --noEmit
+npm run lint           # eslint src/
+npm run lint:fix       # eslint --fix
+npm run format         # prettier
 
-# Debugging
-npm run debug        # Start with remote debugging enabled
+# Build
+npm run package        # electron-forge package
+npm run make           # Create installers (Squirrel/DMG/DEB/RPM)
 ```
 
-Environment variables:
-- Standard Electron environment (no backend API keys needed for basic development)
-- YouTubeI.js handles API interactions internally
+## NOTES
 
-## Verification Gates
-
-- Typecheck: `npm run type-check`
-- Lint: `npm run lint`
-- Build: `npm run pack` (webpack bundles)
-- Production Build: `npm run build`
-- Tests: (none currently configured)
-
-## Use the Nearest AGENTS.md (closest-wins)
-
-To keep agent context minimal, each major folder can have its own AGENTS.md. Agents should read the nearest file in the directory tree first (closest wins), then fall back to this root file.
-
-- Documentation rules: [documentation/AGENTS.md](documentation/AGENTS.md)
-
-Future AGENTS.md locations as the project grows:
-- /src/renderer: (planned for Vue component conventions)
-- /src/main: (planned for Electron main process patterns)
-- /_scripts: (planned for build script guidelines)
-
-## Working With Features
-
-- Active work: /documentation/features/active/
-- Completed: /documentation/features/completed/
-- Planned: /documentation/features/planned/
-
-When implementing a feature:
-- Check the active spec and progress docs
-- Reuse patterns from completed features
-
-## Research and Web Search
-
-**Always use Exa MCP tools for any research, web searches, or deep research tasks - DO NOT use any other search methods.**
-
-The Exa MCP provides AI-powered search capabilities with intelligent content extraction and synthesis. It offers superior results compared to traditional search engines by understanding context and delivering relevant, structured information tailored for development tasks.
-
-Available Exa MCP tools:
-- `web_search_exa`: General web searches with live crawling and content scraping
-- `deep_researcher_start` + `deep_researcher_check`: Comprehensive AI-powered research with multi-source analysis
-- `get_code_context_exa`: Programming-specific searches for APIs, libraries, and SDKs
-- `company_research_exa`: Business and organization information
-- `linkedin_search_exa`: Professional profiles and company pages
-- `crawling_exa`: Extract full content from specific URLs
-
-## Logging Conventions
-
-**Always use `console.debug()` instead of `console.log()` for development/debug logging.**
-
-- `console.debug()` logs are automatically stripped in production builds
-- `console.log()` should be avoided as it persists in production, causing performance overhead and noise
-- Use `console.error()` and `console.warn()` for actual errors and warnings that should appear in production
-- When reviewing or modifying code, convert any existing `console.log()` calls to `console.debug()`
-
-Example:
-```typescript
-// ❌ Bad - persists in production
-console.log('Stream loaded:', streamId);
-
-// ✅ Good - stripped in production
-console.debug('Stream loaded:', streamId);
-```
-
-## Notes
-- The detailed per-area rules (TypeScript migration patterns, Vue component conventions, Electron IPC patterns, database schemas) will live in subfolder AGENTS.md files as they are created.
-- For discovery and precedence behavior, see the "closest-wins" approach above.
-- DO NOT curl urls. Use the web_search_exa tool instead.
+- **No tests yet** - Testing infrastructure planned but not implemented
+- **Kick API limitations** - Uses legacy/public APIs as fallback; may break
+- **webSecurity disabled** - Required for cross-origin video playback
+- **Frame: false** - Custom titlebar, no native frame
+- LSP not available in this environment - rely on grep/ast-grep

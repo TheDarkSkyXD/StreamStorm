@@ -15,10 +15,20 @@ import { Skeleton } from './skeleton';
 // 2. Electron's request interceptor (onBeforeSendHeaders) doesn't reliably set Referer headers
 // 3. The IPC proxy uses Electron's net.request which can set headers properly
 //
+// Kick image URL patterns:
+// - files.kick.com: Profile pictures, emotes, banners (legacy)
+// - images.kick.com: Thumbnails, video previews
+// - kick.com/img/: Official API profile pictures
+//
 // @see src/backend/ipc/handlers/system-handlers.ts
 const PROXY_REQUIRED_DOMAINS: string[] = [
     'files.kick.com',
     'images.kick.com',
+];
+
+// Additional URL patterns that require proxying (checked against full URL)
+const PROXY_REQUIRED_PATTERNS: RegExp[] = [
+    /^https?:\/\/(www\.)?kick\.com\/img\//i,  // kick.com/img/... URLs from official API
 ];
 
 /**
@@ -27,9 +37,20 @@ const PROXY_REQUIRED_DOMAINS: string[] = [
 function needsProxy(url: string): boolean {
     try {
         const parsed = new URL(url);
-        return PROXY_REQUIRED_DOMAINS.some(domain =>
+        
+        // Check against domain list
+        const domainMatch = PROXY_REQUIRED_DOMAINS.some(domain =>
             parsed.hostname === domain || parsed.hostname.endsWith('.' + domain)
         );
+        if (domainMatch) return true;
+        
+        // Check against URL pattern list
+        const patternMatch = PROXY_REQUIRED_PATTERNS.some(pattern =>
+            pattern.test(url)
+        );
+        if (patternMatch) return true;
+        
+        return false;
     } catch {
         return false;
     }

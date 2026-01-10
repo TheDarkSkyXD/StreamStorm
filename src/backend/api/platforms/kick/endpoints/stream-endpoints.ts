@@ -58,8 +58,9 @@ async function getChannelDisplayInfo(slug: string): Promise<{ displayName: strin
             });
 
             request.setHeader('Accept', 'application/json');
-            request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36');
+            request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
             request.setHeader('Referer', 'https://kick.com/');
+            request.setHeader('Accept-Language', 'en-US,en;q=0.9');
 
             const timeout = setTimeout(() => {
                 request.abort();
@@ -95,9 +96,12 @@ async function getChannelDisplayInfo(slug: string): Promise<{ displayName: strin
 
         if (!data) return null;
 
+        // Prefer official API field (profile_picture) over legacy (profile_pic)
+        // Official API returns kick.com/img/... URLs which work directly
+        // Legacy API returns files.kick.com/... URLs which may return 403
         const result = {
             displayName: data.user?.username || slug,
-            avatar: data.user?.profile_pic || ''
+            avatar: data.user?.profile_picture || data.user?.profile_pic || ''
         };
 
         // Cache the result
@@ -177,13 +181,14 @@ export async function getPublicStreamBySlug(slug: string): Promise<UnifiedStream
             if (!livestream) return null;
 
             // Map legacy livestream to UnifiedStream
+            // Prefer profile_picture (official API) over profile_pic (legacy API)
             return {
                 id: livestream.id.toString(),
                 platform: 'kick',
                 channelId: livestream.channel_id.toString(),
                 channelName: data.slug,
                 channelDisplayName: data.user?.username || data.slug,
-                channelAvatar: data.user?.profile_pic || '',
+                channelAvatar: data.user?.profile_picture || data.user?.profile_pic || '',
                 title: livestream.session_title || '',
                 viewerCount: livestream.viewer_count ?? livestream.viewers ?? 0,
                 thumbnailUrl: livestream.thumbnail?.url || '',
@@ -386,13 +391,16 @@ export async function getPublicTopStreams(
                 item.livestream?.thumbnail?.url ||
                 '';
 
-            // Extract avatar URL - different endpoints use different field structures  
+            // Extract avatar URL - different endpoints use different field structures
+            // IMPORTANT: Prefer official API field (profile_picture) over legacy (profile_pic)
+            // Official API returns kick.com/img/... URLs which work directly
+            // Legacy API returns files.kick.com/... URLs which may return 403
             const avatarUrl =
-                item.user?.profile_pic ||
+                item.profile_picture ||  // Official API field (kick.com/img/... - works!)
                 item.user?.profile_picture ||
-                item.channel?.user?.profile_pic ||
                 item.channel?.user?.profile_picture ||
-                item.profile_picture ||
+                item.user?.profile_pic ||  // Legacy API field (files.kick.com - may 403)
+                item.channel?.user?.profile_pic ||
                 '';
 
             streams.push({
@@ -495,11 +503,18 @@ export async function getTopStreams(
                 // Get unique slugs that need enrichment
                 const uniqueSlugs = [...new Set(streams.map(s => s.channelName))];
 
-                // Fetch channel data in parallel (batch of 15 for speed)
+                // Fetch channel data in small batches to avoid rate limiting (429)
+                // Reduced from 15 to 3 concurrent requests with delay between batches
                 const displayNameMap = new Map<string, { displayName: string; avatar: string }>();
-                const batchSize = 15;
+                const batchSize = 3; // Reduced from 15 to avoid 429 rate limits
+                const batchDelayMs = 200; // Add delay between batches
 
                 for (let i = 0; i < uniqueSlugs.length; i += batchSize) {
+                    // Add delay between batches (not before first batch)
+                    if (i > 0) {
+                        await new Promise(resolve => setTimeout(resolve, batchDelayMs));
+                    }
+
                     const batch = uniqueSlugs.slice(i, i + batchSize);
                     const results = await Promise.all(
                         batch.map(async (slug) => {
