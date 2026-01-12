@@ -79,12 +79,10 @@ export function useAdElementObserver(enabled: boolean = true) {
 
     console.debug('[AdElementObserver] Started watching for ad elements');
 
-    // Capture ref value for cleanup
-    const currentHiddenCount = hiddenCount.current;
-
     return () => {
       observerRef.current?.disconnect();
-      console.debug(`[AdElementObserver] Stopped. Hidden ${currentHiddenCount} elements.`);
+      // Read hiddenCount.current at cleanup time for accurate count
+      console.debug(`[AdElementObserver] Stopped. Hidden ${hiddenCount.current} elements.`);
     };
   }, [enabled]);
 

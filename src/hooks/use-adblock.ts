@@ -25,16 +25,24 @@ export function useAdBlock() {
   });
 
   const refresh = useCallback(async () => {
-    const [status, stats] = await Promise.all([
-      window.electronAPI.adblock.getStatus(),
-      window.electronAPI.adblock.getStats(),
-    ]);
-    setState({
-      networkBlockingEnabled: status.networkBlockingEnabled,
-      cosmeticFilteringEnabled: status.cosmeticFilteringEnabled,
-      stats,
-      isLoading: false,
-    });
+    try {
+      const [status, stats] = await Promise.all([
+        window.electronAPI.adblock.getStatus(),
+        window.electronAPI.adblock.getStats(),
+      ]);
+      setState({
+        networkBlockingEnabled: status.networkBlockingEnabled,
+        cosmeticFilteringEnabled: status.cosmeticFilteringEnabled,
+        stats,
+        isLoading: false,
+      });
+    } catch (error) {
+      console.error('[useAdBlock] Failed to refresh adblock status:', error);
+      setState((prev) => ({
+        ...prev,
+        isLoading: false,
+      }));
+    }
   }, []);
 
   useEffect(() => {
@@ -42,14 +50,21 @@ export function useAdBlock() {
   }, [refresh]);
 
   const toggle = useCallback(async (options: { network?: boolean; cosmetic?: boolean }) => {
-    const result = await window.electronAPI.adblock.toggle(options);
-    setState(prev => ({
-      ...prev,
-      networkBlockingEnabled: result.networkBlockingEnabled,
-      cosmeticFilteringEnabled: result.cosmeticFilteringEnabled,
-    }));
-    return result;
-  }, []);
+    try {
+      const result = await window.electronAPI.adblock.toggle(options);
+      setState(prev => ({
+        ...prev,
+        networkBlockingEnabled: result.networkBlockingEnabled,
+        cosmeticFilteringEnabled: result.cosmeticFilteringEnabled,
+      }));
+      return result;
+    } catch (error) {
+      console.error('[useAdBlock] Failed to toggle adblock:', error);
+      // Refresh state from main process to ensure UI stays consistent
+      await refresh();
+      throw error;
+    }
+  }, [refresh]);
 
   return { ...state, toggle, refresh };
 }

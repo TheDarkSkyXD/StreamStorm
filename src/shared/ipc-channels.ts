@@ -136,6 +136,10 @@ export const IPC_CHANNELS = {
   
   // ========== Cosmetic Injection ==========
   ADBLOCK_INJECT_COSMETICS: 'adblock:inject-cosmetics',
+
+  // ========== Stream Proxy Cleanup ==========
+  ADBLOCK_PROXY_CLEAR_STREAM: 'adblock:proxy-clear-stream',
+  ADBLOCK_PROXY_CLEAR_ALL: 'adblock:proxy-clear-all',
 } as const;
 
 // Type for channel names

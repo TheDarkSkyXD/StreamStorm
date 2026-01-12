@@ -8,7 +8,8 @@
 StreamStorm/
 │
 ├── docs/                                         # Documentation
-│   └── TWITCH-ADBLOCK-SYSTEM.md                 # Main documentation (you are here)
+│   ├── TWITCH-ADBLOCK-SYSTEM.md                 # Main documentation
+│   └── ADBLOCK-FILE-TREE.md                     # File tree reference (you are here)
 │
 ├── src/
 │   │

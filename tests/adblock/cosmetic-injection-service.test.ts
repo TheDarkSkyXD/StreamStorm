@@ -27,13 +27,10 @@ describe('cosmetic-injection-service', () => {
   });
 
   describe('initialize', () => {
-    it('should register IPC handler for inject-cosmetics', () => {
-      cosmeticInjectionService.initialize();
-      
-      expect(ipcMain.handle).toHaveBeenCalledWith(
-        'adblock:inject-cosmetics',
-        expect.any(Function)
-      );
+    it('should log initialization (IPC handler now in adblock-handlers.ts)', () => {
+      // The IPC handler registration was moved to adblock-handlers.ts
+      // per CodeRabbit review - this test now just verifies initialize doesn't throw
+      expect(() => cosmeticInjectionService.initialize()).not.toThrow();
     });
 
     it('should not throw when called multiple times', () => {
@@ -150,27 +147,21 @@ describe('cosmetic-injection-service', () => {
   });
 
   describe('IPC Handler Behavior', () => {
-    it('should return injected: false when disabled', async () => {
-      cosmeticInjectionService.initialize();
+    it('should return early when service is disabled (via injectIntoWebContents)', async () => {
+      // The IPC handler now delegates to injectIntoWebContents
+      // Testing behavior directly since handler is in adblock-handlers.ts
       cosmeticInjectionService.disable();
       
-      // Get the registered handler
-      const handleCall = (ipcMain.handle as any).mock.calls.find(
-        (call: any[]) => call[0] === 'adblock:inject-cosmetics'
-      );
+      const mockWebContents = {
+        insertCSS: vi.fn().mockResolvedValue('key'),
+        executeJavaScript: vi.fn().mockResolvedValue(undefined),
+      } as any;
       
-      expect(handleCall).toBeDefined();
+      await cosmeticInjectionService.injectIntoWebContents(mockWebContents);
       
-      const handler = handleCall[1];
-      const mockEvent = {
-        sender: {
-          insertCSS: vi.fn().mockResolvedValue('key'),
-          executeJavaScript: vi.fn().mockResolvedValue(undefined),
-        },
-      };
-      
-      const result = await handler(mockEvent);
-      expect(result).toEqual({ injected: false });
+      // When disabled, should not call insertCSS or executeJavaScript
+      expect(mockWebContents.insertCSS).not.toHaveBeenCalled();
+      expect(mockWebContents.executeJavaScript).not.toHaveBeenCalled();
     });
   });
 });

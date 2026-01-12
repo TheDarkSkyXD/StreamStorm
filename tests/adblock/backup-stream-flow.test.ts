@@ -14,6 +14,7 @@ global.fetch = mockFetch;
 import {
   initAdBlockService,
   updateAdBlockConfig,
+  getAdBlockConfig,
   processMasterPlaylist,
   processMediaPlaylist,
   clearStreamInfo,
@@ -525,13 +526,21 @@ describe('Backup Stream Flow - Configuration', () => {
   it('should update config with updateAdBlockConfig', () => {
     initAdBlockService({ enabled: true });
     
+    // Verify initial config
+    const initialConfig = getAdBlockConfig();
+    expect(initialConfig.backupPlayerTypes).toEqual(DEFAULT_ADBLOCK_CONFIG.backupPlayerTypes);
+    expect(initialConfig.fallbackPlayerType).toBe(DEFAULT_ADBLOCK_CONFIG.fallbackPlayerType);
+    
+    // Update config
     updateAdBlockConfig({ 
       backupPlayerTypes: ['autoplay', 'embed'],
       fallbackPlayerType: 'autoplay',
     });
 
-    // Config update should work without error
-    expect(true).toBe(true);
+    // Verify config was updated
+    const updatedConfig = getAdBlockConfig();
+    expect(updatedConfig.backupPlayerTypes).toEqual(['autoplay', 'embed']);
+    expect(updatedConfig.fallbackPlayerType).toBe('autoplay');
   });
 });
 

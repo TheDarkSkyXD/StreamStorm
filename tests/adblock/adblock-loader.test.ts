@@ -62,7 +62,8 @@ describe('twitch-adblock-loader', () => {
 
     it('should create instances', () => {
       const LoaderClass = createAdBlockPlaylistLoader('testchannel');
-      const instance = new (LoaderClass as any)({});
+      // Cast to constructable type for testing
+      const instance = new (LoaderClass as new (config: Record<string, unknown>) => unknown)({});
       expect(instance).toBeDefined();
     });
   });
@@ -76,7 +77,8 @@ describe('twitch-adblock-loader', () => {
 
     it('should create instances', () => {
       const LoaderClass = createAdBlockFragmentLoader();
-      const instance = new (LoaderClass as any)({});
+      // Cast to constructable type for testing
+      const instance = new (LoaderClass as new (config: Record<string, unknown>) => unknown)({});
       expect(instance).toBeDefined();
     });
   });

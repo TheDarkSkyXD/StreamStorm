@@ -377,10 +377,10 @@
     function getServerTimeFromM3u8(encodingsM3u8) {
         if (V2API) {
             const matches = encodingsM3u8.match(/#EXT-X-SESSION-DATA:DATA-ID="SERVER-TIME",VALUE="([^"]+)"/);
-            return matches.length > 1 ? matches[1] : null;
+            return matches && matches.length > 1 ? matches[1] : null;
         }
         const matches = encodingsM3u8.match('SERVER-TIME="([0-9.]+)"');
-        return matches.length > 1 ? matches[1] : null;
+        return matches && matches.length > 1 ? matches[1] : null;
     }
     function replaceServerTimeInM3u8(encodingsM3u8, newServerTime) {
         if (V2API) {
@@ -421,9 +421,11 @@
             streamInfo.NumStrippedAdSegments = 0;
         }
         streamInfo.IsStrippingAdSegments = hasStrippedAdSegments;
-        AdSegmentCache.forEach((key, value, map) => {
-            if (value < Date.now() - 120000) {
-                map.delete(key);
+        // Clean up old entries from AdSegmentCache (older than 2 minutes)
+        // Note: Map.forEach provides (value, key, map) - value is timestamp, key is URL
+        AdSegmentCache.forEach((timestamp, url, map) => {
+            if (timestamp < Date.now() - 120000) {
+                map.delete(url);
             }
         });
         return lines.join('\n');
@@ -652,6 +654,7 @@
     }
     function gqlRequest(body, playerType) {
         if (!GQLDeviceID) {
+            GQLDeviceID = '';
             const dcharacters = 'abcdefghijklmnopqrstuvwxyz0123456789';
             const dcharactersLength = dcharacters.length;
             for (let i = 0; i < 32; i++) {

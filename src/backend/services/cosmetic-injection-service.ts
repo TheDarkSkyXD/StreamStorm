@@ -5,7 +5,7 @@
  * Inspired by Ghostery's insertCSS and executeJavaScript patterns.
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
+import { BrowserWindow } from 'electron';
 
 // CSS rules to hide Twitch ad elements (if they ever appear in our context)
 const TWITCH_COSMETIC_CSS = `
@@ -35,22 +35,31 @@ const TWITCH_SCRIPTLETS = `
 (function() {
   'use strict';
   
-  // Abort on property read - if code tries to read ad-related properties
+  // Abort on property read - defensively intercepts ad-related property access
+  // Runs early and checks configurability before attempting to redefine
   const abortOnPropertyRead = (obj, prop) => {
-    Object.defineProperty(obj, prop, {
-      get: function() {
-        throw new ReferenceError('Blocked by StreamStorm AdBlock');
-      },
-      set: function() {}
-    });
+    try {
+      const descriptor = Object.getOwnPropertyDescriptor(obj, prop);
+      // Skip if property exists and is non-configurable
+      if (descriptor && descriptor.configurable === false) {
+        return;
+      }
+      // Preserve existing value if present
+      const existingValue = obj[prop];
+      Object.defineProperty(obj, prop, {
+        configurable: true,
+        get: function() {
+          throw new ReferenceError('Blocked by StreamStorm AdBlock');
+        },
+        set: function() {}
+      });
+    } catch(e) {
+      // Silently fail if property cannot be redefined
+    }
   };
   
-  // Try to neutralize common ad-related globals (safe to fail)
-  try {
-    if (typeof window.twitchAdConfig !== 'undefined') {
-      abortOnPropertyRead(window, 'twitchAdConfig');
-    }
-  } catch(e) {}
+  // Unconditionally trap ad-related globals at script start for early interception
+  abortOnPropertyRead(window, 'twitchAdConfig');
 })();
 `;
 
@@ -59,20 +68,7 @@ class CosmeticInjectionService {
   private injectedWindows = new WeakSet<Electron.WebContents>();
 
   initialize(): void {
-    // Handle IPC requests from renderer to inject cosmetics
-    ipcMain.handle('adblock:inject-cosmetics', async (event) => {
-      if (!this.isEnabled) return { injected: false };
-      
-      try {
-        await event.sender.insertCSS(TWITCH_COSMETIC_CSS, { cssOrigin: 'user' });
-        await event.sender.executeJavaScript(TWITCH_SCRIPTLETS, true);
-        return { injected: true };
-      } catch (e) {
-        console.error('[CosmeticInjection] Failed:', e);
-        return { injected: false, error: String(e) };
-      }
-    });
-    
+    // IPC handler registered in adblock-handlers.ts to avoid duplicate registration
     console.debug('[CosmeticInjection] Service initialized');
   }
 
@@ -88,6 +84,28 @@ class CosmeticInjectionService {
       console.debug('[CosmeticInjection] Injected into window');
     } catch (e) {
       console.error('[CosmeticInjection] Failed to inject into window:', e);
+    }
+  }
+
+  // Inject into WebContents directly (called from IPC handler)
+  async injectIntoWebContents(webContents: Electron.WebContents): Promise<{ injected: boolean; error?: string }> {
+    if (!this.isEnabled) {
+      return { injected: false, error: 'cosmetic injection disabled' };
+    }
+    
+    if (this.injectedWindows.has(webContents)) {
+      return { injected: true }; // Already injected
+    }
+    
+    try {
+      await webContents.insertCSS(TWITCH_COSMETIC_CSS, { cssOrigin: 'user' });
+      await webContents.executeJavaScript(TWITCH_SCRIPTLETS, true);
+      this.injectedWindows.add(webContents);
+      console.debug('[CosmeticInjection] Injected into WebContents');
+      return { injected: true };
+    } catch (e) {
+      console.error('[CosmeticInjection] Failed to inject into WebContents:', e);
+      return { injected: false, error: String(e) };
     }
   }
 

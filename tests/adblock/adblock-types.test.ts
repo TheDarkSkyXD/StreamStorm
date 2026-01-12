@@ -131,6 +131,8 @@ describe('adblock-types', () => {
         numStrippedSegments: 0,
         activePlayerType: null,
         channelName: 'test',
+        isUsingFallbackMode: false,
+        adStartTime: null,
       };
 
       expect(status).toHaveProperty('isActive');
@@ -140,6 +142,8 @@ describe('adblock-types', () => {
       expect(status).toHaveProperty('numStrippedSegments');
       expect(status).toHaveProperty('activePlayerType');
       expect(status).toHaveProperty('channelName');
+      expect(status).toHaveProperty('isUsingFallbackMode');
+      expect(status).toHaveProperty('adStartTime');
     });
 
     it('ResolutionInfo should have all required fields', () => {

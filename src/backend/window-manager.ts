@@ -76,7 +76,7 @@ class WindowManager {
       }
     });
 
-    // Register Ctrl+Shift+I (Windows/Linux) / Cmd+Option+I (macOS)
+    // Register Ctrl+Shift+I (Windows/Linux) / Cmd+Shift+I (macOS)
     globalShortcut.register('CommandOrControl+Shift+I', () => {
       if (this.mainWindow?.webContents) {
         this.mainWindow.webContents.toggleDevTools();

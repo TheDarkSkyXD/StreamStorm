@@ -52,5 +52,26 @@ export function registerAdBlockHandlers(_mainWindow: BrowserWindow): void {
     };
   });
 
+  ipcMain.handle(IPC_CHANNELS.ADBLOCK_INJECT_COSMETICS, async (event) => {
+    const result = await cosmeticInjectionService.injectIntoWebContents(event.sender);
+    return {
+      ...result,
+      cosmeticFilteringEnabled: cosmeticInjectionService.isActive(),
+    };
+  });
+
+  // Stream proxy cleanup handlers - prevents memory leaks from accumulated stream info
+  ipcMain.handle(IPC_CHANNELS.ADBLOCK_PROXY_CLEAR_STREAM, async (_event, { channelName }: { channelName: string }) => {
+    twitchManifestProxy.clearStreamInfo(channelName);
+    console.debug(`[AdBlock] Cleared stream info for: ${channelName}`);
+    return { success: true };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.ADBLOCK_PROXY_CLEAR_ALL, async () => {
+    twitchManifestProxy.clearAllStreamInfos();
+    console.debug('[AdBlock] Cleared all stream infos');
+    return { success: true };
+  });
+
   console.debug('[AdBlock] IPC handlers registered');
 }

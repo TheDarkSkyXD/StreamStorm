@@ -137,6 +137,13 @@ export function isAdBlockEnabled(): boolean {
 }
 
 /**
+ * Get current ad-block configuration (for testing/debugging)
+ */
+export function getAdBlockConfig(): AdBlockConfig {
+    return { ...config };
+}
+
+/**
  * Set whether the main process manifest proxy is active
  * When active, renderer-side processing is reduced to just tracking ad state
  */
@@ -187,6 +194,7 @@ export function getBlankVideoDataUrl(): string {
 
 /**
  * Clear stream info for a channel (e.g., when stream ends)
+ * Also clears the backend manifest proxy's stream info to prevent memory leaks
  */
 export function clearStreamInfo(channelName: string): void {
     const lowerName = channelName.toLowerCase();
@@ -197,6 +205,15 @@ export function clearStreamInfo(channelName: string): void {
             streamInfosByUrl.delete(url);
         });
         streamInfos.delete(lowerName);
+    }
+    
+    // Also clear backend manifest proxy's stream info
+    // This prevents memory buildup in the main process
+    // Guard against window not defined (e.g., in Node.js test environment)
+    if (typeof window !== 'undefined') {
+        window.electronAPI?.adblock?.clearProxyStreamInfo?.(lowerName).catch((error: unknown) => {
+            console.debug('[AdBlockService] Failed to clear backend stream info:', error);
+        });
     }
 }
 

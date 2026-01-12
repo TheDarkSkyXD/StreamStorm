@@ -72,6 +72,21 @@ class TwitchManifestProxyService {
     };
 
     /**
+     * Clear stream info and cleanup resources for a channel
+     * Called when stream processing completes or on error
+     */
+    clearStreamInfo(channelName: string): void {
+        this.streamInfos.delete(channelName.toLowerCase());
+    }
+
+    /**
+     * Clear all stream infos (called on cleanup)
+     */
+    clearAllStreamInfos(): void {
+        this.streamInfos.clear();
+    }
+
+    /**
      * Register the manifest interceptor with Electron's session
      */
     registerInterceptor(): void {
@@ -89,7 +104,7 @@ class TwitchManifestProxyService {
                     '*://*.ttvnw.net/*.m3u8*',
                 ],
             },
-            async (details, callback) => {
+            (details, callback) => {
                 if (!this.isEnabled) {
                     callback({});
                     return;
@@ -107,27 +122,32 @@ class TwitchManifestProxyService {
                     return;
                 }
 
-                try {
-                    const response = await fetch(details.url);
-                    if (!response.ok) {
+                // Use Promise chain instead of async/await to satisfy Electron's callback contract
+                fetch(details.url)
+                    .then((response) => {
+                        if (!response.ok) {
+                            callback({});
+                            return null;
+                        }
+                        return response.text();
+                    })
+                    .then((originalText) => {
+                        if (originalText === null) {
+                            return; // Already called callback above
+                        }
+                        return this.processManifest(details.url, originalText).then((processedText) => {
+                            // Return as Base64 data URL
+                            const base64 = Buffer.from(processedText).toString('base64');
+                            callback({
+                                redirectURL: `data:application/vnd.apple.mpegurl;base64,${base64}`,
+                            });
+                            this.stats.manifestsProcessed++;
+                        });
+                    })
+                    .catch((error) => {
+                        console.error('[ManifestProxy] Error:', error);
                         callback({});
-                        return;
-                    }
-
-                    const originalText = await response.text();
-                    const processedText = await this.processManifest(details.url, originalText);
-
-                    // Return as Base64 data URL
-                    const base64 = Buffer.from(processedText).toString('base64');
-                    callback({
-                        redirectURL: `data:application/vnd.apple.mpegurl;base64,${base64}`,
                     });
-                    
-                    this.stats.manifestsProcessed++;
-                } catch (error) {
-                    console.error('[ManifestProxy] Error:', error);
-                    callback({});
-                }
             }
         );
 
@@ -406,6 +426,31 @@ class TwitchManifestProxyService {
 
     /**
      * Get access token with parent_domains stripped
+     * 
+     * IMPORTANT DOCUMENTATION:
+     * -------------------------
+     * This method strips `parent_domains` and `parent_referrer_domains` from Twitch
+     * playback tokens to bypass embed detection. This is necessary because:
+     * 
+     * 1. Business Need: Twitch uses parent_domains to detect if the player is embedded
+     *    on a third-party site and serves additional ads to embedded players. Stripping
+     *    these fields makes the request appear to come from twitch.tv directly.
+     * 
+     * 2. Legal/TOS Implications: This may violate Twitch's Terms of Service. Use at
+     *    your own risk. This is intended for personal ad-blocking purposes only.
+     * 
+     * 3. Known Risks:
+     *    - Twitch may detect this bypass and block/ban accounts
+     *    - Twitch may change their API to require these fields
+     *    - This may stop working at any time without notice
+     * 
+     * TODO: Explore official alternatives:
+     * - Twitch OAuth2/Helix APIs for authorized playback
+     * - Official Twitch embed flows with ad support
+     * - See: https://dev.twitch.tv/docs/embed/
+     * 
+     * ACCEPTANCE OF RISK: By using this functionality, you acknowledge the risks
+     * and accept responsibility for any consequences.
      */
     private async getAccessToken(
         channelName: string,
@@ -439,14 +484,17 @@ class TwitchManifestProxyService {
                 body: JSON.stringify(body),
             });
 
-            if (!response.ok) return null;
+            if (!response.ok) {
+                console.debug(`[ManifestProxy] GQL request failed with status ${response.status} for ${playerType}`);
+                return null;
+            }
 
             const data = await response.json();
             const token = data.data?.streamPlaybackAccessToken;
 
             if (!token) return null;
 
-            // CRITICAL: Strip parent_domains to bypass embed detection
+            // Strip parent_domains to bypass embed detection (see method documentation above)
             try {
                 const tokenValue = JSON.parse(token.value);
                 delete tokenValue.parent_domains;
@@ -459,7 +507,7 @@ class TwitchManifestProxyService {
                 return token;
             }
         } catch (error) {
-            console.debug(`[ManifestProxy] GQL failed for ${playerType}:`, error);
+            console.debug(`[ManifestProxy] GQL request exception for ${playerType}:`, error);
             return null;
         }
     }
@@ -579,10 +627,6 @@ class TwitchManifestProxyService {
 
     getStats(): ProxyStats {
         return { ...this.stats };
-    }
-
-    clearStreamInfo(channelName: string): void {
-        this.streamInfos.delete(channelName.toLowerCase());
     }
 }
 

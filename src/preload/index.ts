@@ -229,7 +229,6 @@ const electronAPI = {
     getPlaybackUrl: (params: {
       platform: Platform;
       channelSlug: string;
-      useProxy?: boolean; // undefined = use user preference, true = force, false = skip
     }): Promise<{ success: boolean; data?: { url: string; format: string }; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.STREAMS_GET_PLAYBACK_URL, params),
   },
@@ -390,6 +389,11 @@ const electronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_GET_STATS),
     injectCosmetics: (): Promise<{ injected: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_INJECT_COSMETICS),
+    // Stream proxy cleanup - prevents memory leaks
+    clearProxyStreamInfo: (channelName: string): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PROXY_CLEAR_STREAM, { channelName }),
+    clearAllProxyStreamInfos: (): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PROXY_CLEAR_ALL),
   },
 };
 

@@ -48,11 +48,9 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
                 }
 
                 // Use IPC to fetch playback URL from main process
-                // Pass useProxy: false if we're in fallback mode
                 const result = await window.electronAPI.streams.getPlaybackUrl({
                     platform,
                     channelSlug: identifier,
-                    useProxy: forceNoProxy ? false : undefined // undefined = use user preference
                 });
 
                 if (!result.success || !result.data) {

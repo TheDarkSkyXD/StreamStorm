@@ -5,7 +5,7 @@
 ### Technical Gotchas
 
 1. **Client-Integrity Header**: May need periodic updates from VAFT project
-   - Monitor: https://github.com/pixeltris/TwitchAdSolutions/issues
+   - Monitor: [TwitchAdSolutions issues](https://github.com/pixeltris/TwitchAdSolutions/issues)
    - Current service has partial implementation
 
 2. **V2 API Detection**: Different SERVER-TIME format

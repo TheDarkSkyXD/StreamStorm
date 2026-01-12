@@ -16,6 +16,15 @@
  */
 
 import Hls from 'hls.js';
+import type {
+    Loader,
+    LoaderContext,
+    LoaderConfiguration,
+    LoaderCallbacks,
+    LoaderResponse,
+    LoaderStats,
+    HlsConfig,
+} from 'hls.js';
 import {
     processMasterPlaylist,
     processMediaPlaylist,
@@ -63,45 +72,43 @@ function isTwitchSegment(url: string): boolean {
     return hasSegmentExtension && isTwitchDomain;
 }
 
-// Use 'any' for HLS.js loader types to avoid complex type gymnastics
-// HLS.js loader API is well-documented but types are complex
-type HlsLoaderClass = typeof Hls.DefaultConfig.loader;
+/**
+ * HLS.js loader constructor type
+ */
+type LoaderConstructor = new (config: HlsConfig) => Loader<LoaderContext>;
 
 /**
  * Create an ad-blocking playlist loader for HLS.js
  *
+ * This loader ONLY handles .m3u8 playlist files. Segment replacement
+ * is handled by the fragment loader (createAdBlockFragmentLoader).
+ *
  * @param channelName - Optional channel name (will be extracted from URL if not provided)
  * @returns A loader class that can be used as pLoader in HLS.js config
  */
-export function createAdBlockPlaylistLoader(channelName?: string): HlsLoaderClass {
+export function createAdBlockPlaylistLoader(channelName?: string): LoaderConstructor {
     // Get the default loader class
     const DefaultLoader = Hls.DefaultConfig.loader;
 
     // Store channel name in closure
     let storedChannelName = channelName?.toLowerCase() ?? null;
 
-    // Create a custom loader class
-    const AdBlockLoader = class extends DefaultLoader {
-        constructor(config: any) {
+    // Create a custom loader class that extends DefaultLoader and implements Loader<LoaderContext>
+    const AdBlockLoader = class extends DefaultLoader implements Loader<LoaderContext> {
+        constructor(config: HlsConfig) {
             super(config);
         }
 
-        load(context: any, config: any, callbacks: any): void {
+        load(
+            context: LoaderContext,
+            config: LoaderConfiguration,
+            callbacks: LoaderCallbacks<LoaderContext>
+        ): void {
             const url: string = context.url;
 
             // If ad-blocking is disabled, pass through directly
             if (!isAdBlockEnabled()) {
                 super.load(context, config, callbacks);
-                return;
-            }
-
-            // Handle ad segment replacement for fragments
-            if (isTwitchSegment(url) && isAdSegment(url)) {
-                // Return blank video for ad segments
-                console.debug('[AdBlockLoader] Replacing ad segment with blank video');
-                const blankUrl = getBlankVideoDataUrl();
-                const modifiedContext = { ...context, url: blankUrl };
-                super.load(modifiedContext, config, callbacks);
                 return;
             }
 
@@ -116,10 +123,10 @@ export function createAdBlockPlaylistLoader(channelName?: string): HlsLoaderClas
                 console.debug(`[AdBlockLoader] Intercepting ${isMaster ? 'MASTER' : isMedia ? 'MEDIA' : 'UNKNOWN'} playlist`);
 
                 callbacks.onSuccess = async (
-                    response: any,
-                    stats: any,
-                    context: any,
-                    networkDetails?: any
+                    response: LoaderResponse,
+                    stats: LoaderStats,
+                    ctx: LoaderContext,
+                    networkDetails: unknown
                 ) => {
                     try {
                         // Only process if we have text data
@@ -147,17 +154,17 @@ export function createAdBlockPlaylistLoader(channelName?: string): HlsLoaderClas
                             originalOnSuccess(
                                 { ...response, data: processedData },
                                 stats,
-                                context,
+                                ctx,
                                 networkDetails
                             );
                         } else {
                             // Non-text response (shouldn't happen for m3u8), pass through
-                            originalOnSuccess(response, stats, context, networkDetails);
+                            originalOnSuccess(response, stats, ctx, networkDetails);
                         }
                     } catch (error) {
                         console.error('[AdBlockLoader] Error processing playlist:', error);
                         // On error, pass through original response
-                        originalOnSuccess(response, stats, context, networkDetails);
+                        originalOnSuccess(response, stats, ctx, networkDetails);
                     }
                 };
             }
@@ -167,7 +174,7 @@ export function createAdBlockPlaylistLoader(channelName?: string): HlsLoaderClas
         }
     };
 
-    return AdBlockLoader as HlsLoaderClass;
+    return AdBlockLoader as LoaderConstructor;
 }
 
 /**
@@ -175,22 +182,26 @@ export function createAdBlockPlaylistLoader(channelName?: string): HlsLoaderClas
  *
  * Use this as fLoader in HLS.js config to intercept segment requests
  */
-export function createAdBlockFragmentLoader(): HlsLoaderClass {
+export function createAdBlockFragmentLoader(): LoaderConstructor {
     const DefaultLoader = Hls.DefaultConfig.loader;
 
-    const AdBlockFragmentLoader = class extends DefaultLoader {
-        constructor(config: any) {
+    const AdBlockFragmentLoader = class extends DefaultLoader implements Loader<LoaderContext> {
+        constructor(config: HlsConfig) {
             super(config);
         }
 
-        load(context: any, config: any, callbacks: any): void {
+        load(
+            context: LoaderContext,
+            config: LoaderConfiguration,
+            callbacks: LoaderCallbacks<LoaderContext>
+        ): void {
             const url: string = context.url;
 
             // If this is a cached ad segment, replace with blank video
-            if (isAdBlockEnabled() && isAdSegment(url)) {
+            if (isAdBlockEnabled() && isTwitchSegment(url) && isAdSegment(url)) {
                 console.debug('[AdBlockLoader] Replacing ad segment with blank video');
                 const blankUrl = getBlankVideoDataUrl();
-                const modifiedContext = { ...context, url: blankUrl };
+                const modifiedContext: LoaderContext = { ...context, url: blankUrl };
                 super.load(modifiedContext, config, callbacks);
                 return;
             }
@@ -200,7 +211,7 @@ export function createAdBlockFragmentLoader(): HlsLoaderClass {
         }
     };
 
-    return AdBlockFragmentLoader as HlsLoaderClass;
+    return AdBlockFragmentLoader as LoaderConstructor;
 }
 
 /**
@@ -209,8 +220,8 @@ export function createAdBlockFragmentLoader(): HlsLoaderClass {
  * Use this helper to get HLS config with ad-blocking loaders
  */
 export interface AdBlockHlsConfig {
-    pLoader: HlsLoaderClass;
-    fLoader: HlsLoaderClass;
+    pLoader: LoaderConstructor;
+    fLoader: LoaderConstructor;
 }
 
 /**
