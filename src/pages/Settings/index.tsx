@@ -1,4 +1,4 @@
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
 import { AccountConnect } from '@/components/auth';
@@ -10,11 +10,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useAppVersion } from '@/hooks';
 import { useAuthError } from '@/hooks/useAuth';
 import { useAuthStore } from '@/store/auth-store';
+import { useAdBlockStore } from '@/store/adblock-store';
 import { VideoQuality } from '@/shared/auth-types';
-import { TwitchProxySettings } from './TwitchProxySettings';
 
 export function SettingsPage() {
 
@@ -24,6 +25,10 @@ export function SettingsPage() {
   const { error, clearError } = useAuthError();
   const preferences = useAuthStore(state => state.preferences);
   const updatePreferences = useAuthStore(state => state.updatePreferences);
+
+  // Ad-block state
+  const enableAdBlock = useAdBlockStore(state => state.enableAdBlock);
+  const setEnableAdBlock = useAdBlockStore(state => state.setEnableAdBlock);
 
   const [saved, setSaved] = useState(false);
 
@@ -128,8 +133,36 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Stream Proxy (Twitch Ad Blocking) */}
-        <TwitchProxySettings />
+        {/* Client-Side Ad-Blocking */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-green-400" />
+              Ad-Block (Twitch)
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Enable Ad-Blocking</p>
+                <p className="text-sm text-[var(--color-foreground-secondary)]">
+                  Block Twitch ads using alternative player tokens
+                </p>
+              </div>
+              <Switch
+                checked={enableAdBlock}
+                onCheckedChange={setEnableAdBlock}
+                className="data-[state=checked]:!bg-green-500 data-[state=checked]:!border-green-500"
+              />
+            </div>
+            <p className="text-xs text-[var(--color-foreground-muted)] pt-2 border-t border-[var(--color-border)]">
+              Uses VAFT technique to request ad-free streams via backup player types.
+              Works without external proxies. A shield icon appears in the player when active.
+            </p>
+          </CardContent>
+        </Card>
+
+
 
         {/* About */}
         <Card>

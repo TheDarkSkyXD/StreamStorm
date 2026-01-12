@@ -37,8 +37,8 @@ export interface PerformanceEnhancedPlayerProps {
     platform: Platform;
     /** Stream URL */
     streamUrl: string;
-    /** Channel name (for identification) */
-    channelName?: string;
+    /** Channel name (required for Twitch ad-blocking) */
+    channelName: string;
     /** Auto-play on load */
     autoPlay?: boolean;
     /** Initial muted state */

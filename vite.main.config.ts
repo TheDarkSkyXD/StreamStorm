@@ -1,8 +1,17 @@
+import path from 'path';
 import { defineConfig } from 'vite';
 
 // https://vitejs.dev/config
 // Main process config - runs in Node.js environment
 export default defineConfig({
+    resolve: {
+        alias: {
+            '@': path.resolve(__dirname, './src'),
+            '@backend': path.resolve(__dirname, './src/backend'),
+            '@frontend': path.resolve(__dirname, './src/frontend'),
+            '@shared': path.resolve(__dirname, './src/shared'),
+        },
+    },
     build: {
         // Target Node.js version used by Electron
         target: 'node20',

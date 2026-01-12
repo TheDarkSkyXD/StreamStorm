@@ -125,8 +125,9 @@ export function StreamSlot({
                             className="pointer-events-none"
                         />
                     ) : (
-                        <TwitchLivePlayer
+<TwitchLivePlayer
                             streamUrl={playback.url}
+                            channelName={channelName}
                             autoPlay={true}
                             muted={isMuted}
                             className="pointer-events-none"

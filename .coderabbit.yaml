@@ -1,0 +1,63 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: "en-US"
+early_access: false
+
+reviews:
+  profile: "chill"
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+      - master
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/.vite/**"
+    - "!**/out/**"
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+  path_instructions:
+    - path: "src/**/*.ts"
+      instructions: |
+        Review TypeScript code for:
+        - Type safety (no `any`, no `@ts-ignore`)
+        - Proper error handling
+        - IPC security (no direct ipcRenderer exposure)
+        - Import order (builtin > external > internal > relative)
+    - path: "src/**/*.tsx"
+      instructions: |
+        Review React components for:
+        - Hook rules and dependencies
+        - Proper cleanup in useEffect
+        - Accessibility considerations
+        - Performance (unnecessary re-renders, missing memo/useMemo)
+    - path: "src/backend/**/*.ts"
+      instructions: |
+        Review Electron main process code for:
+        - Security (no nodeIntegration, contextIsolation)
+        - IPC handler patterns
+        - No credential/token logging
+        - Proper async error handling
+    - path: "src/preload/**/*.ts"
+      instructions: |
+        Review preload scripts for:
+        - contextBridge usage only
+        - No direct ipcRenderer exposure
+        - Minimal API surface
+
+chat:
+  auto_reply: true
+
+code_generation:
+  docstrings:
+    path_instructions:
+      - path: "**/*.ts"
+        instructions: |
+          Use TSDoc format for documentation.
+          Include @param, @returns, and @throws where applicable.

@@ -7,7 +7,7 @@
 
 import path from 'node:path';
 
-import { app, BrowserWindow, screen } from 'electron';
+import { BrowserWindow, globalShortcut, screen } from 'electron';
 
 // Vite globals (provided by Electron Forge's Vite plugin)
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
@@ -61,6 +61,39 @@ function ensureWindowIsVisible(bounds: WindowBounds): WindowBounds {
 
 class WindowManager {
   private mainWindow: BrowserWindow | null = null;
+  private isDev = process.env.NODE_ENV !== 'production';
+
+  /**
+   * Register DevTools keyboard shortcuts (development only)
+   */
+  private registerDevToolsShortcuts(): void {
+    if (!this.isDev || !this.mainWindow) return;
+
+    // Register F12 to toggle DevTools
+    globalShortcut.register('F12', () => {
+      if (this.mainWindow?.webContents) {
+        this.mainWindow.webContents.toggleDevTools();
+      }
+    });
+
+    // Register Ctrl+Shift+I (Windows/Linux) / Cmd+Shift+I (macOS)
+    globalShortcut.register('CommandOrControl+Shift+I', () => {
+      if (this.mainWindow?.webContents) {
+        this.mainWindow.webContents.toggleDevTools();
+      }
+    });
+
+    console.debug('🔧 DevTools shortcuts registered (F12, Ctrl+Shift+I)');
+  }
+
+  /**
+   * Unregister DevTools keyboard shortcuts
+   */
+  private unregisterDevToolsShortcuts(): void {
+    if (!this.isDev) return;
+    globalShortcut.unregister('F12');
+    globalShortcut.unregister('CommandOrControl+Shift+I');
+  }
 
 
   /**
@@ -113,6 +146,7 @@ class WindowManager {
 
     // Handle window closed
     this.mainWindow.on('closed', () => {
+      this.unregisterDevToolsShortcuts();
       this.mainWindow = null;
     });
 
@@ -125,9 +159,10 @@ class WindowManager {
       );
     }
 
-    // Open DevTools in development
-    if (process.env.NODE_ENV !== 'production') {
+    // Development only: Open DevTools and register shortcuts
+    if (this.isDev) {
       this.mainWindow.webContents.openDevTools();
+      this.registerDevToolsShortcuts();
     }
 
     return this.mainWindow;

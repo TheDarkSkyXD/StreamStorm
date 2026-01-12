@@ -1,17 +1,22 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { QualityLevel, PlayerError, Platform } from '../types';
-import { HlsPlayer } from '../hls-player';
+import { TwitchHlsPlayer } from './twitch-hls-player';
 import { TwitchLivePlayerControls } from './twitch-live-player-controls';
+import { AdBlockStatus } from '@/shared/adblock-types';
+import { useAdBlockStore } from '@/store/adblock-store';
 import { VideoStatsOverlay } from './video-stats-overlay';
 import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
 import { usePictureInPicture } from '../hooks/use-picture-in-picture';
 import { useFullscreen } from '../hooks/use-fullscreen';
 import { useDefaultQuality } from '../hooks/use-default-quality';
 import { useVolume } from '../hooks/use-volume';
+import { useAdElementObserver } from '@/hooks/use-ad-element-observer';
 import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
+import { AdBlockFallbackOverlay } from './ad-block-fallback-overlay';
 
 export interface TwitchLivePlayerProps {
     streamUrl: string;
+    channelName: string;
     poster?: string;
     autoPlay?: boolean;
     muted?: boolean;
@@ -19,14 +24,17 @@ export interface TwitchLivePlayerProps {
     onReady?: () => void;
     onError?: (error: PlayerError) => void;
     onQualityChange?: (quality: QualityLevel) => void;
+    onAdBlockStatusChange?: (status: AdBlockStatus) => void;
     className?: string;
     isTheater?: boolean;
     onToggleTheater?: () => void;
+    enableAdBlock?: boolean;
 }
 
 export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
     const {
         streamUrl,
+        channelName,
         poster,
         autoPlay = false,
         muted: initialMuted = false,
@@ -34,13 +42,23 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
         onReady,
         onError,
         onQualityChange,
+        onAdBlockStatusChange,
         className,
         isTheater,
-        onToggleTheater
+        onToggleTheater,
+        enableAdBlock = true
     } = props;
 
-    const containerRef = useRef<HTMLDivElement>(null);
+const containerRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
+
+    // Ad-block store setting
+    const storeEnableAdBlock = useAdBlockStore((s) => s.enableAdBlock);
+    // Use prop if explicitly set, otherwise use store value
+    const effectiveEnableAdBlock = enableAdBlock !== undefined ? enableAdBlock && storeEnableAdBlock : storeEnableAdBlock;
+    
+    // Ad-block status tracking
+    const [adBlockStatus, setAdBlockStatus] = useState<AdBlockStatus | null>(null);
 
     // Persistent volume
     const { volume, isMuted, handleVolumeChange, handleToggleMute, syncFromVideoElement } = useVolume({
@@ -53,6 +71,9 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
     // Hooks
     const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
     const { isPip, togglePip } = usePictureInPicture(videoRef);
+    
+    // Watch for and hide any ad elements that slip through (DOM-based ad blocking)
+    useAdElementObserver(effectiveEnableAdBlock);
 
     // State
     const [isReady, setIsReady] = useState(false);
@@ -66,9 +87,16 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
 
     // Refs for stats
     const hlsRef = useRef<any>(null); // Capture Hls instance
+    
+    // Track mute state before fallback mode for restoration
+    const preFallbackMuteRef = useRef<boolean>(false);
 
     // Apply user's default quality preference
     useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
+    
+    // NOTE: Muting during ads is DISABLED - we want seamless ad blocking at the HLS level
+    // The network-level blocking and HLS segment stripping should handle ads silently
+    // without any interruption to the user experience
 
     // Reset state when streamUrl changes (new stream)
     useEffect(() => {
@@ -169,22 +197,28 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
             ref={containerRef}
             className={`relative w-full h-full bg-black overflow-hidden group ${className || ''}`}
         >
-            {streamUrl ? (
-                <HlsPlayer
+{streamUrl ? (
+                <TwitchHlsPlayer
                     ref={videoRef}
                     src={streamUrl}
+                    channelName={channelName}
+                    enableAdBlock={effectiveEnableAdBlock}
                     poster={poster}
                     muted={isMuted}
                     autoPlay={autoPlay}
                     currentLevel={currentQualityId}
                     onQualityLevels={handleQualityLevels}
-                    onError={(error) => {
+                    onAdBlockStatusChange={(status) => {
+                        setAdBlockStatus(status);
+                        onAdBlockStatusChange?.(status);
+                    }}
+                    onError={(error: PlayerError) => {
                         console.error('[TwitchPlayer] Player error:', error);
                         setHasError(true);
                         setIsLoading(false);
                         onError?.(error);
                     }}
-                    onHlsInstance={(hls) => {
+                    onHlsInstance={(hls: import('hls.js').default) => {
                         hlsRef.current = hls;
                     }}
                     className="size-full object-contain cursor-pointer"
@@ -195,6 +229,23 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
                 <div className="absolute inset-0 flex items-center justify-center text-white z-0">
                     <p>No Stream Source</p>
                 </div>
+            )}
+
+            {/* Ad-Block Status Overlay - Top Left */}
+            {adBlockStatus?.isShowingAd && !adBlockStatus?.isUsingFallbackMode && (
+                <div className="absolute top-2 left-2 z-40 pointer-events-none">
+                    <span className="bg-black/80 text-white text-sm font-medium px-2 py-1 rounded">
+                        {adBlockStatus.isMidroll ? 'Blocking midroll ads' : 'Blocking ads'}
+                    </span>
+                </div>
+            )}
+
+            {/* Ad-Block Fallback Overlay - Full screen when all backup types failed */}
+            {adBlockStatus && (
+                <AdBlockFallbackOverlay
+                    status={adBlockStatus}
+                    channelName={channelName}
+                />
             )}
 
             {/* Centered Loading Spinner - Twitch Purple */}
@@ -235,6 +286,7 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
                     onPlaybackRateChange={handlePlaybackRateChange}
                     showVideoStats={showVideoStats}
                     onToggleVideoStats={() => setShowVideoStats(!showVideoStats)}
+                    adBlockStatus={adBlockStatus}
                 />
             )}
         </div>
