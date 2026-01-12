@@ -16,6 +16,9 @@ import * as path from 'path';
 import { registerIpcHandlers } from './backend/ipc-handlers';
 import { windowManager } from './backend/window-manager';
 import { protocolHandler } from './backend/auth';
+import { networkAdBlockService } from './backend/services/network-adblock-service';
+import { cosmeticInjectionService } from './backend/services/cosmetic-injection-service';
+import { twitchManifestProxy } from './backend/services/twitch-manifest-proxy';
 
 // Sentinel file to track clean shutdown
 const CLEAN_SHUTDOWN_FILE = path.join(app.getPath('userData'), '.clean-shutdown');
@@ -63,7 +66,8 @@ function markCleanShutdown(): void {
 }
 
 /**
- * Setup request interceptors for Kick CDN domains that require special headers.
+ * Setup request interceptors for Kick CDN domains that require special headers
+ * and network-level ad blocking for Twitch.
  * 
  * NOTE: This is a SECONDARY fallback mechanism. The primary approach is the IPC proxy
  * in system-handlers.ts which uses Electron's net.request (more reliable).
@@ -71,6 +75,30 @@ function markCleanShutdown(): void {
  * This interceptor catches any direct image loads that bypass the ProxiedImage component.
  */
 function setupRequestInterceptors(): void {
+  // Twitch manifest proxy (handles m3u8 interception for ad removal)
+  // MUST be registered before the general onBeforeRequest handler
+  twitchManifestProxy.registerInterceptor();
+
+  // Network-level ad blocking (onBeforeRequest)
+  session.defaultSession.webRequest.onBeforeRequest(
+    { urls: ['<all_urls>'] },
+    (details, callback) => {
+      // Skip manifest URLs - handled by twitchManifestProxy
+      if (details.url.includes('ttvnw.net') && details.url.includes('.m3u8')) {
+        callback({});
+        return;
+      }
+
+      const result = networkAdBlockService.shouldBlock(details.url);
+      if (result.blocked) {
+        callback({ cancel: true });
+        return;
+      }
+      callback({});
+    }
+  );
+
+  // Header modification for Kick CDN (onBeforeSendHeaders)
   session.defaultSession.webRequest.onBeforeSendHeaders(
     {
       urls: [
@@ -116,10 +144,17 @@ app.on('ready', async () => {
   // Register custom protocol handler for OAuth callbacks (streamstorm://)
   protocolHandler.registerProtocol();
 
-  // Setup request interceptors for CDN domains
+  // Initialize ad blocking services
+  cosmeticInjectionService.initialize();
+
+  // Setup request interceptors for CDN domains and ad blocking
   setupRequestInterceptors();
 
   const mainWindow = windowManager.createMainWindow();
+  
+  // Inject cosmetics into main window
+  cosmeticInjectionService.injectIntoWindow(mainWindow);
+  
   registerIpcHandlers(mainWindow);
   console.debug('🌩️ StreamStorm main process started');
 });

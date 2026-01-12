@@ -2,7 +2,6 @@ import { ipcMain } from 'electron';
 import { Platform } from '../../../shared/auth-types';
 import { IPC_CHANNELS } from '../../../shared/ipc-channels';
 import { storageService } from '../../services/storage-service';
-import { StreamProxyConfig, DEFAULT_STREAM_PROXY_CONFIG } from '../../../shared/proxy-types';
 
 export function registerStreamHandlers(): void {
     /**
@@ -306,12 +305,11 @@ export function registerStreamHandlers(): void {
 
     /**
      * Get playback URL for a live stream
-     * Supports optional proxy configuration for Twitch ad blocking
+     * Ad-blocking is handled client-side via VAFT in the HLS player
      */
     ipcMain.handle(IPC_CHANNELS.STREAMS_GET_PLAYBACK_URL, async (_event, params: {
         platform: Platform;
         channelSlug: string;
-        useProxy?: boolean; // undefined = use user preference, true = force, false = skip
     }) => {
         const { TwitchStreamResolver } = await import('../../api/platforms/twitch/twitch-stream-resolver');
         const { KickStreamResolver } = await import('../../api/platforms/kick/kick-stream-resolver');
@@ -321,29 +319,9 @@ export function registerStreamHandlers(): void {
 
         try {
             if (params.platform === 'twitch') {
-                let proxyConfig: StreamProxyConfig | undefined;
-
-                // Handle proxy opt-in/opt-out logic:
-                // - useProxy === true: force use proxy
-                // - useProxy === false: force skip proxy
-                // - useProxy === undefined: use user preference (default behavior)
-
-                // Safely read preferences with fallback for uninitialized state (e.g., first launch)
-                const preferences = storageService.getPreferences() ?? {};
-                const userProxyConfig = preferences.advanced?.streamProxy ?? DEFAULT_STREAM_PROXY_CONFIG;
-
-                if (params.useProxy === true ||
-                    (params.useProxy !== false && userProxyConfig.selectedProxy !== 'none')) {
-                    proxyConfig = userProxyConfig;
-                }
-
-                const result = await twitchResolver.getStreamPlaybackUrlWithProxy(
-                    params.channelSlug,
-                    proxyConfig
-                );
+                const result = await twitchResolver.getStreamPlaybackUrl(params.channelSlug);
                 return { success: true, data: result };
             } else if (params.platform === 'kick') {
-                // Kick doesn't need proxy (different ad system)
                 const result = await kickResolver.getStreamPlaybackUrl(params.channelSlug);
                 return { success: true, data: result };
             }
@@ -357,31 +335,6 @@ export function registerStreamHandlers(): void {
             return {
                 success: false,
                 error: error instanceof Error ? error.message : 'Failed to resolve stream URL'
-            };
-        }
-    });
-
-    /**
-     * Test proxy connection from the main process (bypasses CSP)
-     */
-    ipcMain.handle(IPC_CHANNELS.PROXY_TEST_CONNECTION, async (_event, params: {
-        proxyConfig: StreamProxyConfig;
-    }) => {
-        try {
-            const { TwitchProxyService } = await import('../../api/platforms/twitch/twitch-proxy-service');
-            const proxyService = new TwitchProxyService(params.proxyConfig);
-            const result = await proxyService.testConnection();
-
-            return {
-                success: result.success,
-                latencyMs: result.latencyMs,
-                error: result.error,
-            };
-        } catch (error) {
-            console.error('❌ Failed to test proxy connection:', error);
-            return {
-                success: false,
-                error: error instanceof Error ? error.message : 'Failed to test proxy',
             };
         }
     });

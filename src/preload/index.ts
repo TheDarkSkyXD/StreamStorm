@@ -194,16 +194,6 @@ const electronAPI = {
   proxyImage: (url: string): Promise<string | null> =>
     ipcRenderer.invoke(IPC_CHANNELS.IMAGE_PROXY, { url }),
 
-  // ========== Stream Proxy (Twitch Ad Blocking) ==========
-  proxy: {
-    testConnection: (proxyConfig: {
-      selectedProxy: string;
-      customProxyUrl?: string;
-      fallbackToDirect: boolean;
-    }): Promise<{ success: boolean; latencyMs?: number; error?: string }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.PROXY_TEST_CONNECTION, { proxyConfig }),
-  },
-
   // ========== Discovery: Streams ==========
   streams: {
     getTop: (params?: {
@@ -388,6 +378,18 @@ const electronAPI = {
       clipUrl?: string;
     }): Promise<{ success: boolean; data?: { url: string; format: string }; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.CLIPS_GET_PLAYBACK_URL, params),
+  },
+
+  // ========== Ad Blocking ==========
+  adblock: {
+    getStatus: (): Promise<{ networkBlockingEnabled: boolean; cosmeticFilteringEnabled: boolean }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_GET_STATUS),
+    toggle: (options: { network?: boolean; cosmetic?: boolean }): Promise<{ networkBlockingEnabled: boolean; cosmeticFilteringEnabled: boolean }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_TOGGLE, options),
+    getStats: (): Promise<{ totalBlocked: number; byCategory: Record<string, number>; recentBlocked: string[] }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_GET_STATS),
+    injectCosmetics: (): Promise<{ injected: boolean; error?: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_INJECT_COSMETICS),
   },
 };
 

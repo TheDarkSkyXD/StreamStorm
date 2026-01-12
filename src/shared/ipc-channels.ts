@@ -102,9 +102,6 @@ export const IPC_CHANNELS = {
   STREAMS_GET_BY_CHANNEL: 'streams:get-by-channel',
   STREAMS_GET_PLAYBACK_URL: 'streams:get-playback-url',
 
-  // ========== Proxy (Twitch Ad Blocking) ==========
-  PROXY_TEST_CONNECTION: 'proxy:test-connection',
-
   // ========== Discovery: Categories ==========
   CATEGORIES_GET_TOP: 'categories:get-top',
   CATEGORIES_GET_BY_ID: 'categories:get-by-id',
@@ -130,6 +127,15 @@ export const IPC_CHANNELS = {
 
   // ========== VOD Lookup (for clip-to-VOD navigation) ==========
   VIDEOS_GET_BY_LIVESTREAM_ID: 'videos:get-by-livestream-id',
+
+  // ========== Network Ad Blocking ==========
+  ADBLOCK_GET_STATUS: 'adblock:get-status',
+  ADBLOCK_TOGGLE: 'adblock:toggle',
+  ADBLOCK_GET_STATS: 'adblock:get-stats',
+  ADBLOCK_PROXY_STATUS: 'adblock:proxy-status',
+  
+  // ========== Cosmetic Injection ==========
+  ADBLOCK_INJECT_COSMETICS: 'adblock:inject-cosmetics',
 } as const;
 
 // Type for channel names

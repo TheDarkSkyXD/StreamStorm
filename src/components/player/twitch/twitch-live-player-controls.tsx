@@ -3,9 +3,10 @@ import { PlayPauseButton } from '../play-pause-button';
 import { VolumeControl } from '../volume-control';
 import { SettingsMenu } from '../settings-menu';
 import { QualityLevel } from '../types';
-import { Maximize, Minimize } from 'lucide-react';
+import { Maximize, Minimize, ShieldCheck } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip';
+import { AdBlockStatus } from '@/shared/adblock-types';
 
 const TheaterOutlineIcon = ({ className }: { className?: string }) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -55,6 +56,9 @@ interface TwitchLivePlayerControlsProps {
     // Stats
     showVideoStats?: boolean;
     onToggleVideoStats?: () => void;
+
+    // AdBlock
+    adBlockStatus?: AdBlockStatus | null;
 }
 
 export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
@@ -75,7 +79,8 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
         onToggleTheater,
         onTogglePip,
         showVideoStats,
-        onToggleVideoStats
+        onToggleVideoStats,
+        adBlockStatus
     } = props;
 
     const [isVisible, setIsVisible] = useState(true);
@@ -208,6 +213,27 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
                             <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
                             Live
                         </div>
+
+                        {/* AdBlock Status */}
+                        {adBlockStatus?.isActive && (
+                            <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={`
+                                            ${adBlockStatus.isShowingAd ? 'text-green-500 animate-pulse hover:text-green-400 hover:bg-green-500/10' : 'text-white/70 hover:text-white hover:bg-white/20'}
+                                            cursor-help ml-1
+                                        `}
+                                    >
+                                        <ShieldCheck className="w-5 h-5" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent container={containerRef.current}>
+                                    <p>{adBlockStatus.isShowingAd ? 'Blocking Ads...' : 'Ad-Block Active'}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-2">

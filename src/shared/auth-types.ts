@@ -4,7 +4,6 @@
  * Shared type definitions for authentication across main and renderer processes.
  */
 
-import { StreamProxyConfig, DEFAULT_STREAM_PROXY_CONFIG } from './proxy-types';
 // ========== Platform Types ==========
 
 export type Platform = 'twitch' | 'kick';
@@ -127,27 +126,9 @@ export interface AdvancedPreferences {
      * - Kick CDN (files.kick.com) returns 403 Forbidden without proper Referer header
      * - Desktop apps cannot set Referer headers from the renderer process
      * 
-     * ⚠️ SECURITY/COMPLIANCE NOTES:
-     * - This modifies Sec-Fetch-* and Referer headers, which may violate the
-     *   platform's terms of service
-     * - Kick has an official API (https://docs.kick.com) but does not provide
-     *   a documented method for CDN image access without authentication
-     * - Users should review Kick's ToS before enabling this feature
-     * 
      * @default true (enabled for better UX, but can be disabled)
      */
     enableImageProxy: boolean;
-
-    /**
-     * Stream proxy configuration for ad blocking (Twitch only).
-     * Routes HLS manifest requests through external servers to bypass ads.
-     * 
-     * Based on the Twire Android app implementation.
-     * @see https://github.com/twireapp/Twire
-     * 
-     * @default { selectedProxy: 'none', fallbackToDirect: true }
-     */
-    streamProxy: StreamProxyConfig;
 }
 
 export interface UserPreferences {
@@ -249,7 +230,6 @@ export const DEFAULT_PLAYBACK_PREFERENCES: PlaybackPreferences = {
 
 export const DEFAULT_ADVANCED_PREFERENCES: AdvancedPreferences = {
     enableImageProxy: true, // Enabled by default for better UX
-    streamProxy: DEFAULT_STREAM_PROXY_CONFIG, // Disabled by default, user must opt-in
 };
 
 export const DEFAULT_USER_PREFERENCES: UserPreferences = {

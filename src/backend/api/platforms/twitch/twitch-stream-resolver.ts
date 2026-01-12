@@ -3,8 +3,6 @@ import {
     TwitchPlaybackAccessTokenData,
     StreamPlayback
 } from './twitch-types';
-import { StreamProxyConfig } from '../../../../shared/proxy-types';
-import { TwitchProxyService, ProxyConfigError } from './twitch-proxy-service';
 
 export class TwitchStreamResolver {
     // Standard web client ID used for GQL playback requests
@@ -41,62 +39,6 @@ export class TwitchStreamResolver {
             }
             throw error;
         }
-    }
-
-    /**
-     * Get stream URL with optional proxy support.
-     * If proxy is configured, routes through ad-blocking proxy.
-     * Falls back to direct URL if proxy fails and fallbackToDirect is enabled.
-     *
-     * Error classification:
-     * - ProxyConfigError with code 'invalid_custom_url' → user notification + fallback
-     * - ProxyConfigError with code 'disabled' or 'not_configured' → fallback silently
-     * - Network errors (TypeError from fetch) → fallback if enabled
-     * - Other errors → may need explicit user notification
-     *
-     * @param channelLogin - The channel login/username
-     * @param proxyConfig - Optional proxy configuration (if undefined, uses direct stream)
-     * @returns StreamPlayback object with URL
-     */
-    async getStreamPlaybackUrlWithProxy(
-        channelLogin: string,
-        proxyConfig?: StreamProxyConfig
-    ): Promise<StreamPlayback> {
-        // If proxy is configured and enabled
-        if (proxyConfig && proxyConfig.selectedProxy !== 'none') {
-            try {
-                const proxyService = new TwitchProxyService(proxyConfig);
-                const result = proxyService.getProxiedStreamUrl(channelLogin);
-                console.debug(`[TwitchResolver] Using proxy: ${proxyConfig.selectedProxy}`);
-                return result;
-            } catch (proxyError) {
-                // Use ProxyConfigError code for reliable error classification
-                const isProxyConfigError = proxyError instanceof ProxyConfigError;
-                const errorCode = isProxyConfigError ? proxyError.code : null;
-                const isNetworkError = proxyError instanceof TypeError; // fetch network errors
-
-                console.warn('[TwitchResolver] Proxy error:', {
-                    type: errorCode || (isNetworkError ? 'network' : 'unknown'),
-                    message: proxyError instanceof Error ? proxyError.message : String(proxyError),
-                });
-
-                // For invalid custom URL, log a user-facing warning before fallback
-                if (errorCode === 'invalid_custom_url') {
-                    console.error('[TwitchResolver] Custom proxy URL is invalid. Please update your settings.');
-                    // TODO: Emit event for frontend toast notification
-                }
-
-                // Fallback to direct if configured
-                if (proxyConfig.fallbackToDirect) {
-                    console.debug('[TwitchResolver] Falling back to direct stream');
-                    return this.getStreamPlaybackUrl(channelLogin);
-                }
-                throw proxyError;
-            }
-        }
-
-        // No proxy configured, use direct URL
-        return this.getStreamPlaybackUrl(channelLogin);
     }
 
     /**

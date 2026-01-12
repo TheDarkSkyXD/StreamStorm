@@ -225,8 +225,9 @@ export function StreamPage() {
                 startedAt={streamData?.startedAt}
               />
             ) : (
-              <TwitchLivePlayer
+<TwitchLivePlayer
                 streamUrl={effectiveStreamUrl}
+                channelName={channelName}
                 autoPlay={true}
                 muted={isClipDialogOpen}
                 onReady={() => console.debug('Twitch Live Player ready')}
