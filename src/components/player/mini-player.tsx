@@ -8,9 +8,11 @@ import { useNavigate } from '@tanstack/react-router';
 import { X, Maximize2, Volume2, VolumeX, Pause, Play } from 'lucide-react';
 import { usePipStore } from '@/store/pip-store';
 import { HlsPlayer } from '@/components/player/hls-player';
+import { TwitchHlsPlayer } from '@/components/player/twitch/twitch-hls-player';
 import { PlayerError } from '@/components/player/types';
 import { cn } from '@/lib/utils';
 import { useVolume } from './hooks/use-volume';
+import { useAdBlockStore } from '@/store/adblock-store';
 
 // Mini player dimensions
 const MINI_PLAYER_WIDTH = 400;
@@ -23,6 +25,12 @@ export function MiniPlayer() {
 
     const containerRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
+
+    // Ad-block store setting
+    const storeEnableAdBlock = useAdBlockStore((s) => s.enableAdBlock);
+    
+    // Determine if this is a Twitch stream that needs ad-blocking
+    const isTwitchStream = currentStream?.platform === 'twitch';
 
     // Persistent volume
     const { isMuted, handleToggleMute, syncFromVideoElement } = useVolume({
@@ -183,18 +191,33 @@ export function MiniPlayer() {
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
         >
-            {/* Video Player */}
+            {/* Video Player - Use TwitchHlsPlayer for Twitch (ad-blocking), HlsPlayer for others */}
             {!hasError && currentStream.streamUrl && (
-                <HlsPlayer
-                    ref={videoRef}
-                    src={currentStream.streamUrl}
-                    muted={isMuted}
-                    autoPlay={true}
-                    currentLevel="auto"
-                    onError={handleError}
-                    className="w-full h-full object-contain"
-                    controls={false}
-                />
+                isTwitchStream ? (
+                    <TwitchHlsPlayer
+                        ref={videoRef}
+                        src={currentStream.streamUrl}
+                        channelName={currentStream.channelName}
+                        enableAdBlock={storeEnableAdBlock}
+                        muted={isMuted}
+                        autoPlay={true}
+                        currentLevel="auto"
+                        onError={handleError}
+                        className="w-full h-full object-contain"
+                        controls={false}
+                    />
+                ) : (
+                    <HlsPlayer
+                        ref={videoRef}
+                        src={currentStream.streamUrl}
+                        muted={isMuted}
+                        autoPlay={true}
+                        currentLevel="auto"
+                        onError={handleError}
+                        className="w-full h-full object-contain"
+                        controls={false}
+                    />
+                )
             )}
 
             {/* Error State */}
