@@ -266,16 +266,46 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
                 }
 
                 if (onQualityLevelsRef.current && data.levels) {
-                    const levels: QualityLevel[] = data.levels.map((level, index) => ({
-                        id: index.toString(),
-                        label: level.height ? `${level.height}p${level.frameRate && level.frameRate > 30 ? level.frameRate : ''}` : `Level ${index}`,
-                        width: level.width,
-                        height: level.height,
-                        bitrate: level.bitrate,
-                        frameRate: level.frameRate,
-                        isAuto: false,
-                        name: level.name
-                    }));
+                    // Build initial labels
+                    const rawLevels = data.levels.map((level, index) => {
+                        const baseLabel = level.name
+                            ? level.name
+                            : level.height
+                                ? `${level.height}p${level.frameRate ? Math.round(level.frameRate) : ''}`
+                                : `Level ${index}`;
+                        return {
+                            id: index.toString(),
+                            label: baseLabel,
+                            width: level.width,
+                            height: level.height,
+                            bitrate: level.bitrate,
+                            frameRate: level.frameRate,
+                            isAuto: false,
+                            name: level.name
+                        };
+                    });
+
+                    // Find the source quality (highest bitrate)
+                    const maxBitrate = Math.max(...rawLevels.map(l => l.bitrate || 0));
+
+                    // Deduplicate labels by appending bitrate when duplicates exist
+                    const labelCounts = new Map<string, number>();
+                    rawLevels.forEach(l => labelCounts.set(l.label, (labelCounts.get(l.label) || 0) + 1));
+
+                    const levels: QualityLevel[] = rawLevels.map((level) => {
+                        let finalLabel = level.label;
+                        
+                        // Mark the highest bitrate level as source
+                        if (level.bitrate === maxBitrate && maxBitrate > 0) {
+                            finalLabel = `${finalLabel} (source)`;
+                        } else if (labelCounts.get(level.label)! > 1 && level.bitrate > 0) {
+                            // Deduplicate other labels by appending bitrate
+                            finalLabel = `${finalLabel} (${Math.round(level.bitrate / 1000)}k)`;
+                        }
+                        
+                        return { ...level, label: finalLabel };
+                    });
+
                     onQualityLevelsRef.current([
                         { id: 'auto', label: 'Auto', width: 0, height: 0, bitrate: 0, isAuto: true },
                         ...levels
