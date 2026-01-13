@@ -394,6 +394,15 @@ const electronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PROXY_CLEAR_STREAM, { channelName }),
     clearAllProxyStreamInfos: (): Promise<{ success: boolean }> =>
       ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PROXY_CLEAR_ALL),
+    // VAFT pattern management
+    getPatterns: (): Promise<{ version: number; adSignifiers: string[]; dateRangePatterns: string[]; backupPlayerTypes: string[]; lastUpdated: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_GET),
+    refreshPatterns: (): Promise<{ success: boolean; patterns: unknown }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_REFRESH),
+    getPatternStats: (): Promise<{ version: number; dateRangePatternCount: number; signifierCount: number; backupPlayerTypeCount: number; lastChecked: string; autoUpdateEnabled: boolean }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_GET_STATS),
+    setPatternAutoUpdate: (enabled: boolean): Promise<{ autoUpdateEnabled: boolean }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_SET_AUTO_UPDATE, { enabled }),
   },
 };
 

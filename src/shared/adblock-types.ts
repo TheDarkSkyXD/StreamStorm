@@ -152,6 +152,84 @@ export interface AccessTokenResponse {
     };
 }
 
+// ========== Auto-Updating Pattern Types ==========
+
+/**
+ * Ad pattern update fetched from VAFT repository
+ */
+export interface AdPatternUpdate {
+    /** VAFT script version number */
+    version: number;
+    /** Primary ad signifier strings (e.g., 'stitched') */
+    adSignifiers: string[];
+    /** DATERANGE tag patterns that indicate ads */
+    dateRangePatterns: string[];
+    /** Player types to try for backup streams */
+    backupPlayerTypes: PlayerType[];
+    /** Fallback player type */
+    fallbackPlayerType: PlayerType;
+    /** GQL Client ID */
+    clientId: string;
+    /** Last time patterns were updated (ISO string) */
+    lastUpdated: string;
+    /** Source URL where patterns were fetched from */
+    source: string;
+}
+
+/**
+ * Stored ad patterns with metadata
+ */
+export interface StoredAdPatterns {
+    /** The pattern data */
+    patterns: AdPatternUpdate;
+    /** When the patterns were last checked */
+    lastChecked: string;
+    /** Whether auto-update is enabled */
+    autoUpdateEnabled: boolean;
+}
+
+/**
+ * Default DATERANGE patterns for ad detection
+ * These are the known patterns Twitch uses to mark ad segments
+ */
+export const DEFAULT_DATERANGE_PATTERNS: readonly string[] = [
+    'stitched-ad',
+    'com.twitch.tv/ad',
+    'amazon-ad',
+    'twitch-stitched-ad',
+    'amazon-video-ad',
+    'twitch-ad-break',
+    'X-STITCHED',
+    'ad-insertion',
+    'twitch-ad-quartile',
+    'amazon-adsystem',
+] as const;
+
+/**
+ * Default ad signifiers
+ */
+export const DEFAULT_AD_SIGNIFIERS: readonly string[] = [
+    'stitched',
+] as const;
+
+/**
+ * Default stored ad patterns
+ */
+export const DEFAULT_STORED_PATTERNS: StoredAdPatterns = {
+    patterns: {
+        version: 0,
+        adSignifiers: [...DEFAULT_AD_SIGNIFIERS],
+        dateRangePatterns: [...DEFAULT_DATERANGE_PATTERNS],
+        backupPlayerTypes: ['embed', 'popout', 'autoplay', 'picture-by-picture', 'thunderdome'],
+        fallbackPlayerType: 'embed',
+        clientId: 'kimne78kx3ncx6brgo4mv6wki5h1ko',
+        lastUpdated: new Date().toISOString(),
+        source: 'default',
+    },
+    lastChecked: new Date().toISOString(),
+    autoUpdateEnabled: true,
+};
+
 /**
  * Default ad-block configuration
  */

@@ -140,6 +140,12 @@ export const IPC_CHANNELS = {
   // ========== Stream Proxy Cleanup ==========
   ADBLOCK_PROXY_CLEAR_STREAM: 'adblock:proxy-clear-stream',
   ADBLOCK_PROXY_CLEAR_ALL: 'adblock:proxy-clear-all',
+
+  // ========== VAFT Pattern Auto-Update ==========
+  ADBLOCK_PATTERNS_GET: 'adblock:patterns-get',
+  ADBLOCK_PATTERNS_REFRESH: 'adblock:patterns-refresh',
+  ADBLOCK_PATTERNS_GET_STATS: 'adblock:patterns-get-stats',
+  ADBLOCK_PATTERNS_SET_AUTO_UPDATE: 'adblock:patterns-set-auto-update',
 } as const;
 
 // Type for channel names

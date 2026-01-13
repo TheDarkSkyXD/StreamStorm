@@ -10,6 +10,10 @@
 
 import { session } from 'electron';
 
+import { DEFAULT_DATERANGE_PATTERNS } from '@shared/adblock-types';
+
+import { vaftPatternService } from './vaft-pattern-service';
+
 /**
  * Resolution info for a stream quality level
  */
@@ -266,20 +270,36 @@ class TwitchManifestProxyService {
 
     /**
      * Detect ads using multiple heuristics
+     * Uses dynamic patterns from VAFT pattern service when available
      */
     private detectAds(text: string): boolean {
-        // Primary: DATERANGE tags with ad indicators
-        if (text.includes('#EXT-X-DATERANGE') &&
-            (text.includes('stitched-ad') || 
-             text.includes('com.twitch.tv/ad') ||
-             text.includes('amazon-ad') ||
-             text.includes('twitch-stitched-ad'))) {
-            return true;
+        // Get patterns from VAFT pattern service (auto-updated)
+        let dateRangePatterns: readonly string[];
+        let adSignifiers: string[];
+        
+        try {
+            dateRangePatterns = vaftPatternService.getDateRangePatterns();
+            adSignifiers = vaftPatternService.getAdSignifiers();
+        } catch {
+            // Fallback to defaults if service not initialized
+            dateRangePatterns = DEFAULT_DATERANGE_PATTERNS;
+            adSignifiers = ['stitched'];
         }
 
-        // Secondary: stitched signifier
-        if (text.includes('stitched')) {
-            return true;
+        // Primary: DATERANGE tags with ad indicators
+        if (text.includes('#EXT-X-DATERANGE')) {
+            for (const pattern of dateRangePatterns) {
+                if (text.includes(pattern)) {
+                    return true;
+                }
+            }
+        }
+
+        // Secondary: ad signifiers (e.g., 'stitched')
+        for (const signifier of adSignifiers) {
+            if (text.includes(signifier)) {
+                return true;
+            }
         }
 
         return false;

@@ -11,6 +11,7 @@ import { IPC_CHANNELS } from '@shared/ipc-channels';
 import { cosmeticInjectionService } from '../../services/cosmetic-injection-service';
 import { networkAdBlockService } from '../../services/network-adblock-service';
 import { twitchManifestProxy } from '../../services/twitch-manifest-proxy';
+import { vaftPatternService } from '../../services/vaft-pattern-service';
 
 export function registerAdBlockHandlers(_mainWindow: BrowserWindow): void {
   ipcMain.handle(IPC_CHANNELS.ADBLOCK_GET_STATUS, async () => {
@@ -71,6 +72,31 @@ export function registerAdBlockHandlers(_mainWindow: BrowserWindow): void {
     twitchManifestProxy.clearAllStreamInfos();
     console.debug('[AdBlock] Cleared all stream infos');
     return { success: true };
+  });
+
+  // ========== VAFT Pattern Auto-Update Handlers ==========
+
+  ipcMain.handle(IPC_CHANNELS.ADBLOCK_PATTERNS_GET, async () => {
+    return vaftPatternService.getCurrentPatterns();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.ADBLOCK_PATTERNS_REFRESH, async () => {
+    const patterns = await vaftPatternService.forceRefresh();
+    return {
+      success: patterns !== null,
+      patterns: patterns || vaftPatternService.getCurrentPatterns(),
+    };
+  });
+
+  ipcMain.handle(IPC_CHANNELS.ADBLOCK_PATTERNS_GET_STATS, async () => {
+    return vaftPatternService.getStats();
+  });
+
+  ipcMain.handle(IPC_CHANNELS.ADBLOCK_PATTERNS_SET_AUTO_UPDATE, async (_event, { enabled }: { enabled: boolean }) => {
+    vaftPatternService.setAutoUpdateEnabled(enabled);
+    return {
+      autoUpdateEnabled: vaftPatternService.isAutoUpdateEnabled(),
+    };
   });
 
   console.debug('[AdBlock] IPC handlers registered');

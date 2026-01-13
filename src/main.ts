@@ -19,6 +19,7 @@ import { protocolHandler } from './backend/auth';
 import { networkAdBlockService } from './backend/services/network-adblock-service';
 import { cosmeticInjectionService } from './backend/services/cosmetic-injection-service';
 import { twitchManifestProxy } from './backend/services/twitch-manifest-proxy';
+import { vaftPatternService } from './backend/services/vaft-pattern-service';
 
 // Sentinel file to track clean shutdown
 const CLEAN_SHUTDOWN_FILE = path.join(app.getPath('userData'), '.clean-shutdown');
@@ -143,6 +144,11 @@ app.on('ready', async () => {
 
   // Register custom protocol handler for OAuth callbacks (streamstorm://)
   protocolHandler.registerProtocol();
+
+  // Initialize VAFT pattern service (auto-updates ad detection patterns)
+  vaftPatternService.initialize().catch((error) => {
+    console.warn('[Main] VAFT pattern service initialization error:', error);
+  });
 
   // Initialize ad blocking services
   cosmeticInjectionService.initialize();
