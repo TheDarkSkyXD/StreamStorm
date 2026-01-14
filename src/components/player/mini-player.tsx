@@ -13,6 +13,7 @@ import { PlayerError } from '@/components/player/types';
 import { cn } from '@/lib/utils';
 import { useVolume } from './hooks/use-volume';
 import { useAdBlockStore } from '@/store/adblock-store';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 // Mini player dimensions
 const MINI_PLAYER_WIDTH = 400;
@@ -245,20 +246,32 @@ export function MiniPlayer() {
                         </span>
                     </div>
                     <div className="flex items-center gap-1">
-                        <button
-                            onClick={handleExpand}
-                            className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
-                            title="Expand"
-                        >
-                            <Maximize2 size={16} />
-                        </button>
-                        <button
-                            onClick={closePip}
-                            className="p-1.5 rounded-full bg-black/50 hover:bg-red-500/80 text-white transition-colors"
-                            title="Close"
-                        >
-                            <X size={16} />
-                        </button>
+                        <Tooltip delayDuration={0}>
+                            <TooltipTrigger asChild>
+                                <button
+                                    onClick={handleExpand}
+                                    className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
+                                >
+                                    <Maximize2 size={16} />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent container={containerRef.current}>
+                                Expand
+                            </TooltipContent>
+                        </Tooltip>
+                        <Tooltip delayDuration={0}>
+                            <TooltipTrigger asChild>
+                                <button
+                                    onClick={closePip}
+                                    className="p-1.5 rounded-full bg-black/50 hover:bg-red-500/80 text-white transition-colors"
+                                >
+                                    <X size={16} />
+                                </button>
+                            </TooltipTrigger>
+                            <TooltipContent container={containerRef.current}>
+                                Close
+                            </TooltipContent>
+                        </Tooltip>
                     </div>
                 </div>
 
@@ -288,18 +301,32 @@ export function MiniPlayer() {
                     {/* Playback Controls */}
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <button
-                                onClick={togglePlay}
-                                className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
-                            >
-                                {isPlaying ? <Pause size={16} /> : <Play size={16} />}
-                            </button>
-                            <button
-                                onClick={handleToggleMute}
-                                className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
-                            >
-                                {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                            </button>
+                            <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        onClick={togglePlay}
+                                        className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
+                                    >
+                                        {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent container={containerRef.current}>
+                                    {isPlaying ? 'Pause' : 'Play'}
+                                </TooltipContent>
+                            </Tooltip>
+                            <Tooltip delayDuration={0}>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        onClick={handleToggleMute}
+                                        className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
+                                    >
+                                        {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent container={containerRef.current}>
+                                    {isMuted ? 'Unmute' : 'Mute'}
+                                </TooltipContent>
+                            </Tooltip>
                         </div>
 
                         {/* Viewer count */}
