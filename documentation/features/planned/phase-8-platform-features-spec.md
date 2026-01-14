@@ -37,13 +37,6 @@ This phase implements platform-specific features that are unique to Twitch or Ki
 - [ ] Points prediction participation
 - [ ] Redemption notifications
 
-### Phase 8.2: Extensions Support (3 days)
-
-- [ ] Research Twitch extension embedding
-- [ ] Display extension overlays
-- [ ] Extension panel support
-- [ ] Interactive extension features
-- [ ] Extension settings management
 
 ### Phase 8.3: Twitch Subscriptions (1 day)
 

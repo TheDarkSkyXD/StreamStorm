@@ -195,7 +195,7 @@ const containerRef = useRef<HTMLDivElement>(null);
     return (
         <div
             ref={containerRef}
-            className={`relative w-full h-full bg-black overflow-hidden group ${className || ''}`}
+            className={`relative w-full h-full bg-black overflow-hidden group flex flex-col justify-center ${className || ''}`}
         >
 {streamUrl ? (
                 <TwitchHlsPlayer
@@ -221,7 +221,7 @@ const containerRef = useRef<HTMLDivElement>(null);
                     onHlsInstance={(hls: import('hls.js').default) => {
                         hlsRef.current = hls;
                     }}
-                    className="size-full object-contain cursor-pointer"
+                    className="size-full object-contain object-center cursor-pointer"
                     controls={false}
                     onDoubleClick={toggleFullscreen}
                 />

@@ -323,7 +323,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
     return (
         <div
             ref={containerRef}
-            className={`relative w-full h-full bg-black overflow-hidden group ${className || ''}`}
+            className={`relative w-full h-full bg-black overflow-hidden group flex flex-col justify-center ${className || ''}`}
         >
             {streamUrl ? (
                 <HlsPlayer
@@ -341,7 +341,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
                         onError?.(error);
                     }}
                     onHlsInstance={handleHlsInstance}
-                    className="size-full object-contain cursor-pointer"
+                    className="size-full object-contain object-center cursor-pointer"
                     controls={false}
                     onDoubleClick={toggleFullscreen}
                 />

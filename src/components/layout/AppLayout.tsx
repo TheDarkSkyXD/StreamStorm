@@ -33,8 +33,8 @@ export function AppLayout({ children }: AppLayoutProps) {
   useAuthInitialize();
 
   return (
-    <div className="h-full flex flex-col bg-[var(--color-background)]">
-      {/* Custom Title Bar (window controls) */}
+    <div className="h-full flex flex-col bg-[var(--color-background)] relative">
+            {/* Custom Title Bar (window controls) */}
       <TitleBar />
 
       {/* Top Navigation Bar (search, user info) */}

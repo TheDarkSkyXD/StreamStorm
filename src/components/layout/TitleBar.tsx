@@ -22,7 +22,7 @@ export function TitleBar({ className }: TitleBarProps) {
   return (
     <div
       className={cn(
-        'h-8 flex items-center justify-between bg-[var(--color-background-secondary)] border-b border-[var(--color-border)] select-none',
+        'h-7 flex items-center justify-between bg-[var(--color-background-secondary)] border-b border-[var(--color-border)] select-none relative z-50 shrink-0',
         className
       )}
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}

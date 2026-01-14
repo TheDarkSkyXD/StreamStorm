@@ -468,7 +468,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
         <video
             ref={videoRef}
             playsInline
-            className="size-full object-contain"
+            className="size-full object-contain object-top"
             {...props}
         />
     );
