@@ -208,10 +208,12 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
                 liveMaxLatencyDurationCount: 8,
                 maxBufferLength: 30,
                 maxMaxBufferLength: 60,
-                maxBufferHole: 0.5,
-                highBufferWatchdogPeriod: 3,
-                nudgeOffset: 0.2,
-                nudgeMaxRetry: 5,
+                
+                // Buffer hole handling - tuned for live streaming resilience
+                maxBufferHole: 0.5,              // Max gap size before seeking over (seconds)
+                highBufferWatchdogPeriod: 3,     // Seconds before watchdog checks for stalls
+                nudgeOffset: 0.2,                // Amount to nudge playhead when stalled (seconds)
+                nudgeMaxRetry: 5,                // Max nudge attempts before fatal error
                 appendErrorMaxRetry: 5,
 
                 // Manifest loading
@@ -315,7 +317,20 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
 
             // Error handling
             hls.on(Hls.Events.ERROR, (event, data) => {
-                const silentErrors = ['bufferStalledError', 'levelSwitchError', 'fragLoadError', 'fragParsingError'];
+                // Silent errors: non-fatal issues that HLS.js handles automatically
+                // - bufferSeekOverHole: HLS.js seeked over a buffer gap to unstuck playback (normal behavior)
+                // - bufferNudgeOnStall: HLS.js nudged playhead to recover from stall (normal behavior)
+                // - bufferStalledError: Buffer ran out temporarily, will recover
+                // - levelSwitchError: Quality switch issue, will fallback
+                // - fragLoadError/fragParsingError: Fragment issues, will retry
+                const silentErrors = [
+                    'bufferStalledError',
+                    'levelSwitchError',
+                    'fragLoadError',
+                    'fragParsingError',
+                    'bufferSeekOverHole',    // Auto-handled: seeks over buffer gaps
+                    'bufferNudgeOnStall',    // Auto-handled: nudges playhead when stalled
+                ];
                 // @ts-expect-error - response exists on network errors
                 const statusCode = data.response?.code || data.response?.status || data.networkDetails?.status;
 

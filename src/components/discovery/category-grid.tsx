@@ -49,7 +49,12 @@ export function CategoryGrid({
                 show: {
                     opacity: 1,
                     transition: {
-                        staggerChildren: 0.03
+                        // OPTIMIZATION: Reduced stagger from 0.03s to 0.015s
+                        // Old: 0.03s * 100 items = 3 seconds total animation
+                        // New: 0.015s * 100 items = 1.5 seconds total animation
+                        // Also reduced duration for snappier feel
+                        staggerChildren: 0.015,
+                        duration: 0.2
                     }
                 }
             }}

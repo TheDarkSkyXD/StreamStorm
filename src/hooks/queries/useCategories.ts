@@ -13,16 +13,17 @@ export function useTopCategories(platform?: Platform, limit: number = 20) {
     return useQuery({
         queryKey: CATEGORY_KEYS.top(platform, limit),
         queryFn: async () => {
-            // 1. Fetch categories
-            const categoriesResponse = await window.electronAPI.categories.getTop({ platform, limit });
+            // OPTIMIZATION: Fetch categories AND streams in PARALLEL instead of sequentially
+            // This cuts loading time roughly in half since both requests run concurrently
+            const [categoriesResponse, streamsResponse] = await Promise.all([
+                window.electronAPI.categories.getTop({ platform, limit }),
+                window.electronAPI.streams.getTop({ platform, limit: 100 })
+            ]);
+
             if (categoriesResponse.error) {
                 throw new Error(categoriesResponse.error as unknown as string);
             }
             const categories = categoriesResponse.data as UnifiedCategory[] || [];
-
-            // 2. Fetch top streams to aggregate viewer counts (approximation)
-            // We fetch 100 streams to get a decent sample of active games
-            const streamsResponse = await window.electronAPI.streams.getTop({ platform, limit: 100 });
             const streams = (streamsResponse.data as any[]) || [];
 
             // 3. Aggregate viewer counts by category ID
@@ -86,6 +87,14 @@ export function useTopCategories(platform?: Platform, limit: number = 20) {
             return Array.from(categoryMap.values())
                 .sort((a, b) => (b.viewerCount || 0) - (a.viewerCount || 0));
         },
+        // PERFORMANCE: Categories don't change frequently - cache for 2 minutes
+        // This prevents unnecessary refetches when navigating back to this page
+        staleTime: 2 * 60 * 1000, // 2 minutes - data considered fresh
+        gcTime: 10 * 60 * 1000,   // 10 minutes - keep in cache for quick return
+        // Show previous data instantly while refetching in background
+        placeholderData: (previousData) => previousData,
+        // Refetch when window regains focus (user may have been away)
+        refetchOnWindowFocus: true,
     });
 }
 
