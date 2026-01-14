@@ -17,8 +17,10 @@ interface SidebarFollowsProps {
 }
 
 export function SidebarFollows({ collapsed }: SidebarFollowsProps) {
-    const { twitchConnected, kickConnected } = useAuthStore();
-    const { localFollows } = useFollowStore();
+    // Use individual selectors to prevent re-renders when unrelated state changes
+    const twitchConnected = useAuthStore((state) => state.twitchConnected);
+    const kickConnected = useAuthStore((state) => state.kickConnected);
+    const localFollows = useFollowStore((state) => state.localFollows);
 
     // Fetch data
     const { data: twitchFollows } = useFollowedChannels('twitch', { enabled: twitchConnected });

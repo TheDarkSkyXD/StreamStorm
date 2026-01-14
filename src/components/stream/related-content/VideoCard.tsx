@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { PlatformAvatar } from '@/components/ui/platform-avatar';
 import { ProxiedImage } from '@/components/ui/proxied-image';
@@ -16,7 +16,8 @@ interface VideoCardProps {
     channelData: UnifiedChannel | null | undefined;
 }
 
-export function VideoCard({ video, platform, channelName, channelData }: VideoCardProps) {
+// Memoized to prevent re-renders when parent list updates
+export const VideoCard = memo(function VideoCard({ video, platform, channelName, channelData }: VideoCardProps) {
     const linkProps: any = {
         to: video.isLive ? "/stream/$platform/$channel" : "/video/$platform/$videoId",
         params: video.isLive ? {
@@ -149,4 +150,4 @@ export function VideoCard({ video, platform, channelName, channelData }: VideoCa
             </CardContent>
         </Card>
     );
-}
+});

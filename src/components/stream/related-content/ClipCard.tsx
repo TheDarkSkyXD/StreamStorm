@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProxiedImage } from '@/components/ui/proxied-image';
@@ -17,7 +17,8 @@ interface ClipCardProps {
     channelData: UnifiedChannel | null | undefined;
 }
 
-export function ClipCard({ clip, onClick, platform, channelName, channelData }: ClipCardProps) {
+// Memoized to prevent re-renders when parent list updates
+export const ClipCard = memo(function ClipCard({ clip, onClick, platform, channelName, channelData }: ClipCardProps) {
     const categoryName = clip.category || clip.gameName;
 
     return (
@@ -92,4 +93,4 @@ export function ClipCard({ clip, onClick, platform, channelName, channelData }: 
             </CardContent>
         </Card>
     );
-}
+});

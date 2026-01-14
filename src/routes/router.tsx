@@ -5,6 +5,7 @@ import {
   Outlet,
   createHashHistory,
 } from '@tanstack/react-router';
+import { Suspense } from 'react';
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import {
@@ -21,6 +22,20 @@ import {
   HistoryPage,
   DownloadsPage,
 } from '@/pages';
+
+// Loading fallback for lazy-loaded pages
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-full">
+    <div className="w-8 h-8 border-2 border-storm-accent border-t-transparent rounded-full animate-spin" />
+  </div>
+);
+
+// Wrap lazy component with Suspense
+const withSuspense = (Component: React.ComponentType) => () => (
+  <Suspense fallback={<PageLoader />}>
+    <Component />
+  </Suspense>
+);
 
 // Root layout (wraps everything)
 const rootRoute = createRootRoute({
@@ -45,28 +60,28 @@ const appLayoutRoute = createRoute({
 const homeRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/',
-  component: HomePage,
+  component: withSuspense(HomePage),
 });
 
 // Following page
 const followingRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/following',
-  component: FollowingPage,
+  component: withSuspense(FollowingPage),
 });
 
 // Categories page
 const categoriesRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/categories',
-  component: CategoriesPage,
+  component: withSuspense(CategoriesPage),
 });
 
 // Category detail page
 const categoryDetailRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/categories/$platform/$categoryId',
-  component: CategoryDetailPage,
+  component: withSuspense(CategoryDetailPage),
 });
 
 // Search page
@@ -76,7 +91,7 @@ const searchRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => ({
     q: (search.q as string) || '',
   }),
-  component: SearchPage,
+  component: withSuspense(SearchPage),
 });
 
 // Stream viewing page
@@ -86,7 +101,7 @@ const streamRoute = createRoute({
   validateSearch: (search: Record<string, unknown>): { tab: 'videos' | 'clips' } => ({
     tab: (search.tab as 'videos' | 'clips') || 'videos',
   }),
-  component: StreamPage,
+  component: withSuspense(StreamPage),
 });
 
 // Video viewing page (VOD)
@@ -122,42 +137,42 @@ const videoRoute = createRoute({
     language: (search.language as string) || undefined,
     isMature: search.isMature === true || search.isMature === 'true' || undefined,
   }),
-  component: VideoPage,
+  component: withSuspense(VideoPage),
 });
 
 // Clip viewing page
 const clipRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/clip/$platform/$clipId',
-  component: ClipPage,
+  component: withSuspense(ClipPage),
 });
 
 // Settings page
 const settingsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/settings',
-  component: SettingsPage,
+  component: withSuspense(SettingsPage),
 });
 
 // MultiStream page
 const multiStreamRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/multistream',
-  component: MultiStreamPage,
+  component: withSuspense(MultiStreamPage),
 });
 
 // History page
 const historyRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/history',
-  component: HistoryPage,
+  component: withSuspense(HistoryPage),
 });
 
 // Downloads page
 const downloadsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/downloads',
-  component: DownloadsPage,
+  component: withSuspense(DownloadsPage),
 });
 
 // Build the route tree

@@ -5,6 +5,8 @@ import path from 'path';
 export default defineConfig(async (): Promise<UserConfig> => {
   const react = (await import('@vitejs/plugin-react')).default;
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
   return {
     plugins: [react()],
     resolve: {
@@ -21,16 +23,28 @@ export default defineConfig(async (): Promise<UserConfig> => {
       target: 'esnext',
 
       // Disable source maps in production for smaller bundles
-      sourcemap: process.env.NODE_ENV !== 'production',
+      sourcemap: !isProduction,
 
       // Optimize minification
       minify: 'esbuild',
+
+      // CSS code splitting - separate CSS per async chunk for faster initial load
+      cssCodeSplit: true,
+
+      // Inline small assets (< 4KB) as base64 to reduce HTTP requests
+      // Larger assets remain as files for better caching
+      assetsInlineLimit: 4096,
+
+      // Chunk size warning threshold (helps identify bloated chunks)
+      chunkSizeWarningLimit: 500,
 
       // Enable tree-shaking for side-effect-free modules
       rollupOptions: {
         treeshake: {
           moduleSideEffects: 'no-external',
           propertyReadSideEffects: false,
+          // Aggressively remove unused exports
+          tryCatchDeoptimization: false,
         },
         output: {
           // Manual chunk splitting for better caching
@@ -55,7 +69,20 @@ export default defineConfig(async (): Promise<UserConfig> => {
               '@dnd-kit/sortable',
               '@dnd-kit/utilities',
             ],
+            // Utility libraries chunk
+            'vendor-utils': [
+              'clsx',
+              'tailwind-merge',
+              'class-variance-authority',
+            ],
           },
+          // Optimize chunk file names for caching
+          chunkFileNames: isProduction
+            ? 'assets/[name]-[hash].js'
+            : 'assets/[name].js',
+          assetFileNames: isProduction
+            ? 'assets/[name]-[hash][extname]'
+            : 'assets/[name][extname]',
         },
       },
     },
@@ -70,6 +97,10 @@ export default defineConfig(async (): Promise<UserConfig> => {
         'zustand',
         'hls.js',
         'framer-motion',
+        'clsx',
+        'tailwind-merge',
+        'class-variance-authority',
+        'lucide-react',
       ],
       // Exclude native modules that should be handled by Electron
       exclude: ['better-sqlite3'],
@@ -77,9 +108,21 @@ export default defineConfig(async (): Promise<UserConfig> => {
     // Electron-specific optimizations
     esbuild: {
       // Drop debugger statements in production builds
-      drop: process.env.NODE_ENV === 'production' ? ['debugger'] : [],
-      // Preserve console.debug for development but not production
-      pure: process.env.NODE_ENV === 'production' ? ['console.debug'] : [],
+      drop: isProduction ? ['debugger'] : [],
+      // Remove console.debug in production (keeps log/warn/error)
+      pure: isProduction ? ['console.debug'] : [],
+      // Minification settings for smaller output
+      minifyIdentifiers: isProduction,
+      minifySyntax: isProduction,
+      minifyWhitespace: isProduction,
+    },
+    // CSS optimization
+    css: {
+      // Enable CSS modules for scoped styles (when using .module.css)
+      modules: {
+        localsConvention: 'camelCase',
+      },
+      // PostCSS is already configured via postcss.config.js (Tailwind)
     },
   };
 });
