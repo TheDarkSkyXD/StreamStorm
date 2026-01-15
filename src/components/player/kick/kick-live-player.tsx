@@ -214,6 +214,12 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         const video = videoRef.current;
         if (!video) return;
         if (video.paused) {
+            // For live streams: seek to live edge before playing
+            // This ensures we're watching "live" when resuming playback
+            if (video.seekable.length > 0) {
+                const liveEdge = video.seekable.end(video.seekable.length - 1);
+                video.currentTime = liveEdge;
+            }
             video.play().catch((e) => {
                 // Ignore AbortError (interrupted by load) and NotAllowedError (autoplay policy)
                 if (e.name !== 'AbortError' && e.name !== 'NotAllowedError') {
