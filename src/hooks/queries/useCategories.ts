@@ -5,18 +5,18 @@ import { UnifiedCategory } from '../../backend/api/unified/platform-types';
 
 export const CATEGORY_KEYS = {
     all: ['categories'] as const,
-    top: (platform?: Platform, limit?: number) => [...CATEGORY_KEYS.all, 'top', platform, limit] as const,
+    top: (platform?: Platform) => [...CATEGORY_KEYS.all, 'top', platform] as const,
     byId: (categoryId: string, platform: Platform) => [...CATEGORY_KEYS.all, 'id', platform, categoryId] as const,
 };
 
-export function useTopCategories(platform?: Platform, limit: number = 20) {
+export function useTopCategories(platform?: Platform) {
     return useQuery({
-        queryKey: CATEGORY_KEYS.top(platform, limit),
+        queryKey: CATEGORY_KEYS.top(platform),
         queryFn: async () => {
             // OPTIMIZATION: Fetch categories AND streams in PARALLEL instead of sequentially
             // This cuts loading time roughly in half since both requests run concurrently
             const [categoriesResponse, streamsResponse] = await Promise.all([
-                window.electronAPI.categories.getTop({ platform, limit }),
+                window.electronAPI.categories.getTop({ platform }), // No limit - fetch ALL
                 window.electronAPI.streams.getTop({ platform, limit: 100 })
             ]);
 
@@ -45,40 +45,45 @@ export function useTopCategories(platform?: Platform, limit: number = 20) {
                 )
             }));
 
-            // 5. De-duplicate and prioritize
-            // Rule: Use Twitch for EVERYTHING.
-            // Exception: Use Kick ONLY for 'Slots' (Slots & Casino).
+// 5. De-duplicate: Twitch-first, then ADD Kick-exclusives
+            // Rule: 
+            //   - Use Twitch version for any category that exists on Twitch
+            //   - ADD Kick categories that DON'T exist on Twitch
+            //   - Exception: Slots → prefer Kick version (better metadata)
 
             const categoryMap = new Map<string, UnifiedCategory>();
-            const slotsKey = '@@slots@@';
 
-            // First pass: Identify Kick Slots if it exists
-            const kickSlots = enrichedCategories.find(c =>
-                c.platform === 'kick' &&
-                (c.name.toLowerCase().trim() === 'slots' || c.name.toLowerCase().trim() === 'slots & casino')
-            );
+            // Helper to normalize category names for comparison
+            const normalizeKey = (name: string): string => {
+                return name.toLowerCase().trim()
+                    // Handle known variations
+                    .replace(/slots & casino/i, 'slots')
+                    .replace(/just chatting/i, 'just-chatting');
+            };
 
+            // First pass: Add ALL Twitch categories (they take priority)
             for (const category of enrichedCategories) {
-                // Normalize key
-                let key = category.name.toLowerCase().trim();
-                if (key === 'slots' || key === 'slots & casino') {
-                    key = slotsKey;
+                if (category.platform === 'twitch') {
+                    const key = normalizeKey(category.name);
+                    categoryMap.set(key, category);
                 }
+            }
 
-                if (key === slotsKey) {
-                    // For Slots, we ALWAYS want the Kick version if we found it.
-                    // If we have Kick slots, we insert it (once).
-                    // If we encounter Twitch slots, we ignore it if we have Kick slots.
-                    if (kickSlots) {
-                        categoryMap.set(key, kickSlots);
-                    } else if (category.platform === 'twitch') {
-                        // Fallback to Twitch slots only if Kick slots missing
+            // Second pass: Add Kick-EXCLUSIVE categories (not on Twitch)
+            // AND override Slots with Kick version
+            const slotsKey = 'slots';
+            for (const category of enrichedCategories) {
+                if (category.platform === 'kick') {
+                    const key = normalizeKey(category.name);
+
+                    // Slots special case: Kick has better casino game coverage
+                    if (key === slotsKey) {
                         categoryMap.set(key, category);
+                        continue;
                     }
-                } else {
-                    // For non-Slots, strictly use Twitch.
-                    // Ignore all Kick categories.
-                    if (category.platform === 'twitch') {
+
+                    // Only add if Twitch doesn't have this category
+                    if (!categoryMap.has(key)) {
                         categoryMap.set(key, category);
                     }
                 }
@@ -87,10 +92,10 @@ export function useTopCategories(platform?: Platform, limit: number = 20) {
             return Array.from(categoryMap.values())
                 .sort((a, b) => (b.viewerCount || 0) - (a.viewerCount || 0));
         },
-        // PERFORMANCE: Categories don't change frequently - cache for 2 minutes
-        // This prevents unnecessary refetches when navigating back to this page
-        staleTime: 2 * 60 * 1000, // 2 minutes - data considered fresh
-        gcTime: 10 * 60 * 1000,   // 10 minutes - keep in cache for quick return
+        // PERFORMANCE: Categories list is expensive to fetch (1500+ items)
+        // Cache for 5 minutes since category list doesn't change frequently
+        staleTime: 5 * 60 * 1000, // 5 minutes - data considered fresh
+        gcTime: 15 * 60 * 1000,   // 15 minutes - keep in cache for quick return
         // Show previous data instantly while refetching in background
         placeholderData: (previousData) => previousData,
         // Refetch when window regains focus (user may have been away)

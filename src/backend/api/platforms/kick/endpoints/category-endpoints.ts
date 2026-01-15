@@ -8,48 +8,60 @@ import {
     PaginatedResult
 } from '../kick-types';
 import { transformKickCategory } from '../kick-transformers';
-import { getTopStreams } from './stream-endpoints';
+import { getPublicTopStreams } from './stream-endpoints';
 
 /**
- * Get top/popular categories (derived from top streams)
- * Note: Kick official API doesn't have a "browse all" endpoint, so we aggregate from streams
+ * Get categories from public/legacy API (No Auth Required)
+ * Extracts unique categories from public top streams
  */
-export async function getTopCategories(
-    client: KickRequestor,
-    options: PaginationOptions = {}
-): Promise<PaginatedResult<UnifiedCategory>> {
-    // We don't necessarily need auth to fetch public streams, but the client structure checks it.
-    if (!client.isAuthenticated()) {
-        console.warn('⚠️ Kick API requires authentication for categories');
-        return { data: [] };
-    }
-
+export async function getPublicTopCategories(): Promise<PaginatedResult<UnifiedCategory>> {
     try {
-        // Fetch a decent number of streams to get a good spread of categories
-        // Limit 100 is usually the max for most APIs, we can try fetching 100.
-        const streamsResult = await getTopStreams(client, { limit: 100 });
+        // Fetch public streams (uses legacy API, no auth needed)
+        const streamsResult = await getPublicTopStreams({ limit: 100 });
         const streams = streamsResult.data;
 
-        // Extract unique categories
+        // Extract unique categories with aggregated viewer counts
         const categoryMap = new Map<string, UnifiedCategory>();
 
         for (const stream of streams) {
             if (stream.categoryId && stream.categoryName) {
-                // Use categoryId as key
-                if (!categoryMap.has(stream.categoryId)) {
+                const existing = categoryMap.get(stream.categoryId);
+                if (existing) {
+                    // Aggregate viewer counts
+                    existing.viewerCount = (existing.viewerCount || 0) + (stream.viewerCount || 0);
+                } else {
                     categoryMap.set(stream.categoryId, {
                         id: stream.categoryId,
                         platform: 'kick',
                         name: stream.categoryName,
-                        boxArtUrl: '', // Will update below
+                        boxArtUrl: '', // Not available from streams endpoint
+                        viewerCount: stream.viewerCount || 0
                     });
                 }
             }
         }
 
-        // To get Box Art, we should probably do a raw fetch of streams here to access the 'category' object fully.
-        // Duplicate logic from getTopStreams but specifically for category extraction.
+        const categories = Array.from(categoryMap.values())
+            .sort((a, b) => (b.viewerCount || 0) - (a.viewerCount || 0));
 
+        return { data: categories };
+    } catch (error) {
+        console.error('Failed to fetch public Kick categories:', error);
+        return { data: [] };
+    }
+}
+
+/**
+ * Get top/popular categories (derived from top streams)
+ * Note: Kick official API doesn't have a "browse all" endpoint, so we aggregate from streams
+ * Uses App Token if available, falls back to public API if not authenticated
+ */
+export async function getTopCategories(
+    client: KickRequestor,
+    _options: PaginationOptions = {}
+): Promise<PaginatedResult<UnifiedCategory>> {
+    try {
+        // Try official API first (will use App Token if available via KickClient.request fallback)
         const params = new URLSearchParams();
         params.set('limit', '100');
         params.set('sort', 'viewer_count');
@@ -66,7 +78,7 @@ export async function getTopCategories(
                     platform: 'kick',
                     name: s.category.name,
                     boxArtUrl: s.category.thumbnail || '',
-                    viewerCount: 0 // Will aggregate below
+                    viewerCount: 0
                 });
             }
 
@@ -80,14 +92,12 @@ export async function getTopCategories(
         const categories = Array.from(distinctCategories.values())
             .sort((a, b) => (b.viewerCount || 0) - (a.viewerCount || 0));
 
-        return {
-            data: categories,
-            // No real cursor for this derived list unless we implement complex pagination logic
-        };
+        return { data: categories };
 
     } catch (error) {
-        console.error('Failed to fetch Kick top categories:', error);
-        return { data: [] };
+        console.warn('Failed to fetch Kick top categories via official API, falling back to public:', error);
+        // Fallback to public API (no auth required)
+        return getPublicTopCategories();
     }
 }
 
@@ -100,10 +110,6 @@ export async function searchCategories(
     query: string,
     options: PaginationOptions = {}
 ): Promise<PaginatedResult<UnifiedCategory>> {
-    if (!client.isAuthenticated()) {
-        return { data: [] };
-    }
-
     try {
         const params = new URLSearchParams({
             q: query,
@@ -133,10 +139,6 @@ export async function searchCategories(
  * https://docs.kick.com/apis/categories - GET /public/v1/categories/:category_id
  */
 export async function getCategoryById(client: KickRequestor, id: string): Promise<UnifiedCategory | null> {
-    if (!client.isAuthenticated()) {
-        return null;
-    }
-
     try {
         const response = await client.request<KickApiResponse<KickApiCategory>>(
             `/categories/${id}`
@@ -150,4 +152,83 @@ export async function getCategoryById(client: KickRequestor, id: string): Promis
         console.error('Failed to fetch Kick category:', error);
         return null;
     }
+}
+
+/**
+ * Helper to add delay between requests to respect rate limits
+ */
+async function delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
+ * Get ALL categories from Kick that have live streams.
+ * Extracts categories from multiple pages of top streams (sequential with rate limiting).
+ * This is a workaround since Kick lacks a "browse all" endpoint.
+ * Falls back to public API if official API fails.
+ * 
+ * NOTE: Only returns categories with active live streams. Categories with no streams
+ * are intentionally excluded from the Categories page display.
+ * 
+ * RATE LIMIT AWARE: Uses sequential requests with delays to prevent 429 errors
+ */
+export async function getAllCategories(
+    client: KickRequestor
+): Promise<UnifiedCategory[]> {
+    const categoryMap = new Map<number, UnifiedCategory>();
+
+    try {
+        // Fetch pages of streams sequentially to avoid 429 rate limits
+        const offsets = [0, 100, 200];
+        
+        for (const offset of offsets) {
+            try {
+                const response = await client.request<KickApiResponse<KickApiLivestream[]>>(
+                    `/livestreams?limit=100&offset=${offset}&sort=viewer_count`
+                );
+                
+                const streams = response.data || [];
+                for (const s of streams) {
+                    if (s.category && !categoryMap.has(s.category.id)) {
+                        categoryMap.set(s.category.id, {
+                            id: s.category.id.toString(),
+                            platform: 'kick',
+                            name: s.category.name,
+                            boxArtUrl: s.category.thumbnail || '',
+                            viewerCount: 0
+                        });
+                    }
+                    // Aggregate viewer counts
+                    if (s.category && categoryMap.has(s.category.id)) {
+                        const cat = categoryMap.get(s.category.id)!;
+                        cat.viewerCount = (cat.viewerCount || 0) + s.viewer_count;
+                    }
+                }
+                
+                // Add delay between requests to respect rate limits
+                if (offset < offsets[offsets.length - 1]) {
+                    await delay(300);
+                }
+            } catch (err) {
+                console.warn(`Failed to fetch Kick streams at offset ${offset}:`, err);
+                // Continue with next offset
+            }
+        }
+
+    } catch (error) {
+        console.warn('Failed to fetch all Kick categories via official API, falling back to public:', error);
+        // Fallback to public API
+        const publicResult = await getPublicTopCategories();
+        return publicResult.data;
+    }
+
+    // If official API returned nothing, try fallback
+    if (categoryMap.size === 0) {
+        console.warn('Official API returned no categories, using public fallback');
+        const publicResult = await getPublicTopCategories();
+        return publicResult.data;
+    }
+
+    return Array.from(categoryMap.values())
+        .sort((a, b) => (b.viewerCount || 0) - (a.viewerCount || 0));
 }

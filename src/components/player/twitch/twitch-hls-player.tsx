@@ -353,16 +353,43 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
 
                 if (data.fatal) {
                     switch (data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            console.debug('[TwitchHLS] Stream ended or unavailable');
-                            onErrorRef.current?.({
-                                code: 'STREAM_OFFLINE',
-                                message: 'Stream offline or unavailable',
-                                fatal: true,
-                                originalError: data
-                            });
-                            hls?.destroy();
+                        case Hls.ErrorTypes.NETWORK_ERROR: {
+                            // For transient network errors (SSL handshake failures, connection resets),
+                            // attempt recovery by restarting the stream load before giving up.
+                            // This handles CDN edge server rotation and momentary connectivity issues.
+                            const now = Date.now();
+                            const lastAttempt = lastRecoveryAttemptRef.current;
+                            
+                            // Allow one recovery attempt every 8 seconds
+                            if (!lastAttempt || now - lastAttempt > 8000) {
+                                console.debug('[TwitchHLS] Attempting network error recovery (startLoad)');
+                                lastRecoveryAttemptRef.current = now;
+                                try {
+                                    hls?.startLoad(-1);
+                                } catch {
+                                    // HLS may be in invalid state, fall through to destroy
+                                    console.debug('[TwitchHLS] Recovery failed, stream unavailable');
+                                    onErrorRef.current?.({
+                                        code: 'STREAM_OFFLINE',
+                                        message: 'Stream offline or unavailable',
+                                        fatal: true,
+                                        originalError: data
+                                    });
+                                    hls?.destroy();
+                                }
+                            } else {
+                                // Already tried recovery recently, stream is likely truly offline
+                                console.debug('[TwitchHLS] Stream ended or unavailable (recovery exhausted)');
+                                onErrorRef.current?.({
+                                    code: 'STREAM_OFFLINE',
+                                    message: 'Stream offline or unavailable',
+                                    fatal: true,
+                                    originalError: data
+                                });
+                                hls?.destroy();
+                            }
                             break;
+                        }
                         case Hls.ErrorTypes.MEDIA_ERROR: {
                             const now = Date.now();
                             const lastAttempt = lastRecoveryAttemptRef.current;

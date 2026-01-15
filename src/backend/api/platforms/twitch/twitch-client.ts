@@ -130,13 +130,21 @@ class TwitchClient extends TwitchRequestor {
 
     // ========== Categories/Games ==========
 
-    /**
+/**
      * Get top categories/games
      */
     async getTopCategories(
         options: PaginationOptions = {}
     ): Promise<PaginatedResult<UnifiedCategory>> {
         return CategoryEndpoints.getTopCategories(this, options);
+    }
+
+    /**
+     * Get ALL top categories with automatic pagination (for browse page)
+     * Fetches all pages until exhausted - no artificial limits
+     */
+    async getAllTopCategories(): Promise<UnifiedCategory[]> {
+        return CategoryEndpoints.getAllTopCategories(this);
     }
 
     /**

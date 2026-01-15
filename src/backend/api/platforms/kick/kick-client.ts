@@ -619,12 +619,20 @@ class KickClient implements KickRequestor {
         return CategoryEndpoints.searchCategories(this, query, options);
     }
 
-    /**
+/**
      * Get category by ID
      * https://docs.kick.com/apis/categories - GET /public/v1/categories/:category_id
      */
     async getCategoryById(id: string): Promise<UnifiedCategory | null> {
         return CategoryEndpoints.getCategoryById(this, id);
+    }
+
+    /**
+     * Get ALL categories using multiple strategies
+     * Fetches from streams + search to maximize category discovery
+     */
+    async getAllCategories(): Promise<UnifiedCategory[]> {
+        return CategoryEndpoints.getAllCategories(this);
     }
 
     // ========== Follows Endpoints ==========

@@ -76,6 +76,84 @@ class TwitchManifestProxyService {
     };
 
     /**
+     * Fetch with automatic retry for transient network errors.
+     * Handles SSL handshake failures, connection resets, and timeouts
+     * that commonly occur with Twitch CDN edge servers.
+     */
+    private async fetchWithRetry(
+        url: string,
+        options?: Parameters<typeof fetch>[1],
+        maxRetries: number = 3,
+        baseDelay: number = 500
+    ): Promise<Response> {
+        let lastError: Error | null = null;
+
+        for (let attempt = 0; attempt <= maxRetries; attempt++) {
+            try {
+                const response = await fetch(url, options);
+                return response;
+            } catch (error) {
+                lastError = error as Error;
+                const isRetryable = this.isRetryableError(error);
+
+                if (!isRetryable || attempt === maxRetries) {
+                    throw error;
+                }
+
+                const delay = baseDelay * Math.pow(2, attempt);
+                console.debug(
+                    `[ManifestProxy] Fetch failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`,
+                    (error as Error).message
+                );
+                await new Promise((resolve) => setTimeout(resolve, delay));
+            }
+        }
+
+        throw lastError || new Error('Request failed after retries');
+    }
+
+    /**
+     * Check if an error is retryable (transient network issues)
+     */
+    private isRetryableError(error: unknown): boolean {
+        if (error instanceof Error) {
+            // Check cause first (Node.js fetch wraps real error in cause)
+            const cause = (error as Error & { cause?: { code?: string } }).cause;
+            const code = cause?.code || (error as Error & { code?: string }).code;
+
+            // Network-level errors that are typically transient
+            const retryableCodes = [
+                'ECONNRESET', // Connection reset (TLS handshake failure)
+                'ETIMEDOUT', // Connection timed out
+                'ENOTFOUND', // DNS lookup failed (transient)
+                'ECONNREFUSED', // Connection refused
+                'ENETUNREACH', // Network unreachable
+                'EHOSTUNREACH', // Host unreachable
+                'EPIPE', // Broken pipe
+                'EAI_AGAIN', // DNS temporary failure
+            ];
+
+            if (code && retryableCodes.includes(code)) {
+                return true;
+            }
+
+            // Check error message for fetch failures
+            const message = error.message.toLowerCase();
+            if (
+                message.includes('fetch failed') ||
+                message.includes('network') ||
+                message.includes('socket') ||
+                message.includes('ssl') ||
+                message.includes('handshake') ||
+                message.includes('disconnected')
+            ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Clear stream info and cleanup resources for a channel
      * Called when stream processing completes or on error
      */
@@ -127,7 +205,8 @@ class TwitchManifestProxyService {
                 }
 
                 // Use Promise chain instead of async/await to satisfy Electron's callback contract
-                fetch(details.url)
+                // fetchWithRetry handles transient SSL/network errors with exponential backoff
+                this.fetchWithRetry(details.url)
                     .then((response) => {
                         if (!response.ok) {
                             callback({});
@@ -418,14 +497,14 @@ class TwitchManifestProxyService {
                 if (!token) continue;
 
                 const usherUrl = this.buildUsherUrl(streamInfo, token);
-                const encodingsResponse = await fetch(usherUrl);
+                const encodingsResponse = await this.fetchWithRetry(usherUrl);
                 if (!encodingsResponse.ok) continue;
 
                 const encodingsM3u8 = await encodingsResponse.text();
                 const streamUrl = this.getMatchingStreamUrl(encodingsM3u8, originalUrl, streamInfo);
                 if (!streamUrl) continue;
 
-                const mediaResponse = await fetch(streamUrl);
+                const mediaResponse = await this.fetchWithRetry(streamUrl);
                 if (!mediaResponse.ok) continue;
 
                 const mediaText = await mediaResponse.text();
@@ -495,7 +574,7 @@ class TwitchManifestProxyService {
         };
 
         try {
-            const response = await fetch('https://gql.twitch.tv/gql', {
+            const response = await this.fetchWithRetry('https://gql.twitch.tv/gql', {
                 method: 'POST',
                 headers: {
                     'Client-ID': GQL_CLIENT_ID,
