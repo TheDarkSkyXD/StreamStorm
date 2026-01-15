@@ -206,6 +206,7 @@ export async function getPublicChannel(slug: string): Promise<UnifiedChannel | n
             isLive: data.livestream !== null,
             isVerified: data.verified?.id !== undefined || false,
             isPartner: false, // Can't easily tell from this endpoint
+            followerCount: data.followers_count ?? data.followersCount ?? undefined,
             categoryId,
             categoryName,
             lastStreamTitle,

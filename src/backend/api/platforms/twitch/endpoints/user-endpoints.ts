@@ -144,3 +144,56 @@ export async function getAllFollowedChannels(
 
     return allChannels;
 }
+
+/**
+ * Get follower count for a broadcaster
+ * Uses the /channels/followers endpoint which returns total count
+ */
+export async function getFollowerCount(
+    client: TwitchRequestor,
+    broadcasterId: string
+): Promise<number> {
+    try {
+        const data = await client.request<TwitchApiResponse<unknown>>( 
+            `/channels/followers?broadcaster_id=${broadcasterId}&first=1`
+        );
+        return data.total ?? 0;
+    } catch (error) {
+        console.warn(`Failed to get follower count for ${broadcasterId}:`, error);
+        return 0;
+    }
+}
+
+/**
+ * Get follower counts for multiple broadcasters (batch)
+ * Returns a Map of broadcasterId -> followerCount
+ */
+export async function getFollowerCounts(
+    client: TwitchRequestor,
+    broadcasterIds: string[]
+): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    
+    // Twitch API doesn't support batch follower count requests
+    // We need to make individual requests, but we can do them in parallel
+    // Limit concurrent requests to avoid rate limiting
+    const concurrencyLimit = 10;
+    
+    for (let i = 0; i < broadcasterIds.length; i += concurrencyLimit) {
+        const batch = broadcasterIds.slice(i, i + concurrencyLimit);
+        const results = await Promise.allSettled(
+            batch.map(async (id) => {
+                const count = await getFollowerCount(client, id);
+                return { id, count };
+            })
+        );
+        
+        for (const result of results) {
+            if (result.status === 'fulfilled') {
+                counts.set(result.value.id, result.value.count);
+            }
+        }
+    }
+    
+    return counts;
+}
