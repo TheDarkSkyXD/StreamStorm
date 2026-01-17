@@ -75,6 +75,7 @@
     "dotenv": "^17.2.3",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^11.0.2",
+    "electron-updater": "^6.7.3",
     "framer-motion": "^12.23.26",
     "hls.js": "^1.6.15",
     "lucide-react": "^0.562.0",

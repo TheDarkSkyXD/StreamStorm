@@ -1,8 +1,10 @@
-import { AlertCircle, ShieldCheck } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Download, RefreshCw, Rocket, ShieldCheck } from 'lucide-react';
 import { useState } from 'react';
 
 import { AccountConnect } from '@/components/auth';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -11,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useAppVersion } from '@/hooks';
+import { useAppVersion, useUpdater } from '@/hooks';
 import { useAuthError } from '@/hooks/useAuth';
 import { useAuthStore } from '@/store/auth-store';
 import { useAdBlockStore } from '@/store/adblock-store';
@@ -29,6 +31,24 @@ export function SettingsPage() {
   // Ad-block state
   const enableAdBlock = useAdBlockStore(state => state.enableAdBlock);
   const setEnableAdBlock = useAdBlockStore(state => state.setEnableAdBlock);
+
+  // Updater state
+  const {
+    status,
+    updateInfo,
+    progress,
+    error: updateError,
+    allowPrerelease,
+    isChecking,
+    isDownloading,
+    isUpdateAvailable,
+    isUpdateDownloaded,
+    hasError,
+    checkForUpdates,
+    downloadUpdate,
+    installUpdate,
+    setAllowPrerelease,
+  } = useUpdater();
 
   const [saved, setSaved] = useState(false);
 
@@ -162,7 +182,145 @@ export function SettingsPage() {
           </CardContent>
         </Card>
 
+        {/* Updates */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RefreshCw className="w-5 h-5 text-blue-400" />
+              Updates
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {/* Pre-release Toggle */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium">Allow Pre-release Updates</p>
+                <p className="text-sm text-[var(--color-foreground-secondary)]">
+                  Receive beta and preview versions before stable release
+                </p>
+              </div>
+              <Switch
+                checked={allowPrerelease}
+                onCheckedChange={setAllowPrerelease}
+                className="data-[state=checked]:!bg-blue-500 data-[state=checked]:!border-blue-500"
+              />
+            </div>
 
+            {/* Check for Updates Button */}
+            <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]">
+              <div>
+                <p className="font-medium">Check for Updates</p>
+                <p className="text-sm text-[var(--color-foreground-secondary)]">
+                  {status === 'idle' && 'Click to check for available updates'}
+                  {status === 'checking' && 'Checking for updates...'}
+                  {status === 'not-available' && 'You are on the latest version'}
+                  {status === 'available' && `Version ${updateInfo?.version} is available`}
+                  {status === 'downloading' && 'Downloading update...'}
+                  {status === 'downloaded' && 'Update ready to install'}
+                  {status === 'error' && 'Failed to check for updates'}
+                </p>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={checkForUpdates}
+                disabled={isChecking || isDownloading}
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${isChecking ? 'animate-spin' : ''}`} />
+                Check Now
+              </Button>
+            </div>
+
+            {/* Error State */}
+            {hasError && updateError && (
+              <div className="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
+                <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-sm">{updateError}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Update Available Info */}
+            {isUpdateAvailable && updateInfo && (
+              <div className="space-y-3 pt-2 border-t border-[var(--color-border)]">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium">
+                      {updateInfo.releaseName || `Version ${updateInfo.version}`}
+                    </p>
+                    {updateInfo.releaseDate && (
+                      <p className="text-sm text-[var(--color-foreground-secondary)]">
+                        Released {new Date(updateInfo.releaseDate).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                  <Button
+                    variant="default"
+                    size="sm"
+                    onClick={downloadUpdate}
+                    disabled={isDownloading}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    Download
+                  </Button>
+                </div>
+
+                {/* Release Notes */}
+                {updateInfo.releaseNotes && (
+                  <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background-secondary)]">
+                    <div className="px-3 py-2 border-b border-[var(--color-border)]">
+                      <p className="text-sm font-medium text-[var(--color-foreground-secondary)]">
+                        Release Notes
+                      </p>
+                    </div>
+                    <div className="px-3 py-2 max-h-40 overflow-y-auto">
+                      <pre className="text-sm text-[var(--color-foreground-secondary)] whitespace-pre-wrap font-sans">
+                        {updateInfo.releaseNotes}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Download Progress */}
+            {isDownloading && progress && (
+              <div className="space-y-2 pt-2 border-t border-[var(--color-border)]">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Downloading update...</p>
+                  <p className="text-sm text-[var(--color-foreground-secondary)]">
+                    {Math.round(progress.percent)}%
+                  </p>
+                </div>
+                <Progress value={progress.percent} className="h-2" />
+                <p className="text-xs text-[var(--color-foreground-muted)]">
+                  {(progress.transferred / 1024 / 1024).toFixed(1)} MB / {(progress.total / 1024 / 1024).toFixed(1)} MB
+                </p>
+              </div>
+            )}
+
+            {/* Update Downloaded - Install Button */}
+            {isUpdateDownloaded && (
+              <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border)]">
+                <div>
+                  <p className="font-medium text-green-400">Update Ready</p>
+                  <p className="text-sm text-[var(--color-foreground-secondary)]">
+                    Restart the app to apply the update
+                  </p>
+                </div>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={installUpdate}
+                >
+                  <Rocket className="w-4 h-4 mr-2" />
+                  Install & Restart
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         {/* About */}
         <Card>

@@ -146,6 +146,16 @@ export const IPC_CHANNELS = {
   ADBLOCK_PATTERNS_REFRESH: 'adblock:patterns-refresh',
   ADBLOCK_PATTERNS_GET_STATS: 'adblock:patterns-get-stats',
   ADBLOCK_PATTERNS_SET_AUTO_UPDATE: 'adblock:patterns-set-auto-update',
+
+  // ========== App Auto-Update ==========
+  UPDATE_CHECK: 'update:check',
+  UPDATE_DOWNLOAD: 'update:download',
+  UPDATE_INSTALL: 'update:install',
+  UPDATE_GET_STATUS: 'update:get-status',
+  UPDATE_SET_ALLOW_PRERELEASE: 'update:set-allow-prerelease',
+  UPDATE_GET_SETTINGS: 'update:get-settings',
+  UPDATE_ON_STATUS_CHANGE: 'update:on-status-change',
+  UPDATE_ON_PROGRESS: 'update:on-progress',
 } as const;
 
 // Type for channel names
@@ -207,4 +217,41 @@ export interface AuthStatus {
     isExpired: boolean;
   };
   isGuest: boolean;
+}
+
+// ========== App Auto-Update Types ==========
+
+export type UpdateStatus = 
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'not-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error';
+
+export interface UpdateInfo {
+  version: string;
+  releaseDate: string;
+  releaseNotes: string | null;
+  releaseName: string | null;
+}
+
+export interface UpdateProgress {
+  bytesPerSecond: number;
+  percent: number;
+  transferred: number;
+  total: number;
+}
+
+export interface UpdateState {
+  status: UpdateStatus;
+  updateInfo: UpdateInfo | null;
+  progress: UpdateProgress | null;
+  error: string | null;
+  allowPrerelease: boolean;
+}
+
+export interface UpdateSettings {
+  allowPrerelease: boolean;
 }

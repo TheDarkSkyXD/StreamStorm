@@ -23,3 +23,5 @@ export {
   useUserInfo,
 } from './useAuth';
 
+export { useUpdater, useUpdateSettings } from './useUpdater';
+

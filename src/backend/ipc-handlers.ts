@@ -16,6 +16,7 @@ import { registerSearchHandlers } from './ipc/handlers/search-handlers';
 import { registerChannelHandlers } from './ipc/handlers/channel-handlers';
 import { registerVideoHandlers } from './ipc/handlers/video-handlers';
 import { registerAdBlockHandlers } from './ipc/handlers/adblock-handlers';
+import { registerUpdateHandlers } from './ipc/handlers/update-handlers';
 
 export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   // Register all handlers
@@ -28,6 +29,7 @@ export function registerIpcHandlers(mainWindow: BrowserWindow): void {
   registerChannelHandlers();
   registerVideoHandlers();
   registerAdBlockHandlers(mainWindow);
+  registerUpdateHandlers(mainWindow);
 
   console.debug('✅ All IPC handlers registered successfully');
 }
