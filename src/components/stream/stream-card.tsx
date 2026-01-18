@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProxiedImage } from '@/components/ui/proxied-image';
@@ -5,15 +6,51 @@ import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
 import { UnifiedStream } from '@/backend/api/unified/platform-types';
 import { cn, formatViewerCount } from '@/lib/utils';
 import { PlatformAvatar } from '@/components/ui/platform-avatar';
+import { useQueryClient } from '@tanstack/react-query';
+import { CHANNEL_KEYS } from '@/hooks/queries/useChannels';
+import { STREAM_KEYS } from '@/hooks/queries/useStreams';
 
 interface StreamCardProps {
     stream: UnifiedStream;
     showCategory?: boolean;
 }
 
-export function StreamCard({ stream, showCategory = true }: StreamCardProps) {
+// Memoize StreamCard to prevent re-renders when grid updates but individual stream hasn't changed
+export const StreamCard = React.memo(({ stream, showCategory = true }: StreamCardProps) => {
     const PlatformIcon = stream.platform === 'twitch' ? TwitchIcon : KickIcon;
     const platformColor = stream.platform === 'twitch' ? 'text-[#9146FF]' : 'text-[#53FC18]';
+
+    const queryClient = useQueryClient();
+
+    // Prefetch channel and stream data on hover for instant navigation
+    const handleMouseEnter = () => {
+        // Prefetch channel data
+        queryClient.prefetchQuery({
+            queryKey: CHANNEL_KEYS.byUsername(stream.channelName, stream.platform),
+            queryFn: async () => {
+                const response = await window.electronAPI.channels.getByUsername({
+                    username: stream.channelName,
+                    platform: stream.platform,
+                });
+                if (response.error) throw new Error(response.error);
+                return response.data;
+            },
+            staleTime: 1000 * 60 * 5, // 5 minutes
+        });
+
+        // Prefetch stream data
+        queryClient.prefetchQuery({
+            queryKey: STREAM_KEYS.byChannel(stream.channelName, stream.platform),
+            queryFn: async () => {
+                const response = await window.electronAPI.streams.getByChannel({
+                    username: stream.channelName,
+                    platform: stream.platform,
+                });
+                if (response.error) throw new Error(response.error);
+                return response.data;
+            },
+        });
+    };
 
     return (
         <Link
@@ -21,6 +58,7 @@ export function StreamCard({ stream, showCategory = true }: StreamCardProps) {
             params={{ platform: stream.platform, channel: stream.channelName }}
             search={{ tab: 'videos' }}
             className="block group"
+            onMouseEnter={handleMouseEnter}
         >
             <Card className="h-full border-transparent bg-transparent hover:bg-[var(--color-background-secondary)] transition-colors duration-200 overflow-hidden group-hover:ring-1 group-hover:ring-[var(--color-border)]">
                 {/* Thumbnail Section */}
@@ -135,6 +173,6 @@ export function StreamCard({ stream, showCategory = true }: StreamCardProps) {
             </Card>
         </Link>
     );
-}
+});
 
-
+StreamCard.displayName = 'StreamCard';

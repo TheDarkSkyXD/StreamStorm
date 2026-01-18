@@ -7,7 +7,7 @@ import {
     PaginatedResult,
     KICK_LEGACY_API_V1_BASE
 } from '../kick-types';
-import { transformKickLivestream } from '../kick-transformers';
+import { transformKickLivestream, normalizeKickDate } from '../kick-transformers';
 import { getUsersById } from './user-endpoints';
 import { getChannel, getPublicChannel } from './channel-endpoints';
 
@@ -193,7 +193,7 @@ export async function getPublicStreamBySlug(slug: string): Promise<UnifiedStream
                 viewerCount: livestream.viewer_count ?? livestream.viewers ?? 0,
                 thumbnailUrl: livestream.thumbnail?.url || '',
                 isLive: true,
-                startedAt: livestream.created_at,
+                startedAt: normalizeKickDate(livestream.created_at),
                 language: livestream.language || 'en',
                 tags: (livestream.custom_tags && livestream.custom_tags.length > 0) ? livestream.custom_tags : (livestream.tags || []),
                 isMature: livestream.is_mature ?? false,
@@ -489,7 +489,7 @@ export async function getPublicTopStreams(
                 viewerCount: item.viewer_count ?? item.viewers ?? 0,
                 thumbnailUrl: thumbnailUrl,
                 isLive: true,
-                startedAt: item.created_at || item.start_time || new Date().toISOString(),
+                startedAt: normalizeKickDate(item.created_at || item.start_time),
                 language: item.language || language,
                 tags: (item.custom_tags && item.custom_tags.length > 0) ? item.custom_tags : (item.tags || []),
                 isMature: item.is_mature ?? item.has_mature_content ?? false,

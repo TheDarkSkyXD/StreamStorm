@@ -98,9 +98,9 @@ export function VolumeControl({ volume, muted, onVolumeChange, onMuteToggle, cla
                     <Tooltip delayDuration={0} open={isDragging || undefined}>
                         <TooltipTrigger asChild>
                             <div
-                                className="absolute w-3 h-3 bg-white rounded-full shadow-md cursor-pointer"
+                                className="absolute w-4 h-4 bg-white rounded-full shadow-md cursor-pointer"
                                 style={{
-                                    left: `calc(${displayVolume / 100} * (100% - 12px))`,
+                                    left: `calc(${displayVolume / 100} * (100% - 16px))`,
                                 }}
                             />
                         </TooltipTrigger>

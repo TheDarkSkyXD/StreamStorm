@@ -16,7 +16,9 @@
     "check": "npm run typecheck && npm run lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "bundle:analyze": "cross-env ANALYZE=true npm run package",
+    "build:prod": "cross-env NODE_ENV=production npm run package"
   },
   "license": "MIT",
   "devDependencies": {
@@ -43,6 +45,7 @@
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/coverage-v8": "^4.0.16",
     "autoprefixer": "^10.4.23",
+    "cross-env": "^10.1.0",
     "electron": "39.2.7",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
@@ -51,9 +54,11 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "postcss": "^8.5.6",
     "prettier": "^3.7.4",
+    "rollup-plugin-visualizer": "^6.0.5",
     "tailwindcss": "^4.1.18",
     "typescript": "~5.6.3",
     "vite": "^7.3.0",
+    "vite-plugin-compression": "^0.5.1",
     "vitest": "^4.0.16"
   },
   "dependencies": {
@@ -76,7 +81,6 @@
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^11.0.2",
     "electron-updater": "^6.7.3",
-    "framer-motion": "^12.23.26",
     "hls.js": "^1.6.15",
     "lucide-react": "^0.562.0",
     "react": "^19.2.3",

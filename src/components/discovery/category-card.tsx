@@ -1,15 +1,36 @@
-
+import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProxiedImage } from '@/components/ui/proxied-image';
 import { UnifiedCategory } from '@/backend/api/unified/platform-types';
 import { formatViewerCount } from '@/lib/utils';
+import { useQueryClient } from '@tanstack/react-query';
+import { STREAM_KEYS } from '@/hooks/queries/useStreams';
 
 interface CategoryCardProps {
     category: UnifiedCategory;
 }
 
-export function CategoryCard({ category }: CategoryCardProps) {
+// Memoize CategoryCard to prevent re-renders when grid updates but individual category hasn't changed
+export const CategoryCard = React.memo(({ category }: CategoryCardProps) => {
+    const queryClient = useQueryClient();
+
+    // Prefetch category streams on hover for instant navigation
+    const handleMouseEnter = () => {
+        queryClient.prefetchQuery({
+            queryKey: STREAM_KEYS.byCategory(category.id, category.platform),
+            queryFn: async () => {
+                const response = await window.electronAPI.streams.getByCategory({
+                    categoryId: category.id,
+                    platform: category.platform,
+                    limit: 20,
+                });
+                if (response.error) throw new Error(response.error as string);
+                return response.data;
+            },
+        });
+    };
+
     return (
         <Link
             to="/categories/$platform/$categoryId"
@@ -18,6 +39,7 @@ export function CategoryCard({ category }: CategoryCardProps) {
                 categoryId: category.id
             }}
             className="block h-full"
+            onMouseEnter={handleMouseEnter}
         >
             <Card className="overflow-hidden cursor-pointer hover:ring-2 hover:ring-white transition-all h-full group bg-[var(--color-background-secondary)] border-transparent">
                 <div className="aspect-[3/4] bg-[var(--color-background-tertiary)] relative overflow-hidden">
@@ -41,4 +63,6 @@ export function CategoryCard({ category }: CategoryCardProps) {
             </Card>
         </Link>
     );
-}
+});
+
+CategoryCard.displayName = 'CategoryCard';

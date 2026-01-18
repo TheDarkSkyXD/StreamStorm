@@ -58,6 +58,27 @@ export function transformKickChannel(channel: KickApiChannel): UnifiedChannel {
 }
 
 /**
+ * Helper to ensure Kick date strings are properly formatted as UTC ISO strings
+ * Kick API sometimes returns "YYYY-MM-DD HH:MM:SS" (local/UTC ambiguous) or ISO without Z
+ * @returns Normalized ISO string with 'Z' suffix, or null if dateStr is missing/falsy
+ */
+export function normalizeKickDate(dateStr: string | null | undefined): string | null {
+    if (!dateStr) return null;
+
+    // Handle "YYYY-MM-DD HH:MM:SS" format (replace space with T, append Z)
+    if (dateStr.includes(' ') && !dateStr.includes('T')) {
+        return dateStr.replace(' ', 'T') + 'Z';
+    }
+
+    // Handle ISO-like dates missing Timezone info (append Z)
+    if (dateStr.includes('T') && !dateStr.endsWith('Z') && !dateStr.includes('+')) {
+        return dateStr + 'Z';
+    }
+
+    return dateStr;
+}
+
+/**
  * Transform official Kick API livestream to unified stream
  * Endpoint: GET /public/v1/livestreams
  */
@@ -73,7 +94,7 @@ export function transformKickLivestream(livestream: KickApiLivestream): UnifiedS
         viewerCount: livestream.viewer_count,
         thumbnailUrl: livestream.thumbnail || '',
         isLive: true,
-        startedAt: livestream.started_at,
+        startedAt: normalizeKickDate(livestream.started_at),
         language: livestream.language,
         tags: (livestream.custom_tags && livestream.custom_tags.length > 0) ? livestream.custom_tags : (livestream.tags || []),
         isMature: livestream.has_mature_content,

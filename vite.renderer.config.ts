@@ -1,5 +1,7 @@
 import { defineConfig, type UserConfig } from 'vite';
 import path from 'path';
+import viteCompression from 'vite-plugin-compression';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 // https://vitejs.dev/config
 export default defineConfig(async (): Promise<UserConfig> => {
@@ -8,7 +10,23 @@ export default defineConfig(async (): Promise<UserConfig> => {
   const isProduction = process.env.NODE_ENV === 'production';
 
   return {
-    plugins: [react()],
+    plugins: [
+      react(),
+      // Brotli compression for production builds - reduces transfer size by 20-30%
+      ...(isProduction ? [viteCompression({
+        algorithm: 'brotliCompress',
+        ext: '.br',
+        threshold: 10240, // Only compress files > 10KB
+        deleteOriginFile: false,
+      })] : []),
+      // Bundle analyzer - run with ANALYZE=true npm run package
+      ...(process.env.ANALYZE ? [visualizer({
+        open: true,
+        filename: './dist/stats.html',
+        gzipSize: true,
+        brotliSize: true,
+      })] : []),
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, './src'),
@@ -49,10 +67,16 @@ export default defineConfig(async (): Promise<UserConfig> => {
         output: {
           // Manual chunk splitting for better caching
           manualChunks: {
-            // Vendor chunks for stable dependencies
-            'vendor-react': ['react', 'react-dom'],
-            'vendor-router': ['@tanstack/react-router'],
-            'vendor-query': ['@tanstack/react-query'],
+            // Core React (rarely changes) - group with Zustand for state management
+            'vendor-core': ['react', 'react-dom', 'zustand'],
+
+            // TanStack packages (routing + data fetching, change together)
+            'vendor-tanstack': ['@tanstack/react-router', '@tanstack/react-query'],
+
+            // Player library (large, could be lazy-loaded on stream page)
+            'vendor-player': ['hls.js'],
+
+            // UI component library (moderate size, stable)
             'vendor-ui': [
               '@radix-ui/react-dialog',
               '@radix-ui/react-tooltip',
@@ -62,18 +86,12 @@ export default defineConfig(async (): Promise<UserConfig> => {
               '@radix-ui/react-progress',
               '@radix-ui/react-slot',
             ],
-            'vendor-motion': ['framer-motion'],
-            'vendor-hls': ['hls.js'],
+
+            // Drag and drop (only used in multistream)
             'vendor-dnd': [
               '@dnd-kit/core',
               '@dnd-kit/sortable',
               '@dnd-kit/utilities',
-            ],
-            // Utility libraries chunk
-            'vendor-utils': [
-              'clsx',
-              'tailwind-merge',
-              'class-variance-authority',
             ],
           },
           // Optimize chunk file names for caching

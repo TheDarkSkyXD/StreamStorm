@@ -27,7 +27,7 @@ export interface KickLivePlayerProps {
     channelName?: string;
     title?: string;
     thumbnail?: string;
-    startedAt?: string; // Stream start time for uptime calculation
+    startedAt?: string | null; // Stream start time for uptime calculation, or null if unknown
 }
 
 export function KickLivePlayer(props: KickLivePlayerProps) {
