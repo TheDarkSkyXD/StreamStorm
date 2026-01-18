@@ -81,7 +81,7 @@ export function SettingsMenu({
                             toggleOpen();
                         }}
                     >
-                        <Settings className={`w-5 h-5 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`} />
+                        <Settings className={`w-6 h-6 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`} />
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent container={container}>

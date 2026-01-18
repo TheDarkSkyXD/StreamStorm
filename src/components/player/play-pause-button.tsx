@@ -24,9 +24,9 @@ export function PlayPauseButton({ isPlaying, isLoading, onToggle, className }: P
                     }}
                 >
                     {isPlaying ? (
-                        <Pause className="w-5 h-5 fill-current" />
+                        <Pause className="w-6 h-6 fill-current" />
                     ) : (
-                        <Play className="w-5 h-5 fill-current" />
+                        <Play className="w-6 h-6 fill-current" />
                     )}
                 </Button>
             </TooltipTrigger>

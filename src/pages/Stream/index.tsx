@@ -25,7 +25,8 @@ export function StreamPage() {
     isLoading: isPlaybackLoading,
     reload: reloadPlayback,
     isUsingProxy,
-    retryWithoutProxy
+    retryWithoutProxy,
+    reloadAttempts
   } = useStreamPlayback(platform as Platform, channelName);
 
   // Real data fetching
@@ -79,18 +80,25 @@ export function StreamPage() {
     // Handle errors that suggest we need a fresh playback URL
     // TOKEN_EXPIRED: Playback token expired, need new URL
     // NO_FRAGMENTS: No video data received after manifest - likely stale URL or offline
-    if (error.code === 'TOKEN_EXPIRED' || error.code === 'NO_FRAGMENTS') {
-      console.debug(`[StreamPage] ${error.code} - attempting automatic refresh`);
-      setProxyFallbackNotice(
-        error.code === 'TOKEN_EXPIRED'
-          ? 'Playback session expired. Refreshing stream...'
-          : 'Stream data unavailable. Refreshing...'
-      );
-      reloadPlayback(); // Fetch fresh playback URL
-      // Auto-hide notification after 5 seconds
-      if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
-      fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 5000);
-      return; // Don't show error, let refresh attempt
+    // STREAM_OFFLINE with shouldRefresh: Stale URL (404/403) but API says live
+    if (error.shouldRefresh || error.code === 'TOKEN_EXPIRED' || error.code === 'NO_FRAGMENTS') {
+      // Check if we haven't hit the max retries yet (3)
+      if (reloadAttempts < 3) {
+        console.debug(`[StreamPage] ${error.code} - attempting automatic refresh (${reloadAttempts + 1}/3)`);
+        setProxyFallbackNotice(
+          error.code === 'TOKEN_EXPIRED'
+            ? 'Playback session expired. Refreshing stream...'
+            : 'Stream unavailable. Refreshing connection...'
+        );
+        reloadPlayback(); // Fetch fresh playback URL
+
+        // Auto-hide notification after 5 seconds
+        if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+        fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 5000);
+        return; // Don't show error, let refresh attempt
+      } else {
+        console.debug(`[StreamPage] Max reload attempts reached for ${error.code}. Showing error.`);
+      }
     }
 
     // PROXY_ERROR is specific to proxy server failures (500 errors)
@@ -120,7 +128,7 @@ export function StreamPage() {
     // Exit theater mode when stream goes offline for better offline screen visibility
     setTheaterModeActive(false);
     setPlayerError(error);
-  }, [isUsingProxy, platform, triggerProxyFallback, setTheaterModeActive, reloadPlayback]);
+  }, [isUsingProxy, platform, triggerProxyFallback, setTheaterModeActive, reloadPlayback, reloadAttempts]);
 
   // Reset player error when playback changes
   useEffect(() => {

@@ -234,9 +234,9 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
 
     // Get volume icon
     const getVolumeIcon = () => {
-        if (muted || volume === 0) return <VolumeX className="w-5 h-5" />;
-        if (volume < 50) return <Volume1 className="w-5 h-5" />;
-        return <Volume2 className="w-5 h-5" />;
+        if (muted || volume === 0) return <VolumeX className="w-6 h-6" />;
+        if (volume < 50) return <Volume1 className="w-6 h-6" />;
+        return <Volume2 className="w-6 h-6" />;
     };
 
     return (
@@ -358,9 +358,9 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
                             onClick={toggleFullscreen}
                         >
                             {isFullscreen ? (
-                                <Minimize className="w-5 h-5" />
+                                <Minimize className="w-6 h-6" />
                             ) : (
-                                <Maximize className="w-5 h-5" />
+                                <Maximize className="w-6 h-6" />
                             )}
                         </button>
                     </div>

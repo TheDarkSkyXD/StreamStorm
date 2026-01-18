@@ -229,19 +229,79 @@ export async function getPublicStreamBySlug(slug: string): Promise<UnifiedStream
 
 /**
  * Get livestream by channel slug
+ * 
+ * ROBUST FIX: Uses public API first to avoid authenticated API identity mismatch bugs
  */
 export async function getStreamBySlug(client: KickRequestor, slug: string): Promise<UnifiedStream | null> {
-    // Try official API first (using App or User token)
+    const normalizedSlug = slug.toLowerCase().trim();
+
+    // STRATEGY: Use public API first as it's more reliable for single-channel lookups
+    // The authenticated API has known bugs with identity mismatches
+    try {
+        const publicStream = await getPublicStreamBySlug(slug);
+        if (publicStream) {
+            // Validate the returned stream matches what we requested
+            if (publicStream.channelName.toLowerCase() === normalizedSlug) {
+                return publicStream;
+            } else {
+                console.warn(
+                    `[Kick] Public stream API mismatch: requested "${slug}", got "${publicStream.channelName}". ` +
+                    `Trying authenticated API.`
+                );
+            }
+        }
+    } catch (e) {
+        console.debug(`Public stream API failed for ${slug}, trying authenticated API:`, e);
+    }
+
+    // Fallback to official API if public API fails or returns mismatched data
     try {
         const channel = await getChannel(client, slug);
+
+        // Validate channel matches requested slug
+        if (channel && channel.username.toLowerCase() !== normalizedSlug) {
+            console.warn(
+                `[Kick] Channel lookup mismatch: requested "${slug}", got "${channel.username}". ` +
+                `Rejecting to prevent identity confusion.`
+            );
+            return null;
+        }
+
         if (channel && channel.isLive) {
             // Need to get full stream data from livestreams endpoint
             try {
+                const channelIdNum = parseInt(channel.id);
+                if (isNaN(channelIdNum)) {
+                    console.warn(`[Kick] Invalid channel ID "${channel.id}" for stream ${slug}`);
+                    return null;
+                }
+
                 const response = await client.request<KickApiResponse<KickApiLivestream[]>>(
-                    `/livestreams?broadcaster_user_id=${channel.id}`
+                    `/livestreams?broadcaster_user_id=${channelIdNum}`
                 );
+
                 if (response.data && response.data.length > 0) {
-                    const stream = transformKickLivestream(response.data[0]);
+                    const apiStream = response.data[0];
+
+                    // CRITICAL: Validate the stream's broadcaster ID matches the channel ID we queried
+                    if (apiStream.broadcaster_user_id !== channelIdNum) {
+                        console.warn(
+                            `[Kick] Stream broadcaster ID mismatch: queried for ${channelIdNum}, ` +
+                            `got ${apiStream.broadcaster_user_id}. Rejecting to prevent identity confusion.`
+                        );
+                        return null;
+                    }
+
+                    const stream = transformKickLivestream(apiStream);
+
+                    // Final validation: ensure stream channel matches requested slug
+                    if (stream.channelName.toLowerCase() !== normalizedSlug) {
+                        console.warn(
+                            `[Kick] Stream channel name mismatch: requested "${slug}", ` +
+                            `got "${stream.channelName}". Rejecting.`
+                        );
+                        return null;
+                    }
 
                     // Use channel display name if available and better than what we have
                     if (channel.displayName && channel.displayName !== channel.username) {
@@ -251,33 +311,48 @@ export async function getStreamBySlug(client: KickRequestor, slug: string): Prom
                         stream.channelAvatar = channel.avatarUrl;
                     }
 
-                    // Enrich with user avatar and name from fresh user fetch (double check)
+                    // Enrich with user avatar and name from fresh user fetch (with defensive checks)
                     try {
-                        const users = await getUsersById(client, [parseInt(stream.channelId)]);
-                        if (users.length > 0) {
-                            if (users[0].profile_picture) {
-                                stream.channelAvatar = users[0].profile_picture;
-                            }
-                            if (users[0].name) {
-                                stream.channelDisplayName = users[0].name;
+                        const streamChannelIdNum = parseInt(stream.channelId);
+                        if (!isNaN(streamChannelIdNum)) {
+                            const users = await getUsersById(client, [streamChannelIdNum]);
+                            if (users.length > 0) {
+                                const user = users[0];
+
+                                // CRITICAL: Verify ID match to prevent incorrect user data
+                                if (user.user_id.toString() === stream.channelId) {
+                                    if (user.profile_picture) {
+                                        stream.channelAvatar = user.profile_picture;
+                                    }
+                                    if (user.name) {
+                                        stream.channelDisplayName = user.name;
+                                    }
+                                } else {
+                                    console.warn(
+                                        `[Kick] User ID mismatch for stream ${slug}: ` +
+                                        `fetched user ID ${user.user_id}, expected ${stream.channelId}. ` +
+                                        `Skipping user data enrichment.`
+                                    );
+                                }
                             }
                         }
                     } catch (e) {
-                        // Ignore user fetch errors
+                        console.debug(`Failed to enrich user info for stream ${slug}:`, e);
+                        // Not critical - stream data is still valid without user enrichment
                     }
 
                     return stream;
                 }
             } catch (error) {
-                console.error('Failed to fetch Kick stream details:', error);
+                console.warn(`Failed to fetch Kick stream details for ${slug}:`, error);
             }
         }
     } catch (e) {
-        console.warn('Official API lookup failed for stream, falling back to public:', e);
+        console.warn(`Authenticated stream API failed for ${slug}:`, e);
     }
 
-    // Fallback to public/legacy API if official fails or returns no live stream (maybe public API has better cache?)
-    return getPublicStreamBySlug(slug);
+    // All methods failed
+    return null;
 }
 
 /**
