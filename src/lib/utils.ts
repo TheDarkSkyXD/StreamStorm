@@ -89,7 +89,13 @@ export function normalizeCategoryName(name: string): string {
 export function formatUptime(startedAt: string | undefined | null): string {
   if (!startedAt) return '0:00:00';
 
-  const start = new Date(startedAt);
+  let start = new Date(startedAt);
+
+  // Robustness check: if invalid date, try parsing as UTC if it looks like YYYY-MM-DD HH:MM:SS
+  if (isNaN(start.getTime()) && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(startedAt)) {
+    start = new Date(startedAt.replace(' ', 'T') + 'Z');
+  }
+
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - start.getTime()) / 1000);
 

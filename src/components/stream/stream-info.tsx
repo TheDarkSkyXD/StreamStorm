@@ -27,6 +27,8 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
             return;
         }
 
+
+
         // Update uptime immediately
         setUptime(formatUptime(stream.startedAt));
 
