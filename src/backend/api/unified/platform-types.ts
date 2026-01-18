@@ -20,7 +20,7 @@ export interface UnifiedStream {
     viewerCount: number;
     thumbnailUrl: string;
     isLive: boolean;
-    startedAt: string; // ISO date string
+    startedAt: string | null; // ISO date string, or null if unknown
     language: string;
     tags: string[];
     isMature?: boolean;

@@ -60,9 +60,10 @@ export function transformKickChannel(channel: KickApiChannel): UnifiedChannel {
 /**
  * Helper to ensure Kick date strings are properly formatted as UTC ISO strings
  * Kick API sometimes returns "YYYY-MM-DD HH:MM:SS" (local/UTC ambiguous) or ISO without Z
+ * @returns Normalized ISO string with 'Z' suffix, or null if dateStr is missing/falsy
  */
-export function normalizeKickDate(dateStr: string | null | undefined): string {
-    if (!dateStr) return new Date().toISOString();
+export function normalizeKickDate(dateStr: string | null | undefined): string | null {
+    if (!dateStr) return null;
 
     // Handle "YYYY-MM-DD HH:MM:SS" format (replace space with T, append Z)
     if (dateStr.includes(' ') && !dateStr.includes('T')) {

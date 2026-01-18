@@ -96,6 +96,12 @@ export function formatUptime(startedAt: string | undefined | null): string {
     start = new Date(startedAt.replace(' ', 'T') + 'Z');
   }
 
+  // Final robustness check: if still invalid after UTC fallback, return safe default
+  if (isNaN(start.getTime())) {
+    console.warn(`[formatUptime] Unable to parse date: ${startedAt}`);
+    return '0:00:00';
+  }
+
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - start.getTime()) / 1000);
 
