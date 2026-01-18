@@ -115,6 +115,38 @@ function setupRequestInterceptors(): void {
       callback({ requestHeaders: modifiedHeaders });
     }
   );
+
+  // CSP modification for Twitch ad blocking (onHeadersReceived)
+  // Adds 'data:' to connect-src to allow blank video segment replacement
+  session.defaultSession.webRequest.onHeadersReceived(
+    { urls: ['*://*.twitch.tv/*', '*://*.ttvnw.net/*'] },
+    (details, callback) => {
+      const headers = { ...details.responseHeaders };
+
+      // Find and modify Content-Security-Policy header
+      const cspKey = Object.keys(headers).find(
+        key => key.toLowerCase() === 'content-security-policy'
+      );
+
+      if (cspKey && headers[cspKey]) {
+        const cspValues = headers[cspKey];
+        if (Array.isArray(cspValues)) {
+          headers[cspKey] = cspValues.map(csp => {
+            // Add 'data:' to connect-src if not already present
+            if (csp.includes('connect-src') && !csp.includes('data:')) {
+              return csp.replace(
+                /connect-src\s+([^;]+)/,
+                'connect-src $1 data: blob:'
+              );
+            }
+            return csp;
+          });
+        }
+      }
+
+      callback({ responseHeaders: headers });
+    }
+  );
 }
 
 // App lifecycle events
@@ -157,10 +189,10 @@ app.on('ready', async () => {
   setupRequestInterceptors();
 
   const mainWindow = windowManager.createMainWindow();
-  
+
   // Inject cosmetics into main window
   cosmeticInjectionService.injectIntoWindow(mainWindow);
-  
+
   registerIpcHandlers(mainWindow);
   console.debug('🌩️ StreamStorm main process started');
 });
