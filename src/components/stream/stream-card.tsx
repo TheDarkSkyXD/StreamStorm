@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProxiedImage } from '@/components/ui/proxied-image';
@@ -14,7 +15,8 @@ interface StreamCardProps {
     showCategory?: boolean;
 }
 
-export function StreamCard({ stream, showCategory = true }: StreamCardProps) {
+// Memoize StreamCard to prevent re-renders when grid updates but individual stream hasn't changed
+export const StreamCard = React.memo(({ stream, showCategory = true }: StreamCardProps) => {
     const PlatformIcon = stream.platform === 'twitch' ? TwitchIcon : KickIcon;
     const platformColor = stream.platform === 'twitch' ? 'text-[#9146FF]' : 'text-[#53FC18]';
 
@@ -171,6 +173,6 @@ export function StreamCard({ stream, showCategory = true }: StreamCardProps) {
             </Card>
         </Link>
     );
-}
+});
 
-
+StreamCard.displayName = 'StreamCard';

@@ -16,7 +16,9 @@
     "check": "npm run typecheck && npm run lint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "bundle:analyze": "cross-env ANALYZE=true npm run package",
+    "build:prod": "cross-env NODE_ENV=production npm run package"
   },
   "license": "MIT",
   "devDependencies": {
@@ -43,6 +45,7 @@
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/coverage-v8": "^4.0.16",
     "autoprefixer": "^10.4.23",
+    "cross-env": "^10.1.0",
     "electron": "39.2.7",
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",

@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProxiedImage } from '@/components/ui/proxied-image';
@@ -10,7 +11,8 @@ interface CategoryCardProps {
     category: UnifiedCategory;
 }
 
-export function CategoryCard({ category }: CategoryCardProps) {
+// Memoize CategoryCard to prevent re-renders when grid updates but individual category hasn't changed
+export const CategoryCard = React.memo(({ category }: CategoryCardProps) => {
     const queryClient = useQueryClient();
 
     // Prefetch category streams on hover for instant navigation
@@ -61,4 +63,6 @@ export function CategoryCard({ category }: CategoryCardProps) {
             </Card>
         </Link>
     );
-}
+});
+
+CategoryCard.displayName = 'CategoryCard';
