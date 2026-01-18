@@ -1,6 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Platform } from '@/shared/auth-types';
 import { StreamPlayback } from '@/components/player/types';
+
+// Maximum reload attempts before giving up (prevents infinite loops)
+const MAX_RELOAD_ATTEMPTS = 3;
 
 interface UseStreamPlaybackResult {
     playback: StreamPlayback | null;
@@ -11,6 +14,8 @@ interface UseStreamPlaybackResult {
     isUsingProxy: boolean;
     /** Retry loading the stream without proxy (fallback to direct) */
     retryWithoutProxy: () => void;
+    /** Number of consecutive reload attempts (resets on successful playback) */
+    reloadAttempts: number;
 }
 
 export function useStreamPlayback(platform: Platform, identifier: string): UseStreamPlaybackResult {
@@ -22,6 +27,10 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
     const [isUsingProxy, setIsUsingProxy] = useState(false);
     // Force disable proxy for fallback
     const [forceNoProxy, setForceNoProxy] = useState(false);
+    // Track reload attempts to prevent infinite loops
+    // Use ref for synchronous access in callbacks, state for consumers
+    const reloadAttemptsRef = useRef(0);
+    const [reloadAttempts, setReloadAttempts] = useState(0);
 
     const currentKey = `${platform}-${identifier}`;
 
@@ -32,6 +41,8 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
         setError(null);
         setIsUsingProxy(false);
         setForceNoProxy(false);
+        reloadAttemptsRef.current = 0; // Sync ref
+        setReloadAttempts(0); // Reset attempts when stream changes
     }, [currentKey, identifier]);
 
     useEffect(() => {
@@ -75,6 +86,8 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
                     });
                     setIsUsingProxy(usingProxy);
                     setIsLoading(false);
+                    reloadAttemptsRef.current = 0; // Sync ref
+                    setReloadAttempts(0); // Reset on successful load
                 }
             } catch (err) {
                 if (isMounted) {
@@ -106,12 +119,26 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
         setReloadKey(prev => prev + 1);
     }, []);
 
+    // Reload with rate limiting to prevent infinite loops
+    // Uses a ref for synchronous tracking since React state updates are async/batched
+    const reload = useCallback(() => {
+        if (reloadAttemptsRef.current >= MAX_RELOAD_ATTEMPTS) {
+            console.debug(`[useStreamPlayback] Max reload attempts (${MAX_RELOAD_ATTEMPTS}) reached, stopping`);
+            setError(new Error('Max reload attempts reached - stream may be offline'));
+            return;
+        }
+        reloadAttemptsRef.current += 1;
+        setReloadAttempts(reloadAttemptsRef.current); // Keep state in sync for consumers
+        setReloadKey(prev => prev + 1);
+    }, []);
+
     return {
         playback,
         isLoading,
         error,
         isUsingProxy,
-        reload: () => setReloadKey(prev => prev + 1),
-        retryWithoutProxy
+        reload,
+        retryWithoutProxy,
+        reloadAttempts
     };
 }

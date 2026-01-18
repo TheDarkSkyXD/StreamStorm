@@ -58,27 +58,45 @@ export function StreamPage() {
     };
   }, []);
 
+  // Helper to trigger proxy fallback with notice and timeout management
+  const triggerProxyFallback = useCallback((message: string) => {
+    console.debug('[StreamPage] Triggering fallback to direct stream');
+    setProxyFallbackNotice(message);
+    retryWithoutProxy();
+    if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+    fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 8000);
+  }, [retryWithoutProxy]);
+
   const handlePlayerError = useCallback((error: PlayerError) => {
     console.debug(`[StreamPage] handlePlayerError called:`, {
       code: error.code,
       isUsingProxy,
       platform,
-      message: error.message
+      message: error.message,
+      shouldRefresh: error.shouldRefresh
     });
 
-    // PROXY_ERROR is specific to proxy server failures (500 errors)
-    if (error.code === 'PROXY_ERROR') {
-      console.debug('[StreamPage] Proxy server error detected');
+    // Handle errors that suggest we need a fresh playback URL
+    // TOKEN_EXPIRED: Playback token expired, need new URL
+    // NO_FRAGMENTS: No video data received after manifest - likely stale URL or offline
+    if (error.code === 'TOKEN_EXPIRED' || error.code === 'NO_FRAGMENTS') {
+      console.debug(`[StreamPage] ${error.code} - attempting automatic refresh`);
+      setProxyFallbackNotice(
+        error.code === 'TOKEN_EXPIRED'
+          ? 'Playback session expired. Refreshing stream...'
+          : 'Stream data unavailable. Refreshing...'
+      );
+      reloadPlayback(); // Fetch fresh playback URL
+      // Auto-hide notification after 5 seconds
+      if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+      fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 5000);
+      return; // Don't show error, let refresh attempt
+    }
 
-      if (isUsingProxy && platform === 'twitch') {
-        console.debug('[StreamPage] Triggering fallback to direct stream');
-        setProxyFallbackNotice('Proxy server unavailable. Falling back to direct stream (ads may show).');
-        retryWithoutProxy();
-        // Auto-hide notification after 8 seconds
-        if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
-        fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 8000);
-        return; // Don't show error, let fallback attempt
-      }
+    // PROXY_ERROR is specific to proxy server failures (500 errors)
+    if (error.code === 'PROXY_ERROR' && isUsingProxy && platform === 'twitch') {
+      triggerProxyFallback('Proxy server unavailable. Falling back to direct stream (ads may show).');
+      return; // Don't show error, let fallback attempt
     }
 
     // STREAM_OFFLINE is expected when a stream ends - use debug logging
@@ -87,11 +105,7 @@ export function StreamPage() {
 
       // If we were using proxy and got a network/offline error, try fallback to direct
       if (isUsingProxy && platform === 'twitch') {
-        console.debug('[StreamPage] Proxy stream failed, falling back to direct stream');
-        setProxyFallbackNotice('Proxy connection failed. Falling back to direct stream.');
-        retryWithoutProxy();
-        if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
-        fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 8000);
+        triggerProxyFallback('Proxy connection failed. Falling back to direct stream.');
         return; // Don't show error yet, let fallback attempt
       }
     } else {
@@ -99,18 +113,14 @@ export function StreamPage() {
 
       // Also try fallback for other network errors when using proxy
       if (isUsingProxy && platform === 'twitch') {
-        console.debug('[StreamPage] Proxy stream network error, falling back to direct stream');
-        setProxyFallbackNotice('Proxy error. Switching to direct stream.');
-        retryWithoutProxy();
-        if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
-        fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 8000);
+        triggerProxyFallback('Proxy error. Switching to direct stream.');
         return;
       }
     }
     // Exit theater mode when stream goes offline for better offline screen visibility
     setTheaterModeActive(false);
     setPlayerError(error);
-  }, [isUsingProxy, platform, retryWithoutProxy, setTheaterModeActive]);
+  }, [isUsingProxy, platform, triggerProxyFallback, setTheaterModeActive, reloadPlayback]);
 
   // Reset player error when playback changes
   useEffect(() => {
@@ -225,7 +235,7 @@ export function StreamPage() {
                 startedAt={streamData?.startedAt}
               />
             ) : (
-<TwitchLivePlayer
+              <TwitchLivePlayer
                 streamUrl={effectiveStreamUrl}
                 channelName={channelName}
                 autoPlay={true}

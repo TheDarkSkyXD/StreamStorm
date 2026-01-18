@@ -10,11 +10,24 @@ export interface QualityLevel {
     name?: string;
 }
 
+// Standardized error codes for player error handling
+export type PlayerErrorCode =
+    | 'STREAM_OFFLINE'      // Stream is offline or unavailable
+    | 'PROXY_ERROR'         // Proxy server error (500, etc.)
+    | 'TOKEN_EXPIRED'       // Playback token has expired
+    | 'NO_FRAGMENTS'        // No video fragments received after manifest load
+    | 'MEDIA_ERROR'         // Fatal media/decoding error
+    | 'HLS_FATAL'           // Unrecoverable HLS error
+    | 'NATIVE_ERROR'        // Native playback error (Safari HLS)
+    | 'PLAYBACK_ERROR';     // Generic playback failure
+
 export interface PlayerError {
-    code: string;
+    code: PlayerErrorCode | string;
     message: string;
     fatal: boolean;
-    originalError?: any;
+    originalError?: unknown;
+    /** If true, caller should attempt to refresh playback URL */
+    shouldRefresh?: boolean;
 }
 
 export type Platform = 'twitch' | 'kick';

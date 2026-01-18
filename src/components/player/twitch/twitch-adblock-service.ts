@@ -208,7 +208,7 @@ export function clearStreamInfo(channelName: string): void {
         });
         streamInfos.delete(lowerName);
     }
-    
+
     // Also clear backend manifest proxy's stream info
     // This prevents memory buildup in the main process
     // Guard against window not defined (e.g., in Node.js test environment)
@@ -322,19 +322,19 @@ function detectAds(text: string, streamInfo: StreamInfo): { hasAds: boolean; met
             }
         }
     }
-    
+
     // Secondary detection: ad signifiers
     for (const signifier of DEFAULT_AD_SIGNIFIERS) {
         if (text.includes(signifier)) {
             return { hasAds: true, method: 'signifier' };
         }
     }
-    
+
     // Also check configured signifier (backward compatibility)
     if (text.includes(config.adSignifier)) {
         return { hasAds: true, method: 'stitched' };
     }
-    
+
     // Tertiary detection: Bitrate drop (optional)
     if (config.useBitrateDropDetection && streamInfo.lastKnownBitrate) {
         const bitrateMatch = text.match(/BANDWIDTH=(\d+)/);
@@ -346,7 +346,7 @@ function detectAds(text: string, streamInfo: StreamInfo): { hasAds: boolean; met
             }
         }
     }
-    
+
     return { hasAds: false, method: 'none' };
 }
 
@@ -355,7 +355,7 @@ function detectAds(text: string, streamInfo: StreamInfo): { hasAds: boolean; met
  */
 function updateBitrateBaseline(text: string, streamInfo: StreamInfo): void {
     if (!config.useBitrateDropDetection) return;
-    
+
     // Only update from clean (non-ad) playlists
     // Check all known ad patterns
     for (const pattern of DEFAULT_DATERANGE_PATTERNS) {
@@ -365,7 +365,7 @@ function updateBitrateBaseline(text: string, streamInfo: StreamInfo): void {
         if (text.includes(signifier)) return;
     }
     if (text.includes(config.adSignifier)) return;
-    
+
     const bitrateMatch = text.match(/BANDWIDTH=(\d+)/);
     if (bitrateMatch) {
         streamInfo.lastKnownBitrate = parseInt(bitrateMatch[1], 10);
@@ -511,89 +511,118 @@ export async function processMediaPlaylist(
 // ========== Backup Stream Fetching ==========
 
 /**
+ * Network timeout for backup stream fetch operations (milliseconds)
+ * Aggressive timeout to prevent stream freezing when Twitch API is slow
+ */
+const BACKUP_FETCH_TIMEOUT = 2000;
+
+/**
+ * Fetch with timeout wrapper to prevent indefinite blocking
+ */
+async function fetchWithTimeout(url: string, timeoutMs: number = BACKUP_FETCH_TIMEOUT): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+        const response = await fetch(url, { signal: controller.signal });
+        return response;
+    } finally {
+        clearTimeout(timeoutId);
+    }
+}
+
+/**
+ * Try a single player type for backup stream
+ * Returns the clean m3u8 or null if failed/has ads
+ */
+async function tryPlayerType(
+    streamInfo: StreamInfo,
+    currentResolution: ResolutionInfo,
+    playerType: PlayerType
+): Promise<{ playerType: PlayerType; m3u8: string } | null> {
+    try {
+        // Check cache first
+        let encodingsM3u8 = streamInfo.backupEncodingsCache.get(playerType);
+
+        if (!encodingsM3u8) {
+            const accessToken = await getAccessToken(streamInfo.channelName, playerType);
+            if (!accessToken) return null;
+
+            const usherUrl = buildUsherUrl(streamInfo.channelName, accessToken, streamInfo.usherParams);
+            const response = await fetchWithTimeout(usherUrl);
+            if (response.status !== 200) return null;
+
+            encodingsM3u8 = await response.text();
+            streamInfo.backupEncodingsCache.set(playerType, encodingsM3u8);
+        }
+
+        const streamUrl = getStreamUrlForResolution(encodingsM3u8, currentResolution);
+        if (!streamUrl) return null;
+
+        const response = await fetchWithTimeout(streamUrl);
+        if (response.status !== 200) return null;
+
+        const m3u8Text = await response.text();
+
+        // Check if this backup is clean (no ads)
+        if (!m3u8Text.includes(config.adSignifier)) {
+            return { playerType, m3u8: m3u8Text };
+        }
+
+        // Even if it has ads, keep it as potential fallback
+        return { playerType, m3u8: m3u8Text };
+    } catch (err) {
+        // Timeout or network error - fail fast, don't log excessively
+        if ((err as Error).name !== 'AbortError') {
+            console.debug(`[AdBlock] Backup ${playerType} failed:`, (err as Error).message);
+        }
+        return null;
+    }
+}
+
+/**
  * Try to get a backup stream without ads
+ * Uses PARALLEL fetching with aggressive timeouts to prevent stream freezing
  */
 async function tryGetBackupStream(
     streamInfo: StreamInfo,
     currentResolution: ResolutionInfo
 ): Promise<string | null> {
-    let startIndex = 0;
     const isDoingMinimalRequests = streamInfo.lastPlayerReload > Date.now() - config.playerReloadMinimalRequestsTime;
+    const startIndex = isDoingMinimalRequests ? config.playerReloadMinimalRequestsPlayerIndex : 0;
+    const playerTypesToTry = config.backupPlayerTypes.slice(startIndex);
 
-    if (isDoingMinimalRequests) {
-        startIndex = config.playerReloadMinimalRequestsPlayerIndex;
+    // Fetch ALL player types in PARALLEL for maximum speed
+    const backupPromises = playerTypesToTry.map(playerType =>
+        tryPlayerType(streamInfo, currentResolution, playerType)
+    );
+
+    // Wait for all to complete (with individual timeouts)
+    const results = await Promise.all(backupPromises);
+
+    // Find the first CLEAN backup (no ad signifier)
+    const cleanBackup = results.find(r => r !== null && !r.m3u8.includes(config.adSignifier));
+    if (cleanBackup) {
+        streamInfo.activeBackupPlayerType = cleanBackup.playerType;
+        console.debug(`[AdBlock] Using clean backup (${cleanBackup.playerType})`);
+        return cleanBackup.m3u8;
     }
 
-    let backupM3u8: string | null = null;
-    let fallbackM3u8: string | null = null;
-
-    for (let i = startIndex; !backupM3u8 && i < config.backupPlayerTypes.length; i++) {
-        const playerType = config.backupPlayerTypes[i];
-
-        for (let attempt = 0; attempt < 2; attempt++) {
-            let isFreshM3u8 = false;
-            let encodingsM3u8 = streamInfo.backupEncodingsCache.get(playerType);
-
-            if (!encodingsM3u8) {
-                isFreshM3u8 = true;
-                try {
-                    const accessToken = await getAccessToken(streamInfo.channelName, playerType);
-                    if (accessToken) {
-                        const usherUrl = buildUsherUrl(streamInfo.channelName, accessToken, streamInfo.usherParams);
-                        const response = await fetch(usherUrl);
-                        if (response.status === 200) {
-                            encodingsM3u8 = await response.text();
-                            streamInfo.backupEncodingsCache.set(playerType, encodingsM3u8);
-                        }
-                    }
-                } catch (err) {
-                    console.debug(`[AdBlock] Failed to get backup for ${playerType}:`, err);
-                }
-            }
-
-            if (encodingsM3u8) {
-                try {
-                    const streamUrl = getStreamUrlForResolution(encodingsM3u8, currentResolution);
-                    if (streamUrl) {
-                        const response = await fetch(streamUrl);
-                        if (response.status === 200) {
-                            const m3u8Text = await response.text();
-
-                            if (playerType === config.fallbackPlayerType) {
-                                fallbackM3u8 = m3u8Text;
-                            }
-
-                            if (!m3u8Text.includes(config.adSignifier)) {
-                                streamInfo.activeBackupPlayerType = playerType;
-                                backupM3u8 = m3u8Text;
-                                break;
-                            }
-
-                            if (isDoingMinimalRequests) {
-                                streamInfo.activeBackupPlayerType = playerType;
-                                backupM3u8 = m3u8Text;
-                                break;
-                            }
-                        }
-                    }
-                } catch (err) {
-                    console.debug(`[AdBlock] Failed to fetch stream for ${playerType}:`, err);
-                }
-            }
-
-            // Clear cache and retry if this was cached content with ads
-            streamInfo.backupEncodingsCache.delete(playerType);
-            if (isFreshM3u8) break;
-        }
-    }
-
-    // Use fallback if no clean backup found
-    if (!backupM3u8 && fallbackM3u8) {
+    // No clean backup - use fallback if available (even with ads, for segment stripping)
+    const fallbackResult = results.find(r => r !== null && r.playerType === config.fallbackPlayerType);
+    if (fallbackResult) {
         streamInfo.activeBackupPlayerType = config.fallbackPlayerType;
-        backupM3u8 = fallbackM3u8;
+        return fallbackResult.m3u8;
     }
 
-    return backupM3u8;
+    // Use any result we got as last resort
+    const anyResult = results.find(r => r !== null);
+    if (anyResult) {
+        streamInfo.activeBackupPlayerType = anyResult.playerType;
+        return anyResult.m3u8;
+    }
+
+    return null;
 }
 
 /**
@@ -629,7 +658,7 @@ async function getAccessToken(
         if (response.status === 200) {
             const data = (await response.json()) as AccessTokenResponse;
             const token = data.data.streamPlaybackAccessToken;
-            
+
             if (token) {
                 // CRITICAL: Strip parent_domains from token value to bypass fake ad detection
                 // The token.value is a JSON string that contains embed detection params
@@ -637,7 +666,7 @@ async function getAccessToken(
                     const tokenValue = JSON.parse(token.value);
                     delete tokenValue.parent_domains;
                     delete tokenValue.parent_referrer_domains;
-                    
+
                     return {
                         signature: token.signature,
                         value: JSON.stringify(tokenValue),
@@ -656,7 +685,13 @@ async function getAccessToken(
 }
 
 /**
- * Make a GQL request
+ * GQL request timeout (milliseconds)
+ * Aggressive timeout to fail fast and prevent stream freezing
+ */
+const GQL_REQUEST_TIMEOUT = 2000;
+
+/**
+ * Make a GQL request with timeout to prevent blocking
  */
 async function gqlRequest(body: object): Promise<Response> {
     // Generate device ID if not set
@@ -687,11 +722,20 @@ async function gqlRequest(body: object): Promise<Response> {
         headers['Client-Session-Id'] = clientSession;
     }
 
-    return fetch('https://gql.twitch.tv/gql', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(body),
-    });
+    // Use AbortController for timeout to prevent indefinite blocking
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), GQL_REQUEST_TIMEOUT);
+
+    try {
+        return await fetch('https://gql.twitch.tv/gql', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(body),
+            signal: controller.signal,
+        });
+    } finally {
+        clearTimeout(timeoutId);
+    }
 }
 
 /**
@@ -708,11 +752,11 @@ function buildUsherUrl(
     const url = new URL(baseUrl + usherParams);
     url.searchParams.set('sig', accessToken.signature);
     url.searchParams.set('token', accessToken.value);
-    
+
     // CRITICAL: Strip tracking params that enable ad targeting/embed detection
     url.searchParams.delete('parent_domains');
     url.searchParams.delete('referrer');
-    
+
     return url.href;
 }
 
@@ -787,7 +831,7 @@ async function consumeAdSegment(text: string, streamInfo: StreamInfo): Promise<v
             if (!line.includes(',live') && !streamInfo.requestedAds.has(lines[i + 1])) {
                 streamInfo.requestedAds.add(lines[i + 1]);
                 // Fetch in background to consume the ad
-                fetch(lines[i + 1]).then(r => r.blob()).catch(() => {});
+                fetch(lines[i + 1]).then(r => r.blob()).catch(() => { });
                 break;
             }
         }
@@ -946,7 +990,7 @@ function createModifiedPlaylist(text: string, streamInfo: StreamInfo): string {
                     const [aW, aH] = a.resolution.split('x').map(Number);
                     const [bW, bH] = b.resolution.split('x').map(Number);
                     return Math.abs((aW * aH) - (targetWidth * targetHeight)) -
-                           Math.abs((bW * bH) - (targetWidth * targetHeight));
+                        Math.abs((bW * bH) - (targetWidth * targetHeight));
                 })[0];
 
                 if (replacement) {

@@ -76,22 +76,44 @@ class TwitchManifestProxyService {
     };
 
     /**
+     * Default timeout for fetch operations (ms)
+     * Aggressive timeout to prevent stream freezing
+     */
+    private static readonly FETCH_TIMEOUT = 2000;
+
+    /**
      * Fetch with automatic retry for transient network errors.
-     * Handles SSL handshake failures, connection resets, and timeouts
-     * that commonly occur with Twitch CDN edge servers.
+     * Uses aggressive timeouts and minimal retries to prevent stream freezing.
+     * 
+     * IMPORTANT: Reduced from 3 retries to 1, and delay from 500ms to 200ms
+     * to prioritize stream continuity over backup stream quality.
      */
     private async fetchWithRetry(
         url: string,
         options?: Parameters<typeof fetch>[1],
-        maxRetries: number = 3,
-        baseDelay: number = 500
+        maxRetries: number = 1,
+        baseDelay: number = 200
     ): Promise<Response> {
         let lastError: Error | null = null;
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
             try {
-                const response = await fetch(url, options);
-                return response;
+                // Add timeout via AbortController
+                const controller = new AbortController();
+                const timeoutId = setTimeout(
+                    () => controller.abort(),
+                    TwitchManifestProxyService.FETCH_TIMEOUT
+                );
+
+                try {
+                    const response = await fetch(url, {
+                        ...options,
+                        signal: controller.signal,
+                    });
+                    return response;
+                } finally {
+                    clearTimeout(timeoutId);
+                }
             } catch (error) {
                 lastError = error as Error;
                 const isRetryable = this.isRetryableError(error);
@@ -102,8 +124,7 @@ class TwitchManifestProxyService {
 
                 const delay = baseDelay * Math.pow(2, attempt);
                 console.debug(
-                    `[ManifestProxy] Fetch failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms:`,
-                    (error as Error).message
+                    `[ManifestProxy] Fetch failed (attempt ${attempt + 1}/${maxRetries + 1}), retrying in ${delay}ms`
                 );
                 await new Promise((resolve) => setTimeout(resolve, delay));
             }
@@ -114,9 +135,15 @@ class TwitchManifestProxyService {
 
     /**
      * Check if an error is retryable (transient network issues)
+     * Note: AbortError from timeout is NOT retryable - we want to fail fast
      */
     private isRetryableError(error: unknown): boolean {
         if (error instanceof Error) {
+            // AbortError means our timeout triggered - don't retry, fail fast
+            if (error.name === 'AbortError') {
+                return false;
+            }
+
             // Check cause first (Node.js fetch wraps real error in cause)
             const cause = (error as Error & { cause?: { code?: string } }).cause;
             const code = cause?.code || (error as Error & { code?: string }).code;
@@ -302,7 +329,7 @@ class TwitchManifestProxyService {
 
         this.streamInfos.set(channelName, streamInfo);
         console.debug(`[ManifestProxy] Registered stream: ${channelName} (${streamInfo.resolutions.size} qualities)`);
-        
+
         return text;
     }
 
@@ -321,7 +348,7 @@ class TwitchManifestProxyService {
 
         if (hasAd) {
             this.stats.adsDetected++;
-            
+
             if (!streamInfo.isInAdBreak) {
                 streamInfo.isInAdBreak = true;
                 console.debug(`[ManifestProxy] Ad detected on ${streamInfo.channelName}`);
@@ -355,7 +382,7 @@ class TwitchManifestProxyService {
         // Get patterns from VAFT pattern service (auto-updated)
         let dateRangePatterns: readonly string[];
         let adSignifiers: string[];
-        
+
         try {
             dateRangePatterns = vaftPatternService.getDateRangePatterns();
             adSignifiers = vaftPatternService.getAdSignifiers();
@@ -449,7 +476,7 @@ class TwitchManifestProxyService {
             const line = lines[i];
 
             // Skip DATERANGE ad markers
-            if (line.startsWith('#EXT-X-DATERANGE') && 
+            if (line.startsWith('#EXT-X-DATERANGE') &&
                 (line.includes('stitched-ad') || line.includes('amazon-ad'))) {
                 continue;
             }
@@ -485,42 +512,62 @@ class TwitchManifestProxyService {
     }
 
     /**
+     * Try a single player type for backup stream (for parallel fetching)
+     */
+    private async tryPlayerTypeBackup(
+        streamInfo: ProxyStreamInfo,
+        originalUrl: string,
+        playerType: PlayerType
+    ): Promise<{ playerType: PlayerType; m3u8: string } | null> {
+        try {
+            const token = await this.getAccessToken(streamInfo.channelName, playerType);
+            if (!token) return null;
+
+            const usherUrl = this.buildUsherUrl(streamInfo, token);
+            const encodingsResponse = await this.fetchWithRetry(usherUrl);
+            if (!encodingsResponse.ok) return null;
+
+            const encodingsM3u8 = await encodingsResponse.text();
+            const streamUrl = this.getMatchingStreamUrl(encodingsM3u8, originalUrl, streamInfo);
+            if (!streamUrl) return null;
+
+            const mediaResponse = await this.fetchWithRetry(streamUrl);
+            if (!mediaResponse.ok) return null;
+
+            const mediaText = await mediaResponse.text();
+            return { playerType, m3u8: mediaText };
+        } catch {
+            // Fail silently - other player types may succeed
+            return null;
+        }
+    }
+
+    /**
      * Try to get backup stream without ads
+     * Uses PARALLEL fetching for all player types to minimize blocking time
      */
     private async tryGetBackupStream(
         streamInfo: ProxyStreamInfo,
         originalUrl: string
     ): Promise<string | null> {
-        for (const playerType of BACKUP_PLAYER_TYPES) {
-            try {
-                const token = await this.getAccessToken(streamInfo.channelName, playerType);
-                if (!token) continue;
+        // Fetch ALL player types in PARALLEL
+        const backupPromises = BACKUP_PLAYER_TYPES.map(playerType =>
+            this.tryPlayerTypeBackup(streamInfo, originalUrl, playerType)
+        );
 
-                const usherUrl = this.buildUsherUrl(streamInfo, token);
-                const encodingsResponse = await this.fetchWithRetry(usherUrl);
-                if (!encodingsResponse.ok) continue;
+        // Wait for all to complete (each has its own timeout)
+        const results = await Promise.all(backupPromises);
 
-                const encodingsM3u8 = await encodingsResponse.text();
-                const streamUrl = this.getMatchingStreamUrl(encodingsM3u8, originalUrl, streamInfo);
-                if (!streamUrl) continue;
-
-                const mediaResponse = await this.fetchWithRetry(streamUrl);
-                if (!mediaResponse.ok) continue;
-
-                const mediaText = await mediaResponse.text();
-
-                // Check if backup is clean
-                if (!this.detectAds(mediaText)) {
-                    console.debug(`[ManifestProxy] Using backup (${playerType})`);
-                    return mediaText;
-                }
-            } catch (error) {
-                // Continue to next player type
-                console.debug(`[ManifestProxy] Backup failed for ${playerType}:`, error);
-            }
+        // Find first CLEAN backup (no ads)
+        const cleanBackup = results.find(r => r !== null && !this.detectAds(r.m3u8));
+        if (cleanBackup) {
+            console.debug(`[ManifestProxy] Using backup (${cleanBackup.playerType})`);
+            return cleanBackup.m3u8;
         }
 
-        return null;
+        // No clean backup - return any result for segment stripping fallback
+        const anyResult = results.find(r => r !== null);
+        return anyResult?.m3u8 || null;
     }
 
     /**
@@ -670,8 +717,8 @@ class TwitchManifestProxyService {
      */
     private isKnownAdSegment(url: string): boolean {
         return url.includes('cloudfront.net') && url.includes('/ad/') ||
-               url.includes('amazon-ad') ||
-               url.includes('stitched-ad');
+            url.includes('amazon-ad') ||
+            url.includes('stitched-ad');
     }
 
     /**

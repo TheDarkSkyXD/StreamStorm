@@ -354,43 +354,104 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 }
             });
 
-            // === FAST OFFLINE DETECTION HEARTBEAT ===
-            // For live streams, periodically check if we're still receiving fragments
-            // This detects offline status faster than waiting for natural HLS timeouts
+            // === FAST OFFLINE DETECTION & FRAGMENT TIMEOUT ===
+            // For live streams, aggressively detect when fragments stop arriving
+            // This catches: token expiration, stream offline, CDN issues, CORS problems
             let lastFragLoadedTime = Date.now();
+            let manifestParsedTime: number | null = null;
+            let hasReceivedFirstFragment = false;
+            let fragErrorCount = 0;
+            const MAX_FRAG_ERRORS_BEFORE_REFRESH = 3;
+            const INITIAL_FRAGMENT_TIMEOUT_MS = 30000; // 30s timeout for first fragment after manifest
+            const ONGOING_FRAGMENT_TIMEOUT_MS = 45000; // 45s timeout during playback
 
             // Track successful fragment loads
             hls.on(Hls.Events.FRAG_LOADED, () => {
                 lastFragLoadedTime = Date.now();
+                hasReceivedFirstFragment = true;
+                fragErrorCount = 0; // Reset error count on success
             });
 
-            // Start heartbeat after manifest is parsed (stream is playing)
+            // Track fragment load errors (may indicate token expiration)
+            hls.on(Hls.Events.ERROR, (event, data) => {
+                if (data.details === 'fragLoadError' && !data.fatal) {
+                    fragErrorCount++;
+                    console.debug(`[HLS] Fragment load error #${fragErrorCount}`);
+
+                    // After multiple fragment errors, likely token expired
+                    if (fragErrorCount >= MAX_FRAG_ERRORS_BEFORE_REFRESH) {
+                        console.debug('[HLS] Multiple fragment errors - token may have expired');
+                        if (heartbeatInterval) clearInterval(heartbeatInterval);
+                        hls?.destroy();
+                        onErrorRef.current?.({
+                            code: 'TOKEN_EXPIRED',
+                            message: 'Playback token may have expired - reload required',
+                            fatal: true,
+                            shouldRefresh: true,
+                            originalError: data
+                        });
+                    }
+                }
+            });
+
+            // Start heartbeat after manifest is parsed (stream should be playing)
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                manifestParsedTime = Date.now();
+
                 // Clear any existing heartbeat
                 if (heartbeatInterval) clearInterval(heartbeatInterval);
 
-                // Check every 10 seconds if fragments are still arriving
+                // Check every 5 seconds if fragments are arriving (faster detection)
                 heartbeatInterval = setInterval(() => {
                     if (!isEffectActive || !hls) {
                         if (heartbeatInterval) clearInterval(heartbeatInterval);
                         return;
                     }
 
-                    const timeSinceLastFrag = Date.now() - lastFragLoadedTime;
+                    const now = Date.now();
+                    const timeSinceLastFrag = now - lastFragLoadedTime;
+                    const timeSinceManifest = manifestParsedTime ? now - manifestParsedTime : 0;
 
-                    // If no fragments received in 15 seconds, the stream might be dead
-                    // Trigger a manifest reload to check status immediately
+                    // CASE 1: No fragment ever received after manifest parsed
+                    // This is the key fix for the reported issue - fail fast!
+                    if (!hasReceivedFirstFragment && timeSinceManifest > INITIAL_FRAGMENT_TIMEOUT_MS) {
+                        console.debug(`[HLS] No fragments received in ${Math.round(timeSinceManifest / 1000)}s after manifest - stream unavailable`);
+                        if (heartbeatInterval) clearInterval(heartbeatInterval);
+                        hls?.destroy();
+                        onErrorRef.current?.({
+                            code: 'NO_FRAGMENTS',
+                            message: 'No video data received - stream may be offline or token expired',
+                            fatal: true,
+                            shouldRefresh: true,
+                            originalError: null
+                        });
+                        return;
+                    }
+
+                    // CASE 2: Was receiving fragments but they stopped (stream went offline mid-playback)
+                    if (hasReceivedFirstFragment && timeSinceLastFrag > ONGOING_FRAGMENT_TIMEOUT_MS) {
+                        console.debug(`[HLS] No fragments in ${Math.round(timeSinceLastFrag / 1000)}s - stream appears to have ended`);
+                        if (heartbeatInterval) clearInterval(heartbeatInterval);
+                        hls?.destroy();
+                        onErrorRef.current?.({
+                            code: 'STREAM_OFFLINE',
+                            message: 'Stream ended or became unavailable',
+                            fatal: true,
+                            originalError: null
+                        });
+                        return;
+                    }
+
+                    // CASE 3: Mild delay - try to recover by reloading
                     if (timeSinceLastFrag > 15000) {
-                        console.debug(`[HLS] Heartbeat: No fragments in ${Math.round(timeSinceLastFrag / 1000)}s, checking stream...`);
-                        // Force HLS to reload by restarting the load process
-                        // startLoad() is the public API that triggers manifest reload
+                        console.debug(`[HLS] Heartbeat: No fragments in ${Math.round(timeSinceLastFrag / 1000)}s, attempting reload...`);
                         try {
                             hls.startLoad(-1); // -1 means start from live edge
                         } catch (e) {
                             // HLS may be in an invalid state, ignore
                         }
                     }
-                }, 10000); // Check every 10 seconds
+                }, 5000); // Check every 5 seconds for faster detection
             });
 
         } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
