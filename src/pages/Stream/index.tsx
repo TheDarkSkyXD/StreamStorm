@@ -1,6 +1,6 @@
 
 import { useParams } from '@tanstack/react-router';
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { ProxiedImage } from '@/components/ui/proxied-image';
 import { useChannelByUsername } from '@/hooks/queries/useChannels';
@@ -164,29 +164,34 @@ export function StreamPage() {
     }
   }, [isTheater]);
 
+  // Memoize stream info to prevent effect from running on every streamData update
+  // streamData changes every 30s (viewer count), but we only care about title/category changes
+  const pipStreamInfo = useMemo(() => ({
+    platform: platform as Platform,
+    channelName: channelName,
+    channelDisplayName: channelData?.displayName || channelName,
+    channelAvatar: channelData?.avatarUrl,
+    streamUrl: effectiveStreamUrl,
+    title: streamData?.title,
+    categoryName: streamData?.categoryName,
+    viewerCount: streamData?.viewerCount,
+  }), [
+    platform,
+    channelName,
+    channelData?.displayName,
+    channelData?.avatarUrl,
+    effectiveStreamUrl,
+    streamData?.title,        // Only update when title changes
+    streamData?.categoryName, // Only update when category changes
+    // Intentionally exclude viewerCount - it changes every 30s but we don't need to update PiP for that
+  ]);
+
   // Update PiP store with current stream info when we have a live stream
   useEffect(() => {
     if (isStreamLive && effectiveStreamUrl && channelData) {
-      setCurrentStream({
-        platform: platform as Platform,
-        channelName: channelName,
-        channelDisplayName: channelData.displayName || channelName,
-        channelAvatar: channelData.avatarUrl,
-        streamUrl: effectiveStreamUrl,
-        title: streamData?.title,
-        categoryName: streamData?.categoryName,
-        viewerCount: streamData?.viewerCount,
-      });
+      setCurrentStream(pipStreamInfo);
     }
-  }, [
-    isStreamLive,
-    effectiveStreamUrl,
-    platform,
-    channelName,
-    channelData,
-    streamData,
-    setCurrentStream,
-  ]);
+  }, [isStreamLive, effectiveStreamUrl, channelData, pipStreamInfo, setCurrentStream]);
 
   const startResizing = useCallback(() => {
     setIsResizing(true);

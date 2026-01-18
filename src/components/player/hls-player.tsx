@@ -125,6 +125,23 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             // Detect if this is a proxy URL (for faster failure on proxy errors)
             const isProxyUrl = src.includes('cdn-perfprod.com') || src.includes('luminous.dev');
 
+            // === ADAPTIVE TIMEOUTS BASED ON CONNECTION QUALITY ===
+            // Use Network Information API to adjust timeouts for slower connections
+            // This prevents premature failures on 3G/slow connections while keeping fast detection on WiFi/4G
+            const connection = (navigator as any).connection || (navigator as any).mozConnection || (navigator as any).webkitConnection;
+            const effectiveType = connection?.effectiveType || '4g'; // Default to 4g if not available
+
+            // Timeout multipliers based on connection quality
+            let timeoutMultiplier = 1.0;
+            if (effectiveType === 'slow-2g' || effectiveType === '2g') {
+                timeoutMultiplier = 2.0; // Double timeouts for 2G
+            } else if (effectiveType === '3g') {
+                timeoutMultiplier = 1.5; // 50% longer for 3G
+            }
+            // 4g and faster keep base timeouts (1.0x)
+
+            console.debug(`[HLS] Connection type: ${effectiveType}, timeout multiplier: ${timeoutMultiplier}x`);
+
             hls = new Hls({
                 enableWorker: true,
                 lowLatencyMode: true,
@@ -143,24 +160,34 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 // Buffer append error retry settings
                 appendErrorMaxRetry: 5, // Retry buffer append up to 5 times (default 3)
 
-                // === FAST OFFLINE DETECTION SETTINGS ===
+                // === ADAPTIVE FAST OFFLINE DETECTION SETTINGS ===
                 // Manifest loading - detect offline quickly (stream ended/unavailable)
-                manifestLoadingTimeOut: isProxyUrl ? 5000 : 8000, // Fail fast if manifest doesn't load (default 10000)
+                // Adaptive: longer timeouts on slow connections to prevent false positives
+                manifestLoadingTimeOut: isProxyUrl
+                    ? Math.round(5000 * timeoutMultiplier)
+                    : Math.round(8000 * timeoutMultiplier),
                 manifestLoadingMaxRetry: isProxyUrl ? 0 : 1, // Minimal retries - if manifest 404s, stream is gone
                 manifestLoadingRetryDelay: 500, // Very short delay between retries (default 1000)
-                manifestLoadingMaxRetryTimeout: isProxyUrl ? 5000 : 10000, // Cap total retry time
+                manifestLoadingMaxRetryTimeout: isProxyUrl
+                    ? Math.round(5000 * timeoutMultiplier)
+                    : Math.round(10000 * timeoutMultiplier),
 
                 // Level/playlist loading - also needs fast detection for offline
-                levelLoadingTimeOut: isProxyUrl ? 5000 : 8000, // Fail fast on playlist load (default 10000)
+                levelLoadingTimeOut: isProxyUrl
+                    ? Math.round(5000 * timeoutMultiplier)
+                    : Math.round(8000 * timeoutMultiplier),
                 levelLoadingMaxRetry: isProxyUrl ? 0 : 1, // Minimal retries
                 levelLoadingRetryDelay: 500, // Short delay
-                levelLoadingMaxRetryTimeout: isProxyUrl ? 5000 : 10000,
+                levelLoadingMaxRetryTimeout: isProxyUrl
+                    ? Math.round(5000 * timeoutMultiplier)
+                    : Math.round(10000 * timeoutMultiplier),
 
                 // Fragment loading - more tolerant since transient errors are common during live playback
-                fragLoadingTimeOut: 15000, // 15s timeout per fragment (default 20000)
+                // Adaptive: significantly longer on slow connections (fragments take longer to download)
+                fragLoadingTimeOut: Math.round(15000 * timeoutMultiplier), // 15s base, up to 30s on 2G
                 fragLoadingMaxRetry: 4, // Reduced from 6, still handles transient errors
                 fragLoadingRetryDelay: 500, // Faster retry (was 1000)
-                fragLoadingMaxRetryTimeout: 20000, // Cap total retry time (was 30000)
+                fragLoadingMaxRetryTimeout: Math.round(20000 * timeoutMultiplier), // Cap total retry time
 
                 xhrSetup: (xhr, url) => {
                     xhr.withCredentials = false; // Important to avoid CORS issues with wildcards
