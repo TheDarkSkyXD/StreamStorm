@@ -1,6 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Platform } from '@/shared/auth-types';
 import { StreamPlayback } from '@/components/player/types';
+
+// Maximum reload attempts before giving up (prevents infinite loops)
+const MAX_RELOAD_ATTEMPTS = 3;
 
 interface UseStreamPlaybackResult {
     playback: StreamPlayback | null;
@@ -25,8 +28,9 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
     // Force disable proxy for fallback
     const [forceNoProxy, setForceNoProxy] = useState(false);
     // Track reload attempts to prevent infinite loops
+    // Use ref for synchronous access in callbacks, state for consumers
+    const reloadAttemptsRef = useRef(0);
     const [reloadAttempts, setReloadAttempts] = useState(0);
-    const MAX_RELOAD_ATTEMPTS = 3;
 
     const currentKey = `${platform}-${identifier}`;
 
@@ -37,6 +41,7 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
         setError(null);
         setIsUsingProxy(false);
         setForceNoProxy(false);
+        reloadAttemptsRef.current = 0; // Sync ref
         setReloadAttempts(0); // Reset attempts when stream changes
     }, [currentKey, identifier]);
 
@@ -81,6 +86,7 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
                     });
                     setIsUsingProxy(usingProxy);
                     setIsLoading(false);
+                    reloadAttemptsRef.current = 0; // Sync ref
                     setReloadAttempts(0); // Reset on successful load
                 }
             } catch (err) {
@@ -114,23 +120,16 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
     }, []);
 
     // Reload with rate limiting to prevent infinite loops
-    // Uses functional state update to avoid stale closure on reloadAttempts
+    // Uses a ref for synchronous tracking since React state updates are async/batched
     const reload = useCallback(() => {
-        let shouldReload = false;
-        setReloadAttempts(prev => {
-            if (prev >= MAX_RELOAD_ATTEMPTS) {
-                console.debug(`[useStreamPlayback] Max reload attempts (${MAX_RELOAD_ATTEMPTS}) reached, stopping`);
-                setError(new Error('Max reload attempts reached - stream may be offline'));
-                return prev; // Don't increment, max reached
-            }
-            shouldReload = true;
-            return prev + 1;
-        });
-        // Only trigger reload if we haven't hit max attempts
-        // Note: This works because setReloadAttempts is synchronous in its state update
-        if (shouldReload) {
-            setReloadKey(prev => prev + 1);
+        if (reloadAttemptsRef.current >= MAX_RELOAD_ATTEMPTS) {
+            console.debug(`[useStreamPlayback] Max reload attempts (${MAX_RELOAD_ATTEMPTS}) reached, stopping`);
+            setError(new Error('Max reload attempts reached - stream may be offline'));
+            return;
         }
+        reloadAttemptsRef.current += 1;
+        setReloadAttempts(reloadAttemptsRef.current); // Keep state in sync for consumers
+        setReloadKey(prev => prev + 1);
     }, []);
 
     return {
