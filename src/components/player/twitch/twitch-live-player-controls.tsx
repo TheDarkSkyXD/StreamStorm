@@ -7,6 +7,7 @@ import { Maximize, Minimize, ShieldCheck } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip';
 import { AdBlockStatus } from '@/shared/adblock-types';
+import { TwitchProgressBar } from './twitch-progress-bar';
 
 const TheaterOutlineIcon = ({ className }: { className?: string }) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -59,6 +60,9 @@ interface TwitchLivePlayerControlsProps {
 
     // AdBlock
     adBlockStatus?: AdBlockStatus | null;
+
+    // Progress
+    onSeek?: (time: number) => void;
 }
 
 export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
@@ -80,7 +84,8 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
         onTogglePip,
         showVideoStats,
         onToggleVideoStats,
-        adBlockStatus
+        adBlockStatus,
+        onSeek
     } = props;
 
     const [isVisible, setIsVisible] = useState(true);
@@ -187,7 +192,19 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
                 onClick={(e) => e.stopPropagation()}
                 onDoubleClick={(e) => e.stopPropagation()}
             >
-                {/* No progress bar for live streams */}
+                {/* Progress Bar - Twitch Purple */}
+                <div
+                    className="w-full mb-2 pointer-events-auto"
+                    onMouseEnter={handleControlsEnter}
+                    onMouseLeave={handleControlsLeave}
+                >
+                    <TwitchProgressBar
+                        currentTime={0}
+                        duration={0}
+                        onSeek={onSeek || (() => { })}
+                        isLive={true}
+                    />
+                </div>
 
                 <div
                     className="flex items-center justify-between w-full pointer-events-auto"
@@ -226,7 +243,7 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
                                             cursor-help ml-1
                                         `}
                                     >
-                                        <ShieldCheck className="w-5 h-5" />
+                                        <ShieldCheck className="w-6 h-6" />
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent container={containerRef.current}>
@@ -260,9 +277,9 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
                                         onClick={onToggleTheater}
                                     >
                                         {isTheater ? (
-                                            <TheaterFilledIcon className="w-5 h-5" />
+                                            <TheaterFilledIcon className="w-6 h-6" />
                                         ) : (
-                                            <TheaterOutlineIcon className="w-5 h-5" />
+                                            <TheaterOutlineIcon className="w-6 h-6" />
                                         )}
                                     </Button>
                                 </TooltipTrigger>
@@ -281,9 +298,9 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
                                     onClick={onToggleFullscreen}
                                 >
                                     {isFullscreen ? (
-                                        <Minimize className="w-5 h-5" />
+                                        <Minimize className="w-6 h-6" />
                                     ) : (
-                                        <Maximize className="w-5 h-5" />
+                                        <Maximize className="w-6 h-6" />
                                     )}
                                 </Button>
                             </TooltipTrigger>

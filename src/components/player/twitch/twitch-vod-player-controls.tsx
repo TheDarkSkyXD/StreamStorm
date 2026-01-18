@@ -171,7 +171,7 @@ export function TwitchVodPlayerControls(props: TwitchVodPlayerControlsProps) {
                                     onClick={onToggleTheater}
                                     style={isTheater ? { color: twitchPurple } : undefined}
                                 >
-                                    <Monitor className="w-5 h-5" />
+                                    <Monitor className="w-6 h-6" />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -189,9 +189,9 @@ export function TwitchVodPlayerControls(props: TwitchVodPlayerControlsProps) {
                                 onClick={onToggleFullscreen}
                             >
                                 {isFullscreen ? (
-                                    <Minimize className="w-5 h-5" />
+                                    <Minimize className="w-6 h-6" />
                                 ) : (
-                                    <Maximize className="w-5 h-5" />
+                                    <Maximize className="w-6 h-6" />
                                 )}
                             </Button>
                         </TooltipTrigger>

@@ -237,7 +237,7 @@ export function registerStreamHandlers(): void {
                         const chunk = uniqueSlugs.slice(i, i + CHUNK_SIZE);
                         // console.log(`[Kick] Fetching chunk ${i / CHUNK_SIZE + 1} of local follows...`);
 
-                        const chunkPromises = chunk.map(slug => kickClient.getStreamBySlug(slug));
+                        const chunkPromises = chunk.map(slug => kickClient.getPublicStreamBySlug(slug));
                         const chunkResults = await Promise.allSettled(chunkPromises);
                         chunkResults.forEach((result) => {
                             if (result.status === 'fulfilled' && result.value) {

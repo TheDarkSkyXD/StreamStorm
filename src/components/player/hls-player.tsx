@@ -233,6 +233,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                         code: 'STREAM_OFFLINE',
                         message: 'Stream offline or unavailable',
                         fatal: true,
+                        shouldRefresh: true, // Allow parent to retry fetching a fresh URL
                         originalError: data
                     });
                     return;

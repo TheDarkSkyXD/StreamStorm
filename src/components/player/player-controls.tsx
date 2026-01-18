@@ -293,9 +293,9 @@ export function PlayerControls(props: PlayerControlsProps) {
                                         onClick={onToggleTheater}
                                     >
                                         {isTheater ? (
-                                            <TheaterFilledIcon className="w-5 h-5" />
+                                            <TheaterFilledIcon className="w-6 h-6" />
                                         ) : (
-                                            <TheaterOutlineIcon className="w-5 h-5" />
+                                            <TheaterOutlineIcon className="w-6 h-6" />
                                         )}
                                     </Button>
                                 </TooltipTrigger>
@@ -314,9 +314,9 @@ export function PlayerControls(props: PlayerControlsProps) {
                                     onClick={onToggleFullscreen}
                                 >
                                     {isFullscreen ? (
-                                        <Minimize className="w-5 h-5" />
+                                        <Minimize className="w-6 h-6" />
                                     ) : (
-                                        <Maximize className="w-5 h-5" />
+                                        <Maximize className="w-6 h-6" />
                                     )}
                                 </Button>
                             </TooltipTrigger>

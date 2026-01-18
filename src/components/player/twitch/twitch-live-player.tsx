@@ -49,14 +49,14 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
         enableAdBlock = true
     } = props;
 
-const containerRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const videoRef = useRef<HTMLVideoElement>(null);
 
     // Ad-block store setting
     const storeEnableAdBlock = useAdBlockStore((s) => s.enableAdBlock);
     // Use prop if explicitly set, otherwise use store value
     const effectiveEnableAdBlock = enableAdBlock !== undefined ? enableAdBlock && storeEnableAdBlock : storeEnableAdBlock;
-    
+
     // Ad-block status tracking
     const [adBlockStatus, setAdBlockStatus] = useState<AdBlockStatus | null>(null);
 
@@ -71,7 +71,7 @@ const containerRef = useRef<HTMLDivElement>(null);
     // Hooks
     const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
     const { isPip, togglePip } = usePictureInPicture(videoRef);
-    
+
     // Watch for and hide any ad elements that slip through (DOM-based ad blocking)
     useAdElementObserver(effectiveEnableAdBlock);
 
@@ -87,13 +87,13 @@ const containerRef = useRef<HTMLDivElement>(null);
 
     // Refs for stats
     const hlsRef = useRef<any>(null); // Capture Hls instance
-    
+
     // Track mute state before fallback mode for restoration
     const preFallbackMuteRef = useRef<boolean>(false);
 
     // Apply user's default quality preference
     useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
-    
+
     // NOTE: Muting during ads is DISABLED - we want seamless ad blocking at the HLS level
     // The network-level blocking and HLS segment stripping should handle ads silently
     // without any interruption to the user experience
@@ -203,7 +203,7 @@ const containerRef = useRef<HTMLDivElement>(null);
             ref={containerRef}
             className={`relative w-full h-full bg-black overflow-hidden group flex flex-col justify-center ${className || ''}`}
         >
-{streamUrl ? (
+            {streamUrl ? (
                 <TwitchHlsPlayer
                     ref={videoRef}
                     src={streamUrl}
@@ -293,6 +293,7 @@ const containerRef = useRef<HTMLDivElement>(null);
                     showVideoStats={showVideoStats}
                     onToggleVideoStats={() => setShowVideoStats(!showVideoStats)}
                     adBlockStatus={adBlockStatus}
+                    onSeek={() => { }} // Dummy seek handler for visual progress bar
                 />
             )}
         </div>

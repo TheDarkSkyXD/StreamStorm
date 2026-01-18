@@ -10,6 +10,7 @@ interface TwitchProgressBarProps {
     previewImage?: string;
     buffered?: TimeRanges;
     className?: string;
+    isLive?: boolean;
 }
 
 export function TwitchProgressBar({
@@ -19,16 +20,18 @@ export function TwitchProgressBar({
     onSeekHover,
     previewImage,
     buffered,
-    className = ''
+    className = '',
+    isLive = false
 }: TwitchProgressBarProps) {
     const containerRef = useRef<HTMLDivElement>(null);
     const [isHovering, setIsHovering] = useState(false);
     const [hoverPosition, setHoverPosition] = useState(0); // 0 to 1
 
     const progress = useMemo(() => {
+        if (isLive) return 100;
         if (!duration || duration === 0) return 0;
         return Math.min(100, (currentTime / duration) * 100);
-    }, [currentTime, duration]);
+    }, [currentTime, duration, isLive]);
 
     const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
         if (!containerRef.current) return;
