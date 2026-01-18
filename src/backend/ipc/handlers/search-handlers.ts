@@ -28,11 +28,12 @@ const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const twitchChannelDataCache = new Map<string, { data: any | null; timestamp: number }>();
 
 /**
- * Verify Twitch channels exist and fetch their fresh avatar URLs
- * Returns a Map of username -> enriched channel data with fresh avatars
+ * Verify Twitch channels exist and fetch their fresh avatar URLs and follower counts
+ * Returns a Map of username -> enriched channel data with fresh avatars and follower counts
  */
 async function verifyAndEnrichTwitchChannels(channels: any[]): Promise<Map<string, any>> {
     const { twitchClient } = await import('../../api/platforms/twitch/twitch-client');
+    const { getFollowerCounts } = await import('../../api/platforms/twitch/endpoints/user-endpoints');
 
     const enrichedChannels = new Map<string, any>();
     const loginsToFetch: { login: string; originalChannel: any }[] = [];
@@ -45,11 +46,12 @@ async function verifyAndEnrichTwitchChannels(channels: any[]): Promise<Map<strin
 
         if (cached && (now - cached.timestamp) < CACHE_TTL_MS) {
             if (cached.data) {
-                // Merge cached data (with fresh avatar and display name) into the channel
+                // Merge cached data (with fresh avatar, display name, and follower count) into the channel
                 enrichedChannels.set(loginLower, {
                     ...channel,
                     avatarUrl: cached.data.profileImageUrl || channel.avatarUrl || '',
                     displayName: cached.data.displayName || channel.displayName,
+                    followerCount: cached.data.followerCount,
                 });
             }
             // If cached.data is null, channel doesn't exist - skip it
@@ -71,22 +73,29 @@ async function verifyAndEnrichTwitchChannels(channels: any[]): Promise<Map<strin
                 // Create a map of login -> user data for quick lookup
                 const userMap = new Map(users.map(u => [u.login.toLowerCase(), u]));
 
+                // Fetch follower counts for all users in this batch
+                const userIds = users.map(u => u.id);
+                const followerCounts = await getFollowerCounts(twitchClient, userIds);
+
                 for (const { login, originalChannel } of batch) {
                     const loginLower = login.toLowerCase();
                     const user = userMap.get(loginLower);
 
                     if (user) {
-                        // Cache the fetched user data
+                        const followerCount = followerCounts.get(user.id) ?? 0;
+                        
+                        // Cache the fetched user data with follower count
                         twitchChannelDataCache.set(loginLower, {
-                            data: user,
+                            data: { ...user, followerCount },
                             timestamp: now
                         });
 
-                        // Merge fetched data (with fresh avatar) into the original channel
+                        // Merge fetched data (with fresh avatar and follower count) into the original channel
                         enrichedChannels.set(loginLower, {
                             ...originalChannel,
                             avatarUrl: user.profileImageUrl || originalChannel.avatarUrl || '',
                             displayName: user.displayName || originalChannel.displayName,
+                            followerCount,
                         });
                     } else {
                         // Channel doesn't exist - cache as null
@@ -111,13 +120,13 @@ async function verifyAndEnrichTwitchChannels(channels: any[]): Promise<Map<strin
 }
 
 /**
- * Cache for Kick channel data (includes avatar URLs)
+ * Cache for Kick channel data (includes avatar URLs and follower counts)
  */
 const kickChannelDataCache = new Map<string, { data: any | null; timestamp: number }>();
 
 /**
- * Verify Kick channels exist and fetch their avatar URLs
- * Returns a Map of username -> enriched channel data with avatars
+ * Verify Kick channels exist and fetch their avatar URLs and follower counts
+ * Returns a Map of username -> enriched channel data with avatars and follower counts
  */
 async function verifyAndEnrichKickChannels(channels: any[]): Promise<Map<string, any>> {
     const { getPublicChannel } = await import('../../api/platforms/kick/endpoints/channel-endpoints');
@@ -133,13 +142,14 @@ async function verifyAndEnrichKickChannels(channels: any[]): Promise<Map<string,
 
         if (cached && (now - cached.timestamp) < CACHE_TTL_MS) {
             if (cached.data) {
-                // Merge cached data (with avatar and live status) into the channel
+                // Merge cached data (with avatar, live status, and follower count) into the channel
                 enrichedChannels.set(slugLower, {
                     ...channel,
                     avatarUrl: cached.data.avatarUrl || channel.avatarUrl || '',
                     displayName: cached.data.displayName || channel.displayName,
                     isVerified: cached.data.isVerified || channel.isVerified,
                     isLive: cached.data.isLive, // Use authoritative live status from cache
+                    followerCount: cached.data.followerCount,
                 });
             }
             // If cached.data is null, channel doesn't exist - skip it
@@ -175,13 +185,14 @@ async function verifyAndEnrichKickChannels(channels: any[]): Promise<Map<string,
                             timestamp: now
                         });
 
-                        // Merge fetched data (with avatar) into the original channel
+                        // Merge fetched data (with avatar and follower count) into the original channel
                         enrichedChannels.set(slugLower, {
                             ...originalChannel,
                             avatarUrl: fetchedChannel.avatarUrl || originalChannel.avatarUrl || '',
                             displayName: fetchedChannel.displayName || originalChannel.displayName,
                             isVerified: fetchedChannel.isVerified || originalChannel.isVerified,
                             isLive: fetchedChannel.isLive, // Use authoritative live status
+                            followerCount: fetchedChannel.followerCount,
                         });
                     } else {
                         // Channel doesn't exist - cache as null
@@ -249,8 +260,9 @@ export function registerSearchHandlers(): void {
             const kickUser = storageService.getKickUser();
             const twitchUser = storageService.getTwitchUser();
             const normalizedQuery = params.query.toLowerCase().trim();
-            // Only verify for full searches (limit > 25), skip for dropdown suggestions (limit <= 25)
-            const shouldVerify = (params.limit || 20) > 25;
+            // Always enrich channels to get avatars and follower counts
+            // The enrichment is cached so repeated searches are fast
+            const shouldEnrich = true;
 
             // Create search promises for parallel execution
             const searchPromises: Promise<{ platform: Platform; data: any[] }>[] = [];
@@ -275,8 +287,8 @@ export function registerSearchHandlers(): void {
                             });
                         }
 
-                        // Only verify/enrich for full searches (not quick suggestions)
-                        if (shouldVerify) {
+                        // Always enrich to get avatars and follower counts
+                        if (shouldEnrich) {
                             channels = await filterVerifiedChannels(channels, 'twitch');
                         }
 
@@ -309,10 +321,8 @@ export function registerSearchHandlers(): void {
                             });
                         }
 
-                        // Only verify/enrich for full searches (not quick suggestions)
-                        // Note: For quick suggestions, we trust the Kick search's isLive status
-                        // because it comes from authoritative sources (getPublicChannel, top streams)
-                        if (shouldVerify) {
+                        // Always enrich to get avatars and follower counts
+                        if (shouldEnrich) {
                             channels = await filterVerifiedChannels(channels, 'kick');
                         }
 

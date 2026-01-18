@@ -20,6 +20,8 @@ import {
     AccessTokenResponse,
     PlayerType,
     DEFAULT_ADBLOCK_CONFIG,
+    DEFAULT_DATERANGE_PATTERNS,
+    DEFAULT_AD_SIGNIFIERS,
     createStreamInfo,
 } from '@/shared/adblock-types';
 
@@ -305,21 +307,30 @@ function neutralizeTrackingUrls(text: string): string {
  * 1. DATERANGE tags with ad-related class (99% reliable)
  * 2. 'stitched' signifier (VAFT method)
  * 3. Bitrate drop detection (optional secondary check)
+ * 
+ * Uses patterns from DEFAULT_DATERANGE_PATTERNS which are updated by VAFT pattern service
  */
 function detectAds(text: string, streamInfo: StreamInfo): { hasAds: boolean; method: string } {
     // Primary detection: #EXT-X-DATERANGE with ad indicators (most reliable)
     if (config.useDateRangeDetection) {
-        const hasDateRangeAd = text.includes('#EXT-X-DATERANGE') && 
-            (text.includes('stitched-ad') || 
-             text.includes('com.twitch.tv/ad') ||
-             text.includes('amazon-ad') ||
-             text.includes('twitch-stitched-ad'));
-        if (hasDateRangeAd) {
-            return { hasAds: true, method: 'DATERANGE' };
+        if (text.includes('#EXT-X-DATERANGE')) {
+            // Check all known DATERANGE patterns
+            for (const pattern of DEFAULT_DATERANGE_PATTERNS) {
+                if (text.includes(pattern)) {
+                    return { hasAds: true, method: 'DATERANGE' };
+                }
+            }
         }
     }
     
-    // Secondary detection: 'stitched' signifier
+    // Secondary detection: ad signifiers
+    for (const signifier of DEFAULT_AD_SIGNIFIERS) {
+        if (text.includes(signifier)) {
+            return { hasAds: true, method: 'signifier' };
+        }
+    }
+    
+    // Also check configured signifier (backward compatibility)
     if (text.includes(config.adSignifier)) {
         return { hasAds: true, method: 'stitched' };
     }
@@ -346,10 +357,14 @@ function updateBitrateBaseline(text: string, streamInfo: StreamInfo): void {
     if (!config.useBitrateDropDetection) return;
     
     // Only update from clean (non-ad) playlists
-    const hasAdIndicators = text.includes(config.adSignifier) || 
-                           text.includes('stitched-ad') ||
-                           text.includes('twitch-stitched-ad');
-    if (hasAdIndicators) return;
+    // Check all known ad patterns
+    for (const pattern of DEFAULT_DATERANGE_PATTERNS) {
+        if (text.includes(pattern)) return;
+    }
+    for (const signifier of DEFAULT_AD_SIGNIFIERS) {
+        if (text.includes(signifier)) return;
+    }
+    if (text.includes(config.adSignifier)) return;
     
     const bitrateMatch = text.match(/BANDWIDTH=(\d+)/);
     if (bitrateMatch) {

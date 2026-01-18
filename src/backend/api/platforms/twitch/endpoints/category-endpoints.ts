@@ -76,3 +76,38 @@ export async function getCategoriesByIds(
     }
     return [];
 }
+
+/**
+ * Get ALL top categories with automatic pagination until exhausted
+ * No artificial limits - fetches every category available from Twitch
+ */
+export async function getAllTopCategories(
+    client: TwitchRequestor
+): Promise<UnifiedCategory[]> {
+    const allCategories: UnifiedCategory[] = [];
+    let cursor: string | undefined;
+    const perPage = 100; // Twitch max per request
+
+    while (true) {
+        const result = await getTopCategories(client, {
+            first: perPage,
+            after: cursor,
+        });
+
+        allCategories.push(...result.data);
+        cursor = result.cursor;
+
+        // No more pages = done
+        if (!cursor || result.data.length < perPage) {
+            break;
+        }
+
+        // Safety valve: stop at 2000 (Twitch has ~1500 categories)
+        if (allCategories.length >= 2000) {
+            console.warn('⚠️ Twitch category fetch hit safety limit (2000)');
+            break;
+        }
+    }
+
+    return allCategories;
+}

@@ -144,3 +144,68 @@ export async function getAllFollowedChannels(
 
     return allChannels;
 }
+
+/**
+ * Get follower count for a broadcaster
+ * Uses the /channels/followers endpoint which returns total count
+ * 
+ * Note: This endpoint requires a user access token with moderator:read:followers scope.
+ * Returns null on auth failures (401/403) to distinguish from legitimate 0 followers.
+ */
+export async function getFollowerCount(
+    client: TwitchRequestor,
+    broadcasterId: string
+): Promise<number | null> {
+    try {
+        const data = await client.request<TwitchApiResponse<unknown>>(
+            `/channels/followers?broadcaster_id=${broadcasterId}&first=1`
+        );
+        return data.total ?? 0;
+    } catch (error: unknown) {
+        // Check for auth failures - return null to distinguish from 0 followers
+        const err = error as { status?: number; response?: { status?: number } };
+        if (err.status === 401 || err.status === 403 ||
+            err.response?.status === 401 || err.response?.status === 403) {
+            console.debug(`[getFollowerCount] Auth failure for ${broadcasterId} - returning null`);
+            return null;
+        }
+        console.warn(`Failed to get follower count for ${broadcasterId}:`, error);
+        return null;
+    }
+}
+
+/**
+ * Get follower counts for multiple broadcasters (batch)
+ * Returns a Map of broadcasterId -> followerCount
+ * Note: IDs with auth failures (null counts) are omitted from the result
+ */
+export async function getFollowerCounts(
+    client: TwitchRequestor,
+    broadcasterIds: string[]
+): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+
+    // Twitch API doesn't support batch follower count requests
+    // We need to make individual requests, but we can do them in parallel
+    // Limit concurrent requests to avoid rate limiting
+    const concurrencyLimit = 10;
+
+    for (let i = 0; i < broadcasterIds.length; i += concurrencyLimit) {
+        const batch = broadcasterIds.slice(i, i + concurrencyLimit);
+        const results = await Promise.all(
+            batch.map(async (id) => {
+                const count = await getFollowerCount(client, id);
+                return { id, count };
+            })
+        );
+
+        for (const result of results) {
+            // Only set count if we got a valid number (not null/auth failure)
+            if (result.count !== null) {
+                counts.set(result.id, result.count);
+            }
+        }
+    }
+
+    return counts;
+}

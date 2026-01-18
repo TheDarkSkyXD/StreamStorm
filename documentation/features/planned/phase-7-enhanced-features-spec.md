@@ -46,21 +46,6 @@ This phase implements advanced features that enhance the StreamStorm experience 
 - [ ] Caption language selection
 - [ ] Save caption preferences
 
-### Phase 7.3: Stream Analytics (2 days)
-
-- [ ] View count history graph
-- [ ] Chat activity metrics
-- [ ] Stream schedule info
-- [ ] Peak viewer times
-- [ ] Platform comparison stats
-
-### Phase 7.4: Enhanced Discovery (2 days)
-
-- [ ] Recommendation engine based on viewing history
-- [ ] "Similar channels" suggestions
-- [ ] Trending content detection
-- [ ] Personalized home feed
-- [ ] Category exploration tools
 
 ### Phase 7.5: Social Features (2 days)
 

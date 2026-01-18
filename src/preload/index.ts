@@ -394,6 +394,74 @@ const electronAPI = {
       ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PROXY_CLEAR_STREAM, { channelName }),
     clearAllProxyStreamInfos: (): Promise<{ success: boolean }> =>
       ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PROXY_CLEAR_ALL),
+    // VAFT pattern management
+    getPatterns: (): Promise<{ version: number; adSignifiers: string[]; dateRangePatterns: string[]; backupPlayerTypes: string[]; lastUpdated: string }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_GET),
+    refreshPatterns: (): Promise<{ success: boolean; patterns: unknown }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_REFRESH),
+    getPatternStats: (): Promise<{ version: number; dateRangePatternCount: number; signifierCount: number; backupPlayerTypeCount: number; lastChecked: string; autoUpdateEnabled: boolean }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_GET_STATS),
+    setPatternAutoUpdate: (enabled: boolean): Promise<{ autoUpdateEnabled: boolean }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_SET_AUTO_UPDATE, { enabled }),
+  },
+
+  // ========== App Auto-Update ==========
+  updater: {
+    check: (): Promise<{
+      status: string;
+      updateInfo: { version: string; releaseDate: string; releaseNotes: string | null; releaseName: string | null } | null;
+      error: string | null;
+      allowPrerelease: boolean;
+    }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CHECK),
+    
+    download: (): Promise<{
+      status: string;
+      updateInfo: { version: string; releaseDate: string; releaseNotes: string | null; releaseName: string | null } | null;
+      progress: { bytesPerSecond: number; percent: number; transferred: number; total: number } | null;
+      error: string | null;
+    }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_DOWNLOAD),
+    
+    install: (): Promise<{ success: boolean }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.UPDATE_INSTALL),
+    
+    getStatus: (): Promise<{
+      status: string;
+      updateInfo: { version: string; releaseDate: string; releaseNotes: string | null; releaseName: string | null } | null;
+      progress: { bytesPerSecond: number; percent: number; transferred: number; total: number } | null;
+      error: string | null;
+      allowPrerelease: boolean;
+    }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_GET_STATUS),
+    
+    setAllowPrerelease: (allow: boolean): Promise<{
+      status: string;
+      allowPrerelease: boolean;
+    }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_SET_ALLOW_PRERELEASE, { allow }),
+    
+    getSettings: (): Promise<{ allowPrerelease: boolean }> =>
+      ipcRenderer.invoke(IPC_CHANNELS.UPDATE_GET_SETTINGS),
+    
+    onStatusChange: (callback: (state: {
+      status: string;
+      updateInfo: { version: string; releaseDate: string; releaseNotes: string | null; releaseName: string | null } | null;
+      progress: { bytesPerSecond: number; percent: number; transferred: number; total: number } | null;
+      error: string | null;
+      allowPrerelease: boolean;
+    }) => void): (() => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, state: unknown) => callback(state as Parameters<typeof callback>[0]);
+      ipcRenderer.on(IPC_CHANNELS.UPDATE_ON_STATUS_CHANGE, handler);
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.UPDATE_ON_STATUS_CHANGE, handler);
+    },
+    
+    onProgress: (callback: (progress: {
+      bytesPerSecond: number;
+      percent: number;
+      transferred: number;
+      total: number;
+    }) => void): (() => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, progress: unknown) => callback(progress as Parameters<typeof callback>[0]);
+      ipcRenderer.on(IPC_CHANNELS.UPDATE_ON_PROGRESS, handler);
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.UPDATE_ON_PROGRESS, handler);
+    },
   },
 };
 

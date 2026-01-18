@@ -234,6 +234,18 @@ export function UnifiedSearchInput({
     const showSuggestions = isFocused && searchQuery.length > 0 && (hasResults || channelsLoading || categoriesLoading);
     const showDropdown = showHistory || showSuggestions;
 
+    // Helper to format follower count
+    const formatFollowerCount = (count: number | undefined): string | null => {
+        if (count === undefined || count === null) return null;
+        if (count >= 1000000) {
+            return `${(count / 1000000).toFixed(1).replace(/\.0$/, '')}M followers`;
+        }
+        if (count >= 1000) {
+            return `${(count / 1000).toFixed(1).replace(/\.0$/, '')}K followers`;
+        }
+        return `${count} followers`;
+    };
+
     // Helper to render channel items
     const ChannelItem = ({ channel, onClick }: { channel: UnifiedChannel, onClick: (c: UnifiedChannel, e: React.MouseEvent) => void }) => {
         // If onSelectChannel is provided, we use a div, otherwise a Link
@@ -250,6 +262,8 @@ export function UnifiedSearchInput({
                 <span className="text-xs font-bold text-white uppercase">{channel.displayName.slice(0, 1)}</span>
             </div>
         );
+
+        const followerText = formatFollowerCount(channel.followerCount);
 
         return (
             // @ts-ignore - Link props vs div props complexity
@@ -277,8 +291,9 @@ export function UnifiedSearchInput({
                     <p className="font-bold text-sm text-[var(--color-foreground)] group-hover:text-[var(--color-storm-primary)] truncate">
                         {channel.displayName}
                     </p>
-                    <div className="flex items-center gap-2 text-xs text-[var(--color-foreground-muted)]">
+                    <div className="flex items-center gap-2 text-xs text-zinc-400">
                         {!platform && <span className="capitalize">{channel.platform}</span>}
+                        {followerText && <span>{followerText}</span>}
                         {channel.isLive && <span className="text-red-500 font-bold">• LIVE</span>}
                     </div>
                 </div>

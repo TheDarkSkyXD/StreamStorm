@@ -137,12 +137,12 @@ export function StreamPage() {
     };
   }, [setIsOnStreamPage, setTheaterModeActive]);
 
-  // Adjust chat width when toggling theater mode to optimize video size/black bars
+  // Match Twitch's exact theater mode chat width (measured at 1920x1080)
   useEffect(() => {
     if (isTheater) {
-      setChatWidth(250); // Narrower chat in theater mode to maximize video height
+      setChatWidth(340); // Twitch theater mode: exactly 340px chat width
     } else {
-      setChatWidth(300); // Standard width for normal mode
+      setChatWidth(340); // Match Twitch's standard chat width
     }
   }, [isTheater]);
 
@@ -209,9 +209,9 @@ export function StreamPage() {
     <div className="h-full flex overflow-hidden">
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-        <div className={`flex-1 no-scrollbar ${isTheater ? 'flex flex-col overflow-hidden' : 'overflow-y-auto'}`}>
+        <div className={`flex-1 no-scrollbar ${isTheater ? 'flex flex-col items-center justify-center overflow-hidden py-[5px]' : 'overflow-y-auto'}`}>
           {/* Video Player Area */}
-          <div className={`${isTheater ? 'flex-1 min-h-0' : 'aspect-video'} bg-black flex items-center justify-center shrink-0 w-full relative`}>
+          <div className={`${isTheater ? 'h-full aspect-video max-w-full' : 'aspect-video shrink-0 w-full'} bg-black relative`}>
             {/* Platform-specific live stream players */}
             {platform === 'kick' ? (
               <KickLivePlayer

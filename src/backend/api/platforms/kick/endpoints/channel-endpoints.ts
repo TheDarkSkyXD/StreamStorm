@@ -114,6 +114,16 @@ export async function getPublicChannel(slug: string): Promise<UnifiedChannel | n
             return null;
         }
 
+        // Check for common HTTP error responses before attempting JSON parse
+        const pageContentLower = pageContent.toLowerCase();
+        if (pageContentLower.includes('error code 5') || 
+            pageContentLower.includes('internal server error') ||
+            pageContentLower.includes('bad gateway') ||
+            pageContentLower.includes('service unavailable')) {
+            console.warn(`[KickChannel] Server error for ${slug}: ${pageContent.substring(0, 100)}`);
+            return null;
+        }
+
         let data;
         try {
             data = JSON.parse(pageContent);
@@ -196,6 +206,7 @@ export async function getPublicChannel(slug: string): Promise<UnifiedChannel | n
             isLive: data.livestream !== null,
             isVerified: data.verified?.id !== undefined || false,
             isPartner: false, // Can't easily tell from this endpoint
+            followerCount: data.followers_count ?? data.followersCount ?? undefined,
             categoryId,
             categoryName,
             lastStreamTitle,

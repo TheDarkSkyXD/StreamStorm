@@ -26,15 +26,18 @@ const navItems = [
 ] as const;
 
 export function AppLayout({ children }: AppLayoutProps) {
-  const { sidebarCollapsed, setSidebarCollapsed, isTheaterModeActive } = useAppStore();
+  // Use individual selectors to prevent re-renders when unrelated state changes
+  const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed);
+  const setSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed);
+  const isTheaterModeActive = useAppStore((state) => state.isTheaterModeActive);
   const location = useLocation();
 
   // Initialize auth state once at the app root
   useAuthInitialize();
 
   return (
-    <div className="h-full flex flex-col bg-[var(--color-background)]">
-      {/* Custom Title Bar (window controls) */}
+    <div className="h-full flex flex-col bg-[var(--color-background)] relative">
+            {/* Custom Title Bar (window controls) */}
       <TitleBar />
 
       {/* Top Navigation Bar (search, user info) */}

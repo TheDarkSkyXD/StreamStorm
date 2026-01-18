@@ -214,6 +214,12 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
         const video = videoRef.current;
         if (!video) return;
         if (video.paused) {
+            // For live streams: seek to live edge before playing
+            // This ensures we're watching "live" when resuming playback
+            if (video.seekable.length > 0) {
+                const liveEdge = video.seekable.end(video.seekable.length - 1);
+                video.currentTime = liveEdge;
+            }
             video.play().catch((e) => {
                 // Ignore AbortError (interrupted by load) and NotAllowedError (autoplay policy)
                 if (e.name !== 'AbortError' && e.name !== 'NotAllowedError') {
@@ -323,7 +329,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
     return (
         <div
             ref={containerRef}
-            className={`relative w-full h-full bg-black overflow-hidden group ${className || ''}`}
+            className={`relative w-full h-full bg-black overflow-hidden group flex flex-col justify-center ${className || ''}`}
         >
             {streamUrl ? (
                 <HlsPlayer
@@ -341,7 +347,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
                         onError?.(error);
                     }}
                     onHlsInstance={handleHlsInstance}
-                    className="size-full object-contain cursor-pointer"
+                    className="size-full object-contain object-center cursor-pointer"
                     controls={false}
                     onDoubleClick={toggleFullscreen}
                 />

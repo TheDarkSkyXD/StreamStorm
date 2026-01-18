@@ -64,6 +64,11 @@ interface ProxiedImageProps {
     fallbackClassName?: string;
     /** Optional class name for the skeleton loader. Defaults to className if not provided. */
     skeletonClassName?: string;
+    /** 
+     * Native lazy loading attribute. Defaults to 'lazy' for performance.
+     * Use 'eager' for above-the-fold images that should load immediately.
+     */
+    loading?: 'lazy' | 'eager';
 }
 
 export function ProxiedImage({
@@ -72,7 +77,8 @@ export function ProxiedImage({
     className = '',
     fallback,
     fallbackClassName = '',
-    skeletonClassName
+    skeletonClassName,
+    loading = 'lazy'  // OPTIMIZATION: Default to lazy loading for off-screen images
 }: ProxiedImageProps) {
     // The resolved image source (either direct URL or proxied data URL)
     const [resolvedSrc, setResolvedSrc] = useState<string | null>(null);
@@ -204,6 +210,7 @@ export function ProxiedImage({
                 src={resolvedSrc}
                 alt={alt}
                 className={className}
+                loading={loading}  // Native lazy loading - defers off-screen images
                 onError={handleImgError}
             />
         );
