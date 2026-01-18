@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PlatformAvatar } from '@/components/ui/platform-avatar';
@@ -11,6 +10,32 @@ import { formatViewerCount, formatUptime } from '@/lib/utils';
 import { Users, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
+/**
+ * Isolated uptime counter component to prevent re-rendering parent every second
+ * Performance: Reduces StreamInfo re-renders from 60/min to 0 (except when data changes)
+ */
+const UptimeCounter = React.memo(({ startedAt }: { startedAt: string }) => {
+    const [uptime, setUptime] = useState(() => formatUptime(startedAt));
+
+    useEffect(() => {
+        // Update immediately
+        setUptime(formatUptime(startedAt));
+
+        // Update every second
+        const interval = setInterval(() => {
+            setUptime(formatUptime(startedAt));
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [startedAt]);
+
+    return (
+        <span className="font-semibold tabular-nums text-white">
+            {uptime}
+        </span>
+    );
+});
+
 interface StreamInfoProps {
     channel: UnifiedChannel | null | undefined;
     stream: UnifiedStream | null | undefined;
@@ -18,28 +43,6 @@ interface StreamInfoProps {
 }
 
 export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
-    // Real-time uptime counter
-    const [uptime, setUptime] = useState<string>('0:00:00');
-
-    useEffect(() => {
-        if (!stream?.startedAt || !stream?.isLive) {
-            setUptime('0:00:00');
-            return;
-        }
-
-
-
-        // Update uptime immediately
-        setUptime(formatUptime(stream.startedAt));
-
-        // Update every second for real-time display
-        const interval = setInterval(() => {
-            setUptime(formatUptime(stream.startedAt));
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [stream?.startedAt, stream?.isLive]);
-
     if (isLoading || !channel) {
         return (
             <div className="flex justify-between items-start gap-4 animate-pulse">
@@ -175,9 +178,7 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                             <TooltipTrigger asChild>
                                 <div className="flex items-center gap-1.5 cursor-default">
                                     <Clock className="w-4 h-4 text-white" />
-                                    <span className="font-semibold tabular-nums text-white">
-                                        {uptime}
-                                    </span>
+                                    {stream.startedAt && <UptimeCounter startedAt={stream.startedAt} />}
                                 </div>
                             </TooltipTrigger>
                             <TooltipContent side="bottom">

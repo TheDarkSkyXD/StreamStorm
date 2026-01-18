@@ -2,7 +2,6 @@ import { UnifiedCategory } from '@/backend/api/unified/platform-types';
 import { CategoryCard } from './category-card';
 import { CategoryCardSkeleton } from './category-card-skeleton';
 import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
 
 interface CategoryGridProps {
     categories?: UnifiedCategory[];
@@ -31,48 +30,22 @@ export function CategoryGrid({
 
     if (!categories || categories.length === 0) {
         return (
-            <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="col-span-full py-12 text-center text-[var(--color-foreground-muted)]"
-            >
+            <div className="col-span-full py-12 text-center text-[var(--color-foreground-muted)] animate-fade-in-up">
                 <div className="text-4xl mb-4">🎮</div>
                 <p className="text-lg">{emptyMessage}</p>
-            </motion.div>
+            </div>
         );
     }
 
     return (
-        <motion.div
-            variants={{
-                hidden: { opacity: 0 },
-                show: {
-                    opacity: 1,
-                    transition: {
-                        // OPTIMIZATION: Reduced stagger from 0.03s to 0.015s
-                        // Old: 0.03s * 100 items = 3 seconds total animation
-                        // New: 0.015s * 100 items = 1.5 seconds total animation
-                        // Also reduced duration for snappier feel
-                        staggerChildren: 0.015,
-                        duration: 0.2
-                    }
-                }
-            }}
-            initial="hidden"
-            animate="show"
-            className={cn("grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4", className)}
-        >
+        <div className={cn(
+            "grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4",
+            "stagger-scale-container", // CSS-based scale stagger animation
+            className
+        )}>
             {categories.map((category) => (
-                <motion.div
-                    key={`${category.platform}-${category.id}`}
-                    variants={{
-                        hidden: { opacity: 0, scale: 0.9 },
-                        show: { opacity: 1, scale: 1 }
-                    }}
-                >
-                    <CategoryCard category={category} />
-                </motion.div>
+                <CategoryCard key={`${category.platform}-${category.id}`} category={category} />
             ))}
-        </motion.div>
+        </div>
     );
 }
