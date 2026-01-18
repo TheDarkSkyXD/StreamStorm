@@ -25,7 +25,7 @@ export interface PlayerError {
     code: PlayerErrorCode | string;
     message: string;
     fatal: boolean;
-    originalError?: any;
+    originalError?: unknown;
     /** If true, caller should attempt to refresh playback URL */
     shouldRefresh?: boolean;
 }

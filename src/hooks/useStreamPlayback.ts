@@ -114,15 +114,24 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
     }, []);
 
     // Reload with rate limiting to prevent infinite loops
+    // Uses functional state update to avoid stale closure on reloadAttempts
     const reload = useCallback(() => {
-        if (reloadAttempts >= MAX_RELOAD_ATTEMPTS) {
-            console.debug(`[useStreamPlayback] Max reload attempts (${MAX_RELOAD_ATTEMPTS}) reached, stopping`);
-            setError(new Error('Max reload attempts reached - stream may be offline'));
-            return;
+        let shouldReload = false;
+        setReloadAttempts(prev => {
+            if (prev >= MAX_RELOAD_ATTEMPTS) {
+                console.debug(`[useStreamPlayback] Max reload attempts (${MAX_RELOAD_ATTEMPTS}) reached, stopping`);
+                setError(new Error('Max reload attempts reached - stream may be offline'));
+                return prev; // Don't increment, max reached
+            }
+            shouldReload = true;
+            return prev + 1;
+        });
+        // Only trigger reload if we haven't hit max attempts
+        // Note: This works because setReloadAttempts is synchronous in its state update
+        if (shouldReload) {
+            setReloadKey(prev => prev + 1);
         }
-        setReloadAttempts(prev => prev + 1);
-        setReloadKey(prev => prev + 1);
-    }, [reloadAttempts]);
+    }, []);
 
     return {
         playback,
