@@ -11,6 +11,8 @@ interface UseStreamPlaybackResult {
     isUsingProxy: boolean;
     /** Retry loading the stream without proxy (fallback to direct) */
     retryWithoutProxy: () => void;
+    /** Number of consecutive reload attempts (resets on successful playback) */
+    reloadAttempts: number;
 }
 
 export function useStreamPlayback(platform: Platform, identifier: string): UseStreamPlaybackResult {
@@ -22,6 +24,9 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
     const [isUsingProxy, setIsUsingProxy] = useState(false);
     // Force disable proxy for fallback
     const [forceNoProxy, setForceNoProxy] = useState(false);
+    // Track reload attempts to prevent infinite loops
+    const [reloadAttempts, setReloadAttempts] = useState(0);
+    const MAX_RELOAD_ATTEMPTS = 3;
 
     const currentKey = `${platform}-${identifier}`;
 
@@ -32,6 +37,7 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
         setError(null);
         setIsUsingProxy(false);
         setForceNoProxy(false);
+        setReloadAttempts(0); // Reset attempts when stream changes
     }, [currentKey, identifier]);
 
     useEffect(() => {
@@ -75,6 +81,7 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
                     });
                     setIsUsingProxy(usingProxy);
                     setIsLoading(false);
+                    setReloadAttempts(0); // Reset on successful load
                 }
             } catch (err) {
                 if (isMounted) {
@@ -106,12 +113,24 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
         setReloadKey(prev => prev + 1);
     }, []);
 
+    // Reload with rate limiting to prevent infinite loops
+    const reload = useCallback(() => {
+        if (reloadAttempts >= MAX_RELOAD_ATTEMPTS) {
+            console.debug(`[useStreamPlayback] Max reload attempts (${MAX_RELOAD_ATTEMPTS}) reached, stopping`);
+            setError(new Error('Max reload attempts reached - stream may be offline'));
+            return;
+        }
+        setReloadAttempts(prev => prev + 1);
+        setReloadKey(prev => prev + 1);
+    }, [reloadAttempts]);
+
     return {
         playback,
         isLoading,
         error,
         isUsingProxy,
-        reload: () => setReloadKey(prev => prev + 1),
-        retryWithoutProxy
+        reload,
+        retryWithoutProxy,
+        reloadAttempts
     };
 }

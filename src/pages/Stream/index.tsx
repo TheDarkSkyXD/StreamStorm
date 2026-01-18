@@ -63,8 +63,26 @@ export function StreamPage() {
       code: error.code,
       isUsingProxy,
       platform,
-      message: error.message
+      message: error.message,
+      shouldRefresh: error.shouldRefresh
     });
+
+    // Handle errors that suggest we need a fresh playback URL
+    // TOKEN_EXPIRED: Playback token expired, need new URL
+    // NO_FRAGMENTS: No video data received after manifest - likely stale URL or offline
+    if (error.code === 'TOKEN_EXPIRED' || error.code === 'NO_FRAGMENTS') {
+      console.debug(`[StreamPage] ${error.code} - attempting automatic refresh`);
+      setProxyFallbackNotice(
+        error.code === 'TOKEN_EXPIRED'
+          ? 'Playback session expired. Refreshing stream...'
+          : 'Stream data unavailable. Refreshing...'
+      );
+      reloadPlayback(); // Fetch fresh playback URL
+      // Auto-hide notification after 5 seconds
+      if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
+      fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 5000);
+      return; // Don't show error, let refresh attempt
+    }
 
     // PROXY_ERROR is specific to proxy server failures (500 errors)
     if (error.code === 'PROXY_ERROR') {
@@ -110,7 +128,7 @@ export function StreamPage() {
     // Exit theater mode when stream goes offline for better offline screen visibility
     setTheaterModeActive(false);
     setPlayerError(error);
-  }, [isUsingProxy, platform, retryWithoutProxy, setTheaterModeActive]);
+  }, [isUsingProxy, platform, retryWithoutProxy, setTheaterModeActive, reloadPlayback]);
 
   // Reset player error when playback changes
   useEffect(() => {
@@ -225,7 +243,7 @@ export function StreamPage() {
                 startedAt={streamData?.startedAt}
               />
             ) : (
-<TwitchLivePlayer
+              <TwitchLivePlayer
                 streamUrl={effectiveStreamUrl}
                 channelName={channelName}
                 autoPlay={true}
