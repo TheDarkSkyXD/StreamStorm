@@ -56,6 +56,11 @@ export function registerUpdateHandlers(mainWindow: BrowserWindow): void {
   // Install downloaded update (quits and restarts)
   ipcMain.handle(IPC_CHANNELS.UPDATE_INSTALL, () => {
     try {
+      // Verify an update is actually downloaded before attempting install
+      const { status } = getUpdateStatus();
+      if (status !== 'downloaded') {
+        return { success: false, error: 'No downloaded update to install' };
+      }
       installUpdate();
       return { success: true };
     } catch (error) {
@@ -81,20 +86,34 @@ export function registerUpdateHandlers(mainWindow: BrowserWindow): void {
   });
 
   // Set allow pre-release preference
-  ipcMain.handle(IPC_CHANNELS.UPDATE_SET_ALLOW_PRERELEASE, (_event, { allow }: { allow: boolean }) => {
-    try {
-      return setAllowPrerelease(allow);
-    } catch (error) {
-      console.error('[Update] Set prerelease failed:', error);
-      return {
-        status: 'error',
-        updateInfo: null,
-        progress: null,
-        error: error instanceof Error ? error.message : 'Failed to set prerelease preference',
-        allowPrerelease: false,
-      };
+  // Defensively validate payload to prevent crashes if renderer passes undefined
+  ipcMain.handle(
+    IPC_CHANNELS.UPDATE_SET_ALLOW_PRERELEASE,
+    (_event, payload: { allow?: boolean } = {}) => {
+      // Validate that allow is a boolean
+      if (typeof payload.allow !== 'boolean') {
+        return {
+          status: 'error',
+          updateInfo: null,
+          progress: null,
+          error: 'Invalid payload: allow must be a boolean',
+          allowPrerelease: false,
+        };
+      }
+      try {
+        return setAllowPrerelease(payload.allow);
+      } catch (error) {
+        console.error('[Update] Set prerelease failed:', error);
+        return {
+          status: 'error',
+          updateInfo: null,
+          progress: null,
+          error: error instanceof Error ? error.message : 'Failed to set prerelease preference',
+          allowPrerelease: false,
+        };
+      }
     }
-  });
+  );
 
   // Get update settings
   ipcMain.handle(IPC_CHANNELS.UPDATE_GET_SETTINGS, () => {

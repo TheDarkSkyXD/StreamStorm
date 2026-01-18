@@ -75,7 +75,7 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
                 setAdBlockStatus(status);
                 onAdBlockStatusChangeRef.current?.(status);
             });
-            
+
             // Initialize auth headers for backup stream fetching
             // Generate a persistent device ID (stored in localStorage) or use existing
             let deviceId = localStorage.getItem('twitch_adblock_device_id');
@@ -133,7 +133,7 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
         if (!video.paused) {
             video.pause();
             setTimeout(() => {
-                video.play().catch(() => {});
+                video.play().catch(() => { });
             }, 100);
         }
     }, []);
@@ -208,7 +208,7 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
                 liveMaxLatencyDurationCount: 8,
                 maxBufferLength: 30,
                 maxMaxBufferLength: 60,
-                
+
                 // Buffer hole handling - tuned for live streaming resilience
                 maxBufferHole: 0.5,              // Max gap size before seeking over (seconds)
                 highBufferWatchdogPeriod: 3,     // Seconds before watchdog checks for stalls
@@ -290,21 +290,24 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
                     // Find the source quality (highest bitrate)
                     const maxBitrate = Math.max(...rawLevels.map(l => l.bitrate || 0));
 
+                    // Find only the FIRST level with max bitrate to mark as source
+                    const sourceIndex = rawLevels.findIndex(level => level.bitrate === maxBitrate);
+
                     // Deduplicate labels by appending bitrate when duplicates exist
                     const labelCounts = new Map<string, number>();
                     rawLevels.forEach(l => labelCounts.set(l.label, (labelCounts.get(l.label) || 0) + 1));
 
-                    const levels: QualityLevel[] = rawLevels.map((level) => {
+                    const levels: QualityLevel[] = rawLevels.map((level, index) => {
                         let finalLabel = level.label;
-                        
-                        // Mark the highest bitrate level as source
-                        if (level.bitrate === maxBitrate && maxBitrate > 0) {
+
+                        // Mark only the first highest bitrate level as source
+                        if (index === sourceIndex && maxBitrate > 0) {
                             finalLabel = `${finalLabel} (source)`;
                         } else if (labelCounts.get(level.label)! > 1 && level.bitrate > 0) {
                             // Deduplicate other labels by appending bitrate
                             finalLabel = `${finalLabel} (${Math.round(level.bitrate / 1000)}k)`;
                         }
-                        
+
                         return { ...level, label: finalLabel };
                     });
 
@@ -359,7 +362,7 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
                             // This handles CDN edge server rotation and momentary connectivity issues.
                             const now = Date.now();
                             const lastAttempt = lastRecoveryAttemptRef.current;
-                            
+
                             // Allow one recovery attempt every 8 seconds
                             if (!lastAttempt || now - lastAttempt > 8000) {
                                 console.debug('[TwitchHLS] Attempting network error recovery (startLoad)');

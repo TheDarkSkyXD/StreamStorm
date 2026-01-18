@@ -25,17 +25,15 @@ export class TwitchStreamResolver {
         let lastError: Error | null = null;
 
         for (let attempt = 0; attempt <= maxRetries; attempt++) {
-            try {
-                // Create abort controller for timeout
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), timeout);
+            // Move controller and timeoutId outside try block to ensure cleanup in finally
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+            try {
                 const response = await fetch(url, {
                     ...options,
                     signal: controller.signal
                 });
-
-                clearTimeout(timeoutId);
 
                 // Retry on transient server errors
                 if (response.status >= 502 && response.status <= 504) {
@@ -62,6 +60,9 @@ export class TwitchStreamResolver {
                 const errorCode = this.getErrorCode(error);
                 console.warn(`⚠️ Twitch GQL request failed [${errorCode || 'NETWORK'}] (attempt ${attempt + 1}/${maxRetries + 1}). Retrying in ${delay}ms... Error: ${errorMsg}`);
                 await new Promise(resolve => setTimeout(resolve, delay));
+            } finally {
+                // Always clear the timeout to prevent stray timers
+                clearTimeout(timeoutId);
             }
         }
 
@@ -98,7 +99,7 @@ export class TwitchStreamResolver {
 
             // Check error message for fetch failures
             const message = error.message.toLowerCase();
-            if (message.includes('fetch failed') || 
+            if (message.includes('fetch failed') ||
                 message.includes('network') ||
                 message.includes('socket') ||
                 message.includes('disconnected')) {

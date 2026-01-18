@@ -3,6 +3,12 @@ import { useQuery } from '@tanstack/react-query';
 import { Platform } from '../../shared/auth-types';
 import { UnifiedCategory } from '../../backend/api/unified/platform-types';
 
+// Minimal interface for stream data needed for category aggregation
+interface StreamSummary {
+    categoryId?: string;
+    viewerCount?: number;
+}
+
 export const CATEGORY_KEYS = {
     all: ['categories'] as const,
     top: (platform?: Platform) => [...CATEGORY_KEYS.all, 'top', platform] as const,
@@ -24,7 +30,7 @@ export function useTopCategories(platform?: Platform) {
                 throw new Error(categoriesResponse.error as unknown as string);
             }
             const categories = categoriesResponse.data as UnifiedCategory[] || [];
-            const streams = (streamsResponse.data as any[]) || [];
+            const streams = (streamsResponse.data as StreamSummary[]) || [];
 
             // 3. Aggregate viewer counts by category ID
             const viewerCounts = new Map<string, number>();
@@ -45,7 +51,7 @@ export function useTopCategories(platform?: Platform) {
                 )
             }));
 
-// 5. De-duplicate: Twitch-first, then ADD Kick-exclusives
+            // 5. De-duplicate: Twitch-first, then ADD Kick-exclusives
             // Rule: 
             //   - Use Twitch version for any category that exists on Twitch
             //   - ADD Kick categories that DON'T exist on Twitch

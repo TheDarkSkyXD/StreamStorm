@@ -1,9 +1,10 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
 /**
  * Update status types
  */
-export type UpdateStatus = 
+export type UpdateStatus =
   | 'idle'
   | 'checking'
   | 'available'
@@ -11,6 +12,21 @@ export type UpdateStatus =
   | 'downloading'
   | 'downloaded'
   | 'error';
+
+// Valid status values for runtime validation
+const UPDATE_STATUSES: UpdateStatus[] = [
+  'idle',
+  'checking',
+  'available',
+  'not-available',
+  'downloading',
+  'downloaded',
+  'error',
+];
+
+// Type guard for UpdateStatus validation
+const isUpdateStatus = (value: string): value is UpdateStatus =>
+  UPDATE_STATUSES.includes(value as UpdateStatus);
 
 export interface UpdateInfo {
   version: string;
@@ -45,7 +61,7 @@ interface UpdateState {
   setError: (error: string | null) => void;
   setAllowPrerelease: (allow: boolean) => void;
   setInitialized: (initialized: boolean) => void;
-  
+
   // Bulk update from backend state
   updateFromBackend: (state: {
     status: string;
@@ -68,24 +84,34 @@ const initialState = {
   isInitialized: false,
 };
 
-export const useUpdateStore = create<UpdateState>()((set) => ({
-  ...initialState,
+export const useUpdateStore = create<UpdateState>()(
+  persist(
+    (set) => ({
+      ...initialState,
 
-  setStatus: (status) => set({ status }),
-  setUpdateInfo: (updateInfo) => set({ updateInfo }),
-  setProgress: (progress) => set({ progress }),
-  setError: (error) => set({ error }),
-  setAllowPrerelease: (allowPrerelease) => set({ allowPrerelease }),
-  setInitialized: (isInitialized) => set({ isInitialized }),
+      setStatus: (status) => set({ status }),
+      setUpdateInfo: (updateInfo) => set({ updateInfo }),
+      setProgress: (progress) => set({ progress }),
+      setError: (error) => set({ error }),
+      setAllowPrerelease: (allowPrerelease) => set({ allowPrerelease }),
+      setInitialized: (isInitialized) => set({ isInitialized }),
 
-  updateFromBackend: (state) =>
-    set({
-      status: state.status as UpdateStatus,
-      updateInfo: state.updateInfo,
-      progress: state.progress,
-      error: state.error,
-      allowPrerelease: state.allowPrerelease,
+      updateFromBackend: (state) =>
+        set({
+          // Validate status and fall back to 'error' if invalid
+          status: isUpdateStatus(state.status) ? state.status : 'error',
+          updateInfo: state.updateInfo,
+          progress: state.progress,
+          error: state.error,
+          allowPrerelease: state.allowPrerelease,
+        }),
+
+      reset: () => set(initialState),
     }),
-
-  reset: () => set(initialState),
-}));
+    {
+      name: 'update-store',
+      // Only persist allowPrerelease preference - other state is ephemeral
+      partialize: (state) => ({ allowPrerelease: state.allowPrerelease }),
+    }
+  )
+);
