@@ -352,9 +352,18 @@ export class TwitchStreamResolver {
             // Construct the final URL with authentication parameters
             const finalUrl = `${bestQuality.sourceURL}?sig=${accessToken.signature}&token=${encodeURIComponent(accessToken.value)}`;
 
+            // Map all qualities for the player to use
+            const mappedQualities = sortedQualities.map(q => ({
+                quality: q.quality + 'p', // Append 'p' e.g. "1080p"
+                // Append sig and token to EACH url to make it playable
+                url: `${q.sourceURL}?sig=${accessToken.signature}&token=${encodeURIComponent(accessToken.value)}`,
+                frameRate: q.frameRate
+            }));
+
             return {
                 url: finalUrl,
-                format: 'mp4'
+                format: 'mp4',
+                qualities: mappedQualities
             };
         } catch (error) {
             console.error('Failed to get clip playback URL:', clipSlug, error);

@@ -470,9 +470,23 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
         } else {
             // Standard playback
             console.debug('[TwitchHLS] Using standard native playback');
-            video.src = src;
             handleLoadedMetadata = () => {
                 if (autoPlay && isMountedRef.current) safePlay();
+
+                // Emit single source quality for native playback so UI shows something
+                if (onQualityLevelsRef.current && video.videoHeight) {
+                    onQualityLevelsRef.current([
+                        { id: 'auto', label: 'Auto', width: 0, height: 0, bitrate: 0, isAuto: true },
+                        {
+                            id: 'source',
+                            label: `${video.videoHeight}p (Source)`,
+                            width: video.videoWidth,
+                            height: video.videoHeight,
+                            bitrate: 0,
+                            isAuto: false
+                        }
+                    ]);
+                }
             };
             handleError = (e: Event) => {
                 onErrorRef.current?.({
@@ -484,6 +498,7 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
             };
             video.addEventListener('loadedmetadata', handleLoadedMetadata);
             video.addEventListener('error', handleError);
+            video.src = src;
         }
 
         const currentVideo = video;

@@ -27,6 +27,7 @@ export interface TwitchVodPlayerProps {
     videoId?: string;
     title?: string;
     thumbnail?: string;
+    qualities?: { quality: string, url: string }[];
 }
 
 export function TwitchVodPlayer(props: TwitchVodPlayerProps) {
@@ -208,6 +209,7 @@ export function TwitchVodPlayer(props: TwitchVodPlayerProps) {
                     muted={isMuted}
                     autoPlay={autoPlay}
                     currentLevel={currentQualityId}
+                    sources={props.qualities}
                     onQualityLevels={handleQualityLevels}
                     onError={(error) => {
                         setHasError(true);
