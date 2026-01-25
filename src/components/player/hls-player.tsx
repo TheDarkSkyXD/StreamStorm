@@ -9,6 +9,7 @@ export interface HlsPlayerProps extends Omit<React.VideoHTMLAttributes<HTMLVideo
     onHlsInstance?: (hls: Hls) => void;
     autoPlay?: boolean;
     currentLevel?: string; // 'auto' or level index as string
+    sources?: { quality: string, url: string }[];
 }
 
 export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
@@ -18,11 +19,17 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
     onHlsInstance,
     autoPlay = false,
     currentLevel,
+    sources,
     ...props
 }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const hlsRef = useRef<Hls | null>(null);
     const isMountedRef = useRef(true);
+    const sourcesRef = useRef(sources);
+
+    useEffect(() => {
+        sourcesRef.current = sources;
+    }, [sources]);
     const pendingPlayRef = useRef<Promise<void> | null>(null);
     const playRequestIdRef = useRef(0); // Track play request to cancel stale ones
     const lastRecoveryAttemptRef = useRef<number | null>(null); // Rate limit recovery attempts
@@ -43,8 +50,42 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                     hls.currentLevel = levelIndex;
                 }
             }
+        } else if (!src.includes('.m3u8') && sourcesRef.current && currentLevel !== undefined) {
+            // Native Source Switching
+            const video = videoRef.current;
+            if (!video) return;
+
+            let targetUrl = src; // Default to 'auto' / main src
+
+            if (currentLevel !== 'auto') {
+                const idx = parseInt(currentLevel, 10);
+                if (!isNaN(idx) && sourcesRef.current[idx]) {
+                    targetUrl = sourcesRef.current[idx].url;
+                }
+            }
+
+            // Only switch if URL is different
+            // Check formatted URL to avoid infinite loops if browser normalizes it
+            if (video.src !== targetUrl && video.currentSrc !== targetUrl) {
+                console.debug(`[Player] Switching source to: ${targetUrl}`);
+                const currentTime = video.currentTime;
+                const wasPaused = video.paused;
+
+                // Restore time after metadata loads
+                const onSwitchLoaded = () => {
+                    video.currentTime = currentTime;
+                    if (!wasPaused) {
+                        video.play().catch(e => console.warn('Play failed after switch:', e));
+                    }
+                    video.removeEventListener('loadedmetadata', onSwitchLoaded);
+                };
+
+                video.addEventListener('loadedmetadata', onSwitchLoaded);
+                video.src = targetUrl;
+                video.load();
+            }
         }
-    }, [currentLevel]);
+    }, [currentLevel, src]);
 
     // Store callbacks in refs to prevent re-initialization loop
     const onQualityLevelsRef = useRef(onQualityLevels);
@@ -220,16 +261,24 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 }
 
                 if (onQualityLevelsRef.current && data.levels) {
-                    const levels: QualityLevel[] = data.levels.map((level, index) => ({
-                        id: index.toString(),
-                        label: level.height ? `${level.height}p${level.frameRate && level.frameRate > 30 ? level.frameRate : ''}` : `Level ${index}`,
-                        width: level.width,
-                        height: level.height,
-                        bitrate: level.bitrate,
-                        frameRate: level.frameRate,
-                        isAuto: false,
-                        name: level.name
-                    }));
+                    const levels: QualityLevel[] = data.levels.map((level, index) => {
+                        const heightLabel = level.height ? `${level.height}p` : '';
+                        const fpsLabel = level.frameRate && level.frameRate > 30 ? Math.round(level.frameRate) : '';
+                        let label = heightLabel ? `${heightLabel}${fpsLabel}` : `Level ${index}`;
+                        // If single level and no height, assume it's Source
+                        if (data.levels.length === 1 && !level.height) label = 'Source';
+
+                        return {
+                            id: index.toString(),
+                            label,
+                            width: level.width || 0,
+                            height: level.height || 0,
+                            bitrate: level.bitrate || 0,
+                            frameRate: level.frameRate || 0,
+                            isAuto: false,
+                            name: level.name
+                        };
+                    });
                     // Add Auto level
                     onQualityLevelsRef.current([
                         { id: 'auto', label: 'Auto', width: 0, height: 0, bitrate: 0, isAuto: true },
@@ -501,10 +550,41 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             video.addEventListener('error', handleError);
         } else {
             // Standard Native Playback (e.g. MP4)
-            console.debug('Using standard native playback');
-            video.src = src;
             handleLoadedMetadata = () => {
                 if (autoPlay && isMountedRef.current) safePlay();
+
+                // Emit quality levels for native playback
+                if (onQualityLevelsRef.current) {
+                    if (sourcesRef.current && sourcesRef.current.length > 0) {
+                        // If provided explicit sources (e.g. clips with multiple qualities)
+                        const levels = sourcesRef.current.map((s, i) => ({
+                            id: i.toString(),
+                            label: s.quality,
+                            width: 0,
+                            height: 0,
+                            bitrate: 0,
+                            isAuto: false
+                        }));
+
+                        onQualityLevelsRef.current([
+                            { id: 'auto', label: 'Auto (Best)', width: 0, height: 0, bitrate: 0, isAuto: true },
+                            ...levels
+                        ]);
+                    } else if (video.videoHeight) {
+                        // Fallback: Single source
+                        onQualityLevelsRef.current([
+                            { id: 'auto', label: 'Auto', width: 0, height: 0, bitrate: 0, isAuto: true },
+                            {
+                                id: 'source',
+                                label: `${video.videoHeight}p (Source)`,
+                                width: video.videoWidth,
+                                height: video.videoHeight,
+                                bitrate: 0,
+                                isAuto: false
+                            }
+                        ]);
+                    }
+                }
             };
             handleError = (e: Event) => {
                 // Only report error if we really fail
@@ -517,7 +597,9 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             };
             video.addEventListener('loadedmetadata', handleLoadedMetadata);
             video.addEventListener('error', handleError);
+            video.src = src;
         }
+
 
         // Store reference for cleanup
         const currentVideo = video;

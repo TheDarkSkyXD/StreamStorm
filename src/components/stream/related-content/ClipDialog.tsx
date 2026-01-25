@@ -24,6 +24,7 @@ interface ClipDialogProps {
     clipLoading: boolean;
     clipError: string | null;
     clipPlaybackUrl: string | null;
+    clipQualities?: { quality: string, url: string }[];
     platform: Platform;
     channelName: string;
     channelData: UnifiedChannel | null | undefined;
@@ -36,6 +37,7 @@ export function ClipDialog({
     clipLoading,
     clipError,
     clipPlaybackUrl,
+    clipQualities,
     platform,
     channelName,
     channelData,
@@ -126,6 +128,7 @@ export function ClipDialog({
                                             className="w-full h-full"
                                             videoId={selectedClip.id}
                                             title={selectedClip.title}
+                                            qualities={clipQualities}
                                         />
                                     ) : (
                                         <KickVodPlayer
@@ -134,6 +137,7 @@ export function ClipDialog({
                                             className="w-full h-full"
                                             videoId={selectedClip.id}
                                             title={selectedClip.title}
+                                        // Kick clips are handled differently or might not have manual qualities exposed the same way yet
                                         />
                                     )
                                 ) : platform === 'twitch' ? (

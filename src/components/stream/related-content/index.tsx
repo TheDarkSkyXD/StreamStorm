@@ -24,6 +24,7 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
     const [clips, setClips] = useState<VideoOrClip[]>([]);
     const [selectedClip, setSelectedClip] = useState<VideoOrClip | null>(null);
     const [clipPlaybackUrl, setClipPlaybackUrl] = useState<string | null>(null);
+    const [clipQualities, setClipQualities] = useState<{ quality: string, url: string }[] | undefined>(undefined);
     const [sortBy, setSortBy] = useState<SortOption>(() => {
         try {
             // Load saved preference from localStorage
@@ -264,6 +265,7 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
     useEffect(() => {
         if (!selectedClip) {
             setClipPlaybackUrl(null);
+            setClipQualities(undefined);
             setClipError(null);
             return;
         }
@@ -288,6 +290,7 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
 
                 if (result.success && result.data) {
                     setClipPlaybackUrl(result.data.url);
+                    setClipQualities(result.data.qualities);
                 } else {
                     console.error('[RelatedContent] Failed to get clip URL:', result.error);
                     // For Twitch, we'll fall back to iframe embed
@@ -431,6 +434,7 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                 clipLoading={clipLoading}
                 clipError={clipError}
                 clipPlaybackUrl={clipPlaybackUrl}
+                clipQualities={clipQualities}
                 platform={platform}
                 channelName={channelName}
                 channelData={channelData}

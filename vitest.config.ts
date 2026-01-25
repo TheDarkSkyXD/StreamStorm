@@ -5,8 +5,9 @@ import path from 'path';
 export default defineConfig({
   test: {
     globals: true,
-    environment: 'node',
-    include: ['tests/**/*.test.ts'],
+    environment: 'jsdom',
+    setupFiles: [path.resolve(__dirname, './tests/setup.ts')],
+    include: ['tests/**/*.test.{ts,tsx}', 'src/**/*.test.{ts,tsx}'],
     alias: {
       '@/': path.resolve(__dirname, './src') + '/',
       '@backend/': path.resolve(__dirname, './src/backend') + '/',
@@ -16,9 +17,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
-      include: ['src/**/*.ts'],
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
       exclude: [
-        'src/**/*.tsx', // React components need jsdom
         'src/main.ts',
         'src/preload/**',
         'src/renderer.tsx',
