@@ -1,5 +1,6 @@
-import { KickRequestor } from '../kick-requestor';
 import { UnifiedStream } from '../../../unified/platform-types';
+import { KickRequestor } from '../kick-requestor';
+import { transformKickLivestream, normalizeKickDate } from '../kick-transformers';
 import {
     KickApiResponse,
     KickApiLivestream,
@@ -7,9 +8,10 @@ import {
     PaginatedResult,
     KICK_LEGACY_API_V1_BASE
 } from '../kick-types';
-import { transformKickLivestream, normalizeKickDate } from '../kick-transformers';
-import { getUsersById } from './user-endpoints';
+
 import { getChannel, getPublicChannel } from './channel-endpoints';
+import { getUsersById } from './user-endpoints';
+
 
 let _topStreamsCache: { data: UnifiedStream[]; timestamp: number } | null = null;
 const CACHE_TTL = 1000 * 60 * 5; // 5 minutes

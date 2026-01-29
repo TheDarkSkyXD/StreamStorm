@@ -1,8 +1,12 @@
-import { useTopStreams } from '@/hooks/queries/useStreams';
-import { FeaturedStream } from '@/components/stream/featured-stream';
-import { LiveNowSection } from './components/live-now-section';
-import { Button } from '@/components/ui/button';
 import { Link } from '@tanstack/react-router';
+
+import { FeaturedStream } from '@/components/stream/featured-stream';
+import { Button } from '@/components/ui/button';
+import { useTopStreams } from '@/hooks/queries/useStreams';
+
+import { LiveNowSection } from './components/live-now-section';
+
+
 
 export function HomePage() {
   const { data: streams, isLoading, error } = useTopStreams(undefined, 25);

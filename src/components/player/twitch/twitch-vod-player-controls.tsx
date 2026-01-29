@@ -1,13 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { PlayPauseButton } from '../play-pause-button';
-import { VolumeControl } from '../volume-control';
-import { SettingsMenu } from '../settings-menu';
-import { QualityLevel } from '../types';
 import { Maximize, Minimize, Monitor } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+
+import { formatDuration } from '@/lib/utils';
+
 import { Button } from '../../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip';
+import { PlayPauseButton } from '../play-pause-button';
+import { SettingsMenu } from '../settings-menu';
+import { QualityLevel } from '../types';
+import { VolumeControl } from '../volume-control';
+
 import { TwitchProgressBar } from './twitch-progress-bar';
-import { formatDuration } from '@/lib/utils';
+
 
 interface TwitchVodPlayerControlsProps {
     // Playback state

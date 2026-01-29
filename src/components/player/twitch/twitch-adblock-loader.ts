@@ -25,6 +25,7 @@ import type {
     LoaderStats,
     HlsConfig,
 } from 'hls.js';
+
 import {
     processMasterPlaylist,
     processMediaPlaylist,

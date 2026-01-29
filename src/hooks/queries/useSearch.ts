@@ -1,7 +1,8 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { Platform } from '../../shared/auth-types';
+
 import { UnifiedChannel, UnifiedCategory, UnifiedStream, UnifiedVideo, UnifiedClip } from '../../backend/api/unified/platform-types';
+import { Platform } from '../../shared/auth-types';
 
 export const SEARCH_KEYS = {
     all: ['search'] as const,

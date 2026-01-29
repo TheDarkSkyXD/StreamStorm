@@ -1,5 +1,4 @@
 
-import React from 'react';
 import {
     DndContext,
     closestCenter,
@@ -14,10 +13,13 @@ import {
     rectSortingStrategy,
     sortableKeyboardCoordinates,
 } from '@dnd-kit/sortable';
-import { useMultiStreamStore } from '@/store/multistream-store';
-import { StreamSlot } from './stream-slot';
-import { SortableStreamSlot } from './sortable-stream-slot';
+import React from 'react';
+
 import { cn } from '@/lib/utils';
+import { useMultiStreamStore } from '@/store/multistream-store';
+
+import { SortableStreamSlot } from './sortable-stream-slot';
+import { StreamSlot } from './stream-slot';
 
 export function MultiStreamGrid() {
     const {

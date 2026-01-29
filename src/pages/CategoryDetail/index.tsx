@@ -1,17 +1,15 @@
 
+import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 
-import { Platform } from '@/shared/auth-types';
-
-import { ProxiedImage } from '@/components/ui/proxied-image';
-import { Skeleton } from '@/components/ui/skeleton';
+import { UnifiedCategory } from '@/backend/api/unified/platform-types';
 import { StreamGrid } from '@/components/stream/stream-grid';
+import { ProxiedImage } from '@/components/ui/proxied-image';
 import { useCategoryById } from '@/hooks/queries/useCategories';
 import { useStreamsByCategory } from '@/hooks/queries/useStreams';
-import { useQuery } from '@tanstack/react-query';
 import { normalizeCategoryName, formatViewerCount } from '@/lib/utils';
-import { UnifiedCategory } from '@/backend/api/unified/platform-types';
+import { Platform } from '@/shared/auth-types';
 
 export function CategoryDetailPage() {
   const { platform, categoryId } = useParams({ from: '/_app/categories/$platform/$categoryId' });
@@ -55,7 +53,7 @@ export function CategoryDetailPage() {
   // 5. Fetch streams for secondary category (if found)
   const {
     data: secondaryStreams,
-    isLoading: isSecondaryStreamsLoading
+    isLoading: _isSecondaryStreamsLoading
   } = useStreamsByCategory(otherCategory?.id || '', otherPlatform, 50);
 
   const isLoading = isCategoryLoading || isPrimaryStreamsLoading;

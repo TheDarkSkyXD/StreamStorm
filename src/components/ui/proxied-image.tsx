@@ -6,6 +6,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+
 import { Skeleton } from './skeleton';
 
 // Domains that require IPC proxying (image fetched in main process, returned as base64)

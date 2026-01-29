@@ -1,5 +1,9 @@
-import React, { useState, useCallback } from 'react';
 import { Link, useNavigate } from '@tanstack/react-router';
+import React, { useState, useCallback } from 'react';
+
+import { UnifiedChannel } from '@/backend/api/unified/platform-types';
+import { KickVodPlayer } from '@/components/player/kick';
+import { TwitchVodPlayer } from '@/components/player/twitch';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -7,16 +11,15 @@ import {
     DialogTitle,
     DialogDescription,
 } from "@/components/ui/dialog";
-import { VisuallyHidden } from "@/components/ui/visually-hidden";
-import { PlatformAvatar } from '@/components/ui/platform-avatar';
 import { FollowButton } from '@/components/ui/follow-button';
+import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
+import { PlatformAvatar } from '@/components/ui/platform-avatar';
+import { VisuallyHidden } from "@/components/ui/visually-hidden";
 import { Platform } from '@/shared/auth-types';
-import { UnifiedChannel } from '@/backend/api/unified/platform-types';
+
 import { ClipPlayer } from './ClipPlayer';
 import { VideoOrClip } from './types';
-import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
-import { TwitchVodPlayer } from '@/components/player/twitch';
-import { KickVodPlayer } from '@/components/player/kick';
+
 
 interface ClipDialogProps {
     selectedClip: VideoOrClip | null;

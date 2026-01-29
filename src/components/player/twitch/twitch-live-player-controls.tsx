@@ -1,12 +1,16 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { PlayPauseButton } from '../play-pause-button';
-import { VolumeControl } from '../volume-control';
-import { SettingsMenu } from '../settings-menu';
-import { QualityLevel } from '../types';
 import { Maximize, Minimize, ShieldCheck } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+
+import { AdBlockStatus } from '@/shared/adblock-types';
+
 import { Button } from '../../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip';
-import { AdBlockStatus } from '@/shared/adblock-types';
+import { PlayPauseButton } from '../play-pause-button';
+import { SettingsMenu } from '../settings-menu';
+import { QualityLevel } from '../types';
+import { VolumeControl } from '../volume-control';
+
+
 import { TwitchProgressBar } from './twitch-progress-bar';
 
 const TheaterOutlineIcon = ({ className }: { className?: string }) => (

@@ -15,8 +15,8 @@
  * @module player/use-video-lifecycle
  */
 
-import { useEffect, useCallback, useRef, useState } from 'react';
 import type Hls from 'hls.js';
+import { useEffect, useCallback, useRef, useState } from 'react';
 
 export interface VideoLifecycleOptions {
     /** Reference to the video element */

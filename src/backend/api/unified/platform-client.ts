@@ -6,6 +6,7 @@
  */
 
 import type { Platform } from '../../../shared/auth-types';
+
 import type {
     UnifiedStream,
     UnifiedChannel,

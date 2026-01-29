@@ -11,8 +11,8 @@ export * from './twitch';
 export * from './kick';
 
 // Re-export with namespaces
-import * as TwitchAssets from './twitch';
 import * as KickAssets from './kick';
+import * as TwitchAssets from './twitch';
 
 export { TwitchAssets, KickAssets };
 

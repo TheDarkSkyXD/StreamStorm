@@ -1,7 +1,7 @@
+import { KickUser } from '../../../../../shared/auth-types';
+import { kickAuthService } from '../../../../auth/kick-auth';
 import { KickRequestor } from '../kick-requestor';
 import { KickApiResponse, KickApiUser } from '../kick-types';
-import { kickAuthService } from '../../../../auth/kick-auth';
-import { KickUser } from '../../../../../shared/auth-types';
 
 /**
  * Get the currently authenticated user

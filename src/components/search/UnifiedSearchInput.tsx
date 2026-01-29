@@ -1,13 +1,14 @@
-import React from 'react';
-import { Search, X, Clock, Sparkles, User, Grid } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useDebounce } from '@/hooks/useDebounce';
-import { useSearchChannels, useSearchCategories } from '@/hooks/queries/useSearch';
-import { useSearchHistory } from '@/hooks/useSearchHistory';
-import { UnifiedChannel, UnifiedCategory } from '@/backend/api/unified/platform-types';
-import { Platform } from '@/shared/auth-types';
 import { Link } from '@tanstack/react-router';
+import { Search, X, Clock, Sparkles, User, Grid } from 'lucide-react';
+import React from 'react';
+
+import { UnifiedChannel, UnifiedCategory } from '@/backend/api/unified/platform-types';
 import { ProxiedImage } from '@/components/ui/proxied-image';
+import { useSearchChannels, useSearchCategories } from '@/hooks/queries/useSearch';
+import { useDebounce } from '@/hooks/useDebounce';
+import { useSearchHistory } from '@/hooks/useSearchHistory';
+import { cn } from '@/lib/utils';
+import { Platform } from '@/shared/auth-types';
 
 interface UnifiedSearchInputProps {
     /**

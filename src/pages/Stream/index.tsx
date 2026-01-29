@@ -1,20 +1,22 @@
 
 import { useParams } from '@tanstack/react-router';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
-import { ProxiedImage } from '@/components/ui/proxied-image';
-import { useChannelByUsername } from '@/hooks/queries/useChannels';
-import { useStreamByChannel } from '@/hooks/queries/useStreams';
-import { Platform } from '@/shared/auth-types';
+
 import { KickLivePlayer } from '@/components/player/kick';
 import { TwitchLivePlayer } from '@/components/player/twitch';
 import { PlayerError } from '@/components/player/types';
-import { useStreamPlayback } from '@/hooks/useStreamPlayback';
-import { StreamInfo } from '@/components/stream/stream-info';
 import { RelatedContent } from '@/components/stream/related-content';
+import { StreamInfo } from '@/components/stream/stream-info';
+import { Button } from '@/components/ui/button';
 import { KickLoadingSpinner, TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
-import { usePipStore } from '@/store/pip-store';
+import { ProxiedImage } from '@/components/ui/proxied-image';
+import { useChannelByUsername } from '@/hooks/queries/useChannels';
+import { useStreamByChannel } from '@/hooks/queries/useStreams';
+import { useStreamPlayback } from '@/hooks/useStreamPlayback';
+import { Platform } from '@/shared/auth-types';
 import { useAppStore } from '@/store/app-store';
+import { usePipStore } from '@/store/pip-store';
+
 
 export function StreamPage() {
   const { platform, channel: channelName } = useParams({ from: '/_app/stream/$platform/$channel' });

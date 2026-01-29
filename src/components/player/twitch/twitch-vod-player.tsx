@@ -1,15 +1,20 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+
 import { useSeekPreview } from '@/components/player/hooks/use-seek-preview';
-import { QualityLevel, PlayerError, Platform } from '../types';
-import { HlsPlayer } from '../hls-player';
-import { TwitchVodPlayerControls } from './twitch-vod-player-controls';
-import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
-import { usePictureInPicture } from '../hooks/use-picture-in-picture';
-import { useFullscreen } from '../hooks/use-fullscreen';
-import { useResumePlayback } from '../hooks/use-resume-playback';
-import { useDefaultQuality } from '../hooks/use-default-quality';
-import { useVolume } from '../hooks/use-volume';
 import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
+
+import { HlsPlayer } from '../hls-player';
+import { useDefaultQuality } from '../hooks/use-default-quality';
+import { useFullscreen } from '../hooks/use-fullscreen';
+import { usePictureInPicture } from '../hooks/use-picture-in-picture';
+import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
+import { useResumePlayback } from '../hooks/use-resume-playback';
+import { useVolume } from '../hooks/use-volume';
+import { QualityLevel, PlayerError, Platform } from '../types';
+
+import { TwitchVodPlayerControls } from './twitch-vod-player-controls';
+
+
 
 export interface TwitchVodPlayerProps {
     streamUrl: string;

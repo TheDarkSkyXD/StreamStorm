@@ -1,7 +1,7 @@
 import { ipcMain, BrowserWindow } from 'electron';
+
 import { Platform, AuthToken, TwitchUser, KickUser } from '../../../shared/auth-types';
 import { IPC_CHANNELS, AuthStatus } from '../../../shared/ipc-channels';
-import { storageService } from '../../services/storage-service';
 import {
     authWindowManager,
     oauthCallbackServer,
@@ -12,6 +12,7 @@ import {
     deviceCodeFlowService,
     getOAuthConfig,
 } from '../../auth';
+import { storageService } from '../../services/storage-service';
 
 export function registerAuthHandlers(mainWindow: BrowserWindow): void {
     /**

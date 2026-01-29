@@ -1,6 +1,7 @@
 
-import React from 'react';
 import { Download, CheckCircle, FileVideo, AlertCircle, PauseCircle, PlayCircle } from 'lucide-react';
+import React from 'react';
+
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 

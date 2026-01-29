@@ -8,18 +8,19 @@
 // Load environment variables from .env file FIRST (before other imports)
 import 'dotenv/config';
 
-import { app, BrowserWindow, session, Menu } from 'electron';
-import started from 'electron-squirrel-startup';
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { registerIpcHandlers } from './backend/ipc-handlers';
-import { windowManager } from './backend/window-manager';
+import { app, BrowserWindow, session, Menu } from 'electron';
+import started from 'electron-squirrel-startup';
+
 import { protocolHandler } from './backend/auth';
-import { networkAdBlockService } from './backend/services/network-adblock-service';
+import { registerIpcHandlers } from './backend/ipc-handlers';
 import { cosmeticInjectionService } from './backend/services/cosmetic-injection-service';
+import { networkAdBlockService } from './backend/services/network-adblock-service';
 import { twitchManifestProxy } from './backend/services/twitch-manifest-proxy';
 import { vaftPatternService } from './backend/services/vaft-pattern-service';
+import { windowManager } from './backend/window-manager';
 
 // Sentinel file to track clean shutdown
 const CLEAN_SHUTDOWN_FILE = path.join(app.getPath('userData'), '.clean-shutdown');

@@ -1,4 +1,5 @@
 import { app, ipcMain, shell, Notification, BrowserWindow, nativeTheme } from 'electron';
+
 import { IPC_CHANNELS } from '../../../shared/ipc-channels';
 import { kickClient } from '../../api/platforms/kick/kick-client';
 

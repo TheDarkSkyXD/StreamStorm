@@ -1,13 +1,13 @@
-import React from 'react';
 import { Power, ExternalLink, AlertCircle } from 'lucide-react';
+import React from 'react';
 
-import { useTwitchAuth, useKickAuth } from '@/hooks/useAuth';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { ProxiedImage } from '@/components/ui/proxied-image';
 import { getPlatformColor } from '@/assets/platforms';
-import { Platform } from '@/shared/auth-types';
 import { TwitchIcon, KickIcon } from '@/components/icons';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { ProxiedImage } from '@/components/ui/proxied-image';
+import { useTwitchAuth, useKickAuth } from '@/hooks/useAuth';
+import { Platform } from '@/shared/auth-types';
 
 /**
  * AccountConnect Component

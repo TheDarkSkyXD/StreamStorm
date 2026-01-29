@@ -1,11 +1,13 @@
-import React from 'react';
 import { Link } from '@tanstack/react-router';
+import React from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+
+import { UnifiedCategory } from '@/backend/api/unified/platform-types';
 import { Card, CardContent } from '@/components/ui/card';
 import { ProxiedImage } from '@/components/ui/proxied-image';
-import { UnifiedCategory } from '@/backend/api/unified/platform-types';
-import { formatViewerCount } from '@/lib/utils';
-import { useQueryClient } from '@tanstack/react-query';
 import { STREAM_KEYS } from '@/hooks/queries/useStreams';
+import { formatViewerCount } from '@/lib/utils';
+
 
 interface CategoryCardProps {
     category: UnifiedCategory;

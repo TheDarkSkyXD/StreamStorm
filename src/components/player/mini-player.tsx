@@ -3,17 +3,19 @@
  * MiniPlayer Component
  * A draggable, persistent mini-player for live streams that appears when navigating away from a stream
  */
-import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { X, Maximize2, Volume2, VolumeX, Pause, Play } from 'lucide-react';
-import { usePipStore } from '@/store/pip-store';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+
 import { HlsPlayer } from '@/components/player/hls-player';
 import { TwitchHlsPlayer } from '@/components/player/twitch/twitch-hls-player';
 import { PlayerError } from '@/components/player/types';
-import { cn } from '@/lib/utils';
-import { useVolume } from './hooks/use-volume';
-import { useAdBlockStore } from '@/store/adblock-store';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
+import { useAdBlockStore } from '@/store/adblock-store';
+import { usePipStore } from '@/store/pip-store';
+
+import { useVolume } from './hooks/use-volume';
 
 // Mini player dimensions
 const MINI_PLAYER_WIDTH = 400;

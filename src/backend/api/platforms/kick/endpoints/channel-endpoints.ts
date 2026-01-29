@@ -1,8 +1,10 @@
 import { BrowserWindow } from 'electron';
-import { KickRequestor } from '../kick-requestor';
+
 import { UnifiedChannel } from '../../../unified/platform-types';
-import { KickApiResponse, KickApiChannel, KICK_LEGACY_API_V1_BASE } from '../kick-types';
+import { KickRequestor } from '../kick-requestor';
 import { transformKickChannel } from '../kick-transformers';
+import { KickApiResponse, KickApiChannel, KICK_LEGACY_API_V1_BASE } from '../kick-types';
+
 import { getUsersById } from './user-endpoints';
 
 // Cache for channel data to reduce API calls and prevent 429 errors

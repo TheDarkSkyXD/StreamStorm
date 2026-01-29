@@ -2,14 +2,15 @@ import { Link, useLocation } from '@tanstack/react-router';
 import { Home, Heart, Grid3X3, Settings, LayoutDashboard, History, Download } from 'lucide-react';
 import React from 'react';
 
+import { MiniPlayer } from '@/components/player/mini-player';
 import { useAuthInitialize } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
 
-import { TitleBar } from './TitleBar';
 import { TopNavBar } from '../TopNavBar';
+
 import { SidebarFollows } from './SidebarFollows';
-import { MiniPlayer } from '@/components/player/mini-player';
+import { TitleBar } from './TitleBar';
 
 interface AppLayoutProps {
   children: React.ReactNode;

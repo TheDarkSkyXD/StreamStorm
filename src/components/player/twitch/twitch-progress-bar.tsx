@@ -1,5 +1,7 @@
 import React, { useRef, useState, useCallback, useMemo } from 'react';
+
 import { formatDuration } from '@/lib/utils';
+
 import { SeekPreview } from '../seek-preview';
 
 interface TwitchProgressBarProps {

@@ -1,5 +1,6 @@
 import type { UnifiedCategory, UnifiedChannel } from '../../../unified/platform-types';
 import type { TwitchRequestor } from '../twitch-requestor';
+import { transformTwitchSearchChannel, transformTwitchCategory } from '../twitch-transformers';
 import type {
     TwitchApiResponse,
     TwitchApiSearchChannel,
@@ -7,7 +8,6 @@ import type {
     PaginationOptions,
     PaginatedResult
 } from '../twitch-types';
-import { transformTwitchSearchChannel, transformTwitchCategory } from '../twitch-transformers';
 
 /**
  * Search for channels

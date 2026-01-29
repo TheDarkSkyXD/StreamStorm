@@ -1,13 +1,16 @@
-import React, { memo } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Card, CardContent } from '@/components/ui/card';
-import { ProxiedImage } from '@/components/ui/proxied-image';
-import { PlatformAvatar } from '@/components/ui/platform-avatar';
 import { Play } from 'lucide-react';
+import React, { memo } from 'react';
+
+import { UnifiedChannel } from '@/backend/api/unified/platform-types';
+import { Card, CardContent } from '@/components/ui/card';
+import { PlatformAvatar } from '@/components/ui/platform-avatar';
+import { ProxiedImage } from '@/components/ui/proxied-image';
+import { Platform } from '@/shared/auth-types';
+
 import { VideoOrClip } from './types';
 import { formatTimeAgo, formatViews } from './utils';
-import { Platform } from '@/shared/auth-types';
-import { UnifiedChannel } from '@/backend/api/unified/platform-types';
+
 
 interface ClipCardProps {
     clip: VideoOrClip;

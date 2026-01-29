@@ -1,8 +1,10 @@
-import React, { useState, useMemo } from 'react';
 import { Settings, PictureInPicture, Check, Activity } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
+
 import { QualityLevel } from './types';
 
 // Custom Settings Menu (replaces simple QualitySelector)

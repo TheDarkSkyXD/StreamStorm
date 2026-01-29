@@ -3,6 +3,7 @@
  * Manages the state of mini-player that persists across route navigation
  */
 import { create } from 'zustand';
+
 import { Platform } from '@/shared/auth-types';
 
 export interface PipStreamInfo {

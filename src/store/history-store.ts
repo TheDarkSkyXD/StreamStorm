@@ -31,7 +31,7 @@ const MAX_HISTORY_ITEMS = 200;
 
 export const useHistoryStore = create<HistoryState>()(
     persist(
-        (set, get) => ({
+        (set, _get) => ({
             history: [],
 
             addToHistory: (item) => {

@@ -1,7 +1,9 @@
-import React from 'react';
-import { Bell, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Link } from '@tanstack/react-router';
+import { Bell, X } from 'lucide-react';
+import React from 'react';
+
+import { cn } from '@/lib/utils';
+
 
 export function NotificationsDropdown() {
     const [isOpen, setIsOpen] = React.useState(false);

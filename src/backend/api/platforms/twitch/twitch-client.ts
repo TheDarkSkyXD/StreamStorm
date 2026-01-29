@@ -7,6 +7,17 @@
 
 import type { TwitchUser } from '../../../../shared/auth-types';
 import type { UnifiedStream, UnifiedChannel, UnifiedCategory } from '../../unified/platform-types';
+
+
+import * as CategoryEndpoints from './endpoints/category-endpoints';
+import * as ChannelEndpoints from './endpoints/channel-endpoints';
+import * as ClipEndpoints from './endpoints/clip-endpoints';
+import * as SearchEndpoints from './endpoints/search-endpoints';
+import * as StreamEndpoints from './endpoints/stream-endpoints';
+import * as UserEndpoints from './endpoints/user-endpoints';
+import * as VideoEndpoints from './endpoints/video-endpoints';
+import { fetchGamesForVideos } from './twitch-gql-helpers';
+import { TwitchRequestor } from './twitch-requestor';
 import type {
     PaginatedResult,
     PaginationOptions,
@@ -14,16 +25,6 @@ import type {
     TwitchApiVideo,
     TwitchApiClip
 } from './twitch-types';
-
-import { TwitchRequestor } from './twitch-requestor';
-import * as UserEndpoints from './endpoints/user-endpoints';
-import * as ChannelEndpoints from './endpoints/channel-endpoints';
-import * as StreamEndpoints from './endpoints/stream-endpoints';
-import * as CategoryEndpoints from './endpoints/category-endpoints';
-import * as VideoEndpoints from './endpoints/video-endpoints';
-import * as ClipEndpoints from './endpoints/clip-endpoints';
-import * as SearchEndpoints from './endpoints/search-endpoints';
-import { fetchGamesForVideos } from './twitch-gql-helpers';
 
 // Re-export types for backward compatibility
 export type { PaginationOptions, PaginatedResult, TwitchClientError };

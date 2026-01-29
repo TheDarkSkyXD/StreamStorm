@@ -1,5 +1,6 @@
-import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
 import Hls from 'hls.js';
+import React, { useEffect, useRef, forwardRef, useImperativeHandle } from 'react';
+
 import { QualityLevel, PlayerError } from './types';
 
 export interface HlsPlayerProps extends Omit<React.VideoHTMLAttributes<HTMLVideoElement>, 'onError'> {

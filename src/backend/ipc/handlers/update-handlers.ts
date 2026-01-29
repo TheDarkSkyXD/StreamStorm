@@ -5,6 +5,7 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
+
 import { IPC_CHANNELS } from '../../../shared/ipc-channels';
 import {
   initUpdateService,

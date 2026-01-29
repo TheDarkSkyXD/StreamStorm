@@ -1,14 +1,16 @@
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { QualityLevel, PlayerError, Platform } from '../types';
+
 import { HlsPlayer } from '../hls-player';
-import { KickPlayerControls } from './kick-player-controls';
-import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
-import { usePictureInPicture } from '../hooks/use-picture-in-picture';
-import { useFullscreen } from '../hooks/use-fullscreen';
-import { useResumePlayback } from '../hooks/use-resume-playback';
 import { useDefaultQuality } from '../hooks/use-default-quality';
+import { useFullscreen } from '../hooks/use-fullscreen';
+import { usePictureInPicture } from '../hooks/use-picture-in-picture';
+import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
+import { useResumePlayback } from '../hooks/use-resume-playback';
 import { useVolume } from '../hooks/use-volume';
+import { QualityLevel, PlayerError, Platform } from '../types';
+
+import { KickPlayerControls } from './kick-player-controls';
 
 export interface KickVideoPlayerProps {
     streamUrl: string;

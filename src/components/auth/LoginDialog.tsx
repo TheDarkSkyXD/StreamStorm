@@ -1,11 +1,11 @@
 
-import React from 'react';
 import { MessageSquare, Layout } from 'lucide-react';
+import React from 'react';
 
-import { useTwitchAuth, useKickAuth } from '@/hooks/useAuth';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { getPlatformColor } from '@/assets/platforms';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { useTwitchAuth, useKickAuth } from '@/hooks/useAuth';
 
 interface LoginDialogProps {
     open: boolean;

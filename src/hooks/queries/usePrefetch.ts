@@ -1,10 +1,12 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { useCallback } from 'react';
-import { Platform } from '../../shared/auth-types';
-import { STREAM_KEYS } from './useStreams';
-import { CATEGORY_KEYS } from './useCategories';
+
 import { UnifiedStream, UnifiedCategory } from '../../backend/api/unified/platform-types';
+import { Platform } from '../../shared/auth-types';
+
+import { CATEGORY_KEYS } from './useCategories';
+import { STREAM_KEYS } from './useStreams';
 
 export function usePrefetchChannel() {
     const queryClient = useQueryClient();

@@ -5,7 +5,6 @@
  */
 
 import { useEffect, useMemo } from 'react';
-import { useShallow } from 'zustand/react/shallow';
 
 import type { Platform } from '../shared/auth-types';
 import { useAuthStore } from '../store/auth-store';

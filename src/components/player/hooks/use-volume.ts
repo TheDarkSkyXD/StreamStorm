@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react';
+
 import { useVolumeStore } from '../../../store/volume-store';
 
 interface UseVolumeOptions {

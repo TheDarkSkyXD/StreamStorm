@@ -1,19 +1,16 @@
 
-import React, { useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Platform } from '@/shared/auth-types';
-import { useMultiStreamStore } from '@/store/multistream-store';
 import { Plus, MonitorPlay } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { UnifiedSearchInput } from '@/components/search/UnifiedSearchInput';
+import React, { useState } from 'react';
+
 import { UnifiedChannel } from '@/backend/api/unified/platform-types';
 import { TwitchIcon, KickIcon } from '@/components/icons/PlatformIcons';
+import { UnifiedSearchInput } from '@/components/search/UnifiedSearchInput';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-
-interface AddStreamDialogProps {
-
-}
+import { Platform } from '@/shared/auth-types';
+import { useMultiStreamStore } from '@/store/multistream-store';
 
 export function AddStreamDialog() {
     const [open, setOpen] = useState(false);

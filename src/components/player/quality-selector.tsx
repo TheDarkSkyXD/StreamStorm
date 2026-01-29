@@ -1,5 +1,5 @@
 import React from 'react';
-import { QualityLevel } from './types';
+
 import {
     Select,
     SelectContent,
@@ -7,6 +7,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '../ui/select';
+
+import { QualityLevel } from './types';
 
 export interface QualitySelectorProps {
     levels: QualityLevel[];

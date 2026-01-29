@@ -1,11 +1,12 @@
 import { useParams, useSearch, Link } from '@tanstack/react-router';
-import { useState, useEffect, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
 import { Heart, HeartCrack, AlertCircle, Lock } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+
 import { KickVodPlayer } from '@/components/player/kick';
 import { TwitchVodPlayer } from '@/components/player/twitch';
 import { VideoCard } from '@/components/stream/related-content/VideoCard';
 import { VideoOrClip } from '@/components/stream/related-content/types';
+import { Button } from '@/components/ui/button';
 import { Platform } from '@/shared/auth-types';
 import { useFollowStore } from '@/store/follow-store';
 import { useHistoryStore } from '@/store/history-store';
@@ -159,7 +160,7 @@ export function VideoPage() {
                         if (metadataResult.success && metadataResult.data) {
                             setVideoMetadata(metadataResult.data);
                         }
-                    } catch (metaErr) {
+                    } catch (_metaErr) {
                         console.warn('Could not fetch metadata, continuing with video playback');
                     }
 

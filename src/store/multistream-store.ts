@@ -1,6 +1,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+
 import { Platform } from '@/shared/auth-types';
 
 export interface MultiStreamConfig {
@@ -42,7 +43,7 @@ interface MultiStreamState {
 
 export const useMultiStreamStore = create<MultiStreamState>()(
     persist(
-        (set, get) => ({
+        (set, _get) => ({
             streams: [],
             layout: 'grid',
             focusedStreamId: null,

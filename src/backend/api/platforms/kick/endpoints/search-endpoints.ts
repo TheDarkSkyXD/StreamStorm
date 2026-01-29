@@ -1,9 +1,10 @@
-import { KickRequestor } from '../kick-requestor';
 import { UnifiedChannel, UnifiedStream } from '../../../unified/platform-types';
+import { KickRequestor } from '../kick-requestor';
 import { PaginationOptions, PaginatedResult } from '../kick-types';
+
+import { searchCategories } from './category-endpoints';
 import { getPublicChannel, getChannel } from './channel-endpoints';
 import { getTopStreamsCached, getStreamBySlug } from './stream-endpoints';
-import { searchCategories } from './category-endpoints';
 
 /**
  * Search for channels (using categories search + livestreams)

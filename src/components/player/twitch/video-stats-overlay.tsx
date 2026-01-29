@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useMemo } from 'react';
 import Hls from 'hls.js';
+import React, { useEffect, useState, useMemo } from 'react';
 
 interface VideoStatsOverlayProps {
     hls?: Hls | null;

@@ -1,14 +1,16 @@
-import React from 'react';
-import { Link } from '@tanstack/react-router';
-import { Card, CardContent } from '@/components/ui/card';
-import { ProxiedImage } from '@/components/ui/proxied-image';
-import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
-import { UnifiedStream } from '@/backend/api/unified/platform-types';
-import { cn, formatViewerCount } from '@/lib/utils';
-import { PlatformAvatar } from '@/components/ui/platform-avatar';
 import { useQueryClient } from '@tanstack/react-query';
+import { Link } from '@tanstack/react-router';
+import React from 'react';
+
+import { UnifiedStream } from '@/backend/api/unified/platform-types';
+import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
+import { Card, CardContent } from '@/components/ui/card';
+import { PlatformAvatar } from '@/components/ui/platform-avatar';
+import { ProxiedImage } from '@/components/ui/proxied-image';
 import { CHANNEL_KEYS } from '@/hooks/queries/useChannels';
 import { STREAM_KEYS } from '@/hooks/queries/useStreams';
+import { formatViewerCount } from '@/lib/utils';
+
 
 interface StreamCardProps {
     stream: UnifiedStream;

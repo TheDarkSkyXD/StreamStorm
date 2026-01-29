@@ -9,7 +9,6 @@
 
 import { safeStorage } from 'electron';
 import Store from 'electron-store';
-import { dbService } from './database-service';
 
 import {
     StorageSchema,
@@ -23,6 +22,9 @@ import {
     DEFAULT_USER_PREFERENCES,
     DEFAULT_WINDOW_BOUNDS,
 } from '../../shared/auth-types';
+
+import { dbService } from './database-service';
+
 
 // ========== Default Values ==========
 

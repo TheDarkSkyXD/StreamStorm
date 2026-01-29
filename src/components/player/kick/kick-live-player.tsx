@@ -1,15 +1,20 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Hls from 'hls.js';
-import { QualityLevel, PlayerError, Platform } from '../types';
-import { HlsPlayer } from '../hls-player';
-import { KickLivePlayerControls } from './kick-live-player-controls';
-import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
-import { usePictureInPicture } from '../hooks/use-picture-in-picture';
-import { useFullscreen } from '../hooks/use-fullscreen';
-import { useResumePlayback } from '../hooks/use-resume-playback';
-import { useDefaultQuality } from '../hooks/use-default-quality';
-import { useVolume } from '../hooks/use-volume';
+import React, { useRef, useState, useEffect, useCallback } from 'react';
+
 import { KickLoadingSpinner } from '@/components/ui/loading-spinner';
+
+import { HlsPlayer } from '../hls-player';
+import { useDefaultQuality } from '../hooks/use-default-quality';
+import { useFullscreen } from '../hooks/use-fullscreen';
+import { usePictureInPicture } from '../hooks/use-picture-in-picture';
+import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
+import { useResumePlayback } from '../hooks/use-resume-playback';
+import { useVolume } from '../hooks/use-volume';
+import { QualityLevel, PlayerError, Platform } from '../types';
+
+import { KickLivePlayerControls } from './kick-live-player-controls';
+
+
 
 export interface KickLivePlayerProps {
     streamUrl: string;

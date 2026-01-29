@@ -2,20 +2,19 @@ import { Link } from '@tanstack/react-router';
 import { Search, Heart } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
+import type { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
+import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
+import { StreamGrid } from '@/components/stream/stream-grid';
 import { Button } from '@/components/ui/button';
+import { PlatformAvatar } from '@/components/ui/platform-avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useFollowStore } from '@/store/follow-store';
-import { useAuthStore } from '@/store/auth-store';
 import { useFollowedChannels } from '@/hooks/queries/useChannels';
 import { useFollowedStreams } from '@/hooks/queries/useStreams';
-import type { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
-import type { Platform } from '@/shared/auth-types';
-import { StreamGrid } from '@/components/stream/stream-grid';
-import { PlatformAvatar } from '@/components/ui/platform-avatar';
-import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
-import { cn } from '@/lib/utils';
-import type { LocalFollow } from '@/shared/auth-types';
 import { getChannelKey, getStreamKey, getChannelNameKey } from '@/lib/id-utils';
+import { cn } from '@/lib/utils';
+import type { Platform } from '@/shared/auth-types';
+import { useAuthStore } from '@/store/auth-store';
+import { useFollowStore } from '@/store/follow-store';
 
 export function FollowingPage() {
   const [filter, setFilter] = useState<Platform | 'all'>('all');

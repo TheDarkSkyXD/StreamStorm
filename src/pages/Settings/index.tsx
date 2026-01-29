@@ -15,9 +15,9 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useAppVersion, useUpdater } from '@/hooks';
 import { useAuthError } from '@/hooks/useAuth';
-import { useAuthStore } from '@/store/auth-store';
+import { VideoQuality, DEFAULT_PLAYBACK_PREFERENCES } from '@/shared/auth-types';
 import { useAdBlockStore } from '@/store/adblock-store';
-import { VideoQuality } from '@/shared/auth-types';
+import { useAuthStore } from '@/store/auth-store';
 
 export function SettingsPage() {
 
@@ -59,7 +59,7 @@ export function SettingsPage() {
     // Update store
     await updatePreferences({
       playback: {
-        ...preferences?.playback!,
+        ...(preferences?.playback || DEFAULT_PLAYBACK_PREFERENCES),
         defaultQuality: quality
       }
     });

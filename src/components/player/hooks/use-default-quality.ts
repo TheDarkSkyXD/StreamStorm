@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { useAuthStore } from '@/store/auth-store';
-import type { QualityLevel } from '../types';
+
 import type { VideoQuality } from '@/shared/auth-types';
+import { useAuthStore } from '@/store/auth-store';
+
+import type { QualityLevel } from '../types';
 
 /**
  * Quality mapping from user preference to resolution heights
