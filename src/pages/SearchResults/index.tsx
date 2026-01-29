@@ -1,22 +1,21 @@
-import { useQuery } from '@tanstack/react-query';
 import { Link, useSearch } from '@tanstack/react-router';
+import { Play, Clapperboard } from "lucide-react";
 import React from 'react';
 
-import type { UnifiedCategory, UnifiedChannel, UnifiedStream, UnifiedVideo, UnifiedClip } from '@/backend/api/unified/platform-types';
-import { Skeleton } from '@/components/ui/skeleton';
+import type { UnifiedChannel, UnifiedVideo, UnifiedClip } from '@/backend/api/unified/platform-types';
+import { CategoryGrid } from '@/components/discovery/category-grid';
+import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
+import { StreamGrid } from '@/components/stream/stream-grid';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Play, Clapperboard, Sparkles } from "lucide-react";
-import { cn, formatDuration } from '@/lib/utils';
-import { useSearchAll } from '@/hooks/queries/useSearch';
-import { StreamGrid } from '@/components/stream/stream-grid';
-import { CategoryGrid } from '@/components/discovery/category-grid';
 import { PlatformAvatar } from '@/components/ui/platform-avatar';
-import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useSearchAll } from '@/hooks/queries/useSearch';
+import { cn, formatDuration } from '@/lib/utils';
 
 // ... (existing code)
 

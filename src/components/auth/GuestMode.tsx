@@ -7,8 +7,9 @@
  * - Login prompts
  */
 
-import React from 'react';
 import { User, Lock, LogIn } from 'lucide-react';
+import React from 'react';
+
 import { useAuthStore } from '@/store/auth-store';
 
 // ========== Guest Badge ==========

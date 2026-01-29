@@ -1,11 +1,12 @@
-import { MouseEvent, useState } from 'react';
 import { Heart, HeartCrack } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { useFollowStore } from '@/store/follow-store';
+import { MouseEvent, useState } from 'react';
+
 import { UnifiedChannel } from '@/backend/api/unified/platform-types';
+import { Button } from '@/components/ui/button';
+import { getChannelKey } from '@/lib/id-utils';
 import { cn } from '@/lib/utils';
 import { Platform } from '@/shared/auth-types';
-import { getChannelKey } from '@/lib/id-utils';
+import { useFollowStore } from '@/store/follow-store';
 
 interface FollowButtonProps {
     channel: UnifiedChannel;

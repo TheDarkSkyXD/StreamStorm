@@ -7,24 +7,25 @@
  * Handles authentication and data fetching for stream discovery.
  */
 
+import { KickUser } from '../../../../shared/auth-types';
 import { kickAuthService } from '../../../auth/kick-auth';
 import { storageService } from '../../../services/storage-service';
 import { UnifiedStream, UnifiedChannel, UnifiedCategory, UnifiedClip } from '../../unified/platform-types';
-import { KickUser } from '../../../../shared/auth-types';
-import { KICK_API_BASE, KickApiUser, PaginationOptions, PaginatedResult } from './kick-types';
-import { KickRequestor } from './kick-requestor';
+
 
 // Re-export common types for compatibility
 export type { PaginationOptions, PaginatedResult } from './kick-types';
 
 // Import endpoints
-import * as UserEndpoints from './endpoints/user-endpoints';
-import * as ChannelEndpoints from './endpoints/channel-endpoints';
-import * as StreamEndpoints from './endpoints/stream-endpoints';
 import * as CategoryEndpoints from './endpoints/category-endpoints';
-import * as SearchEndpoints from './endpoints/search-endpoints';
-import * as VideoEndpoints from './endpoints/video-endpoints';
+import * as ChannelEndpoints from './endpoints/channel-endpoints';
 import * as ClipEndpoints from './endpoints/clip-endpoints';
+import * as SearchEndpoints from './endpoints/search-endpoints';
+import * as StreamEndpoints from './endpoints/stream-endpoints';
+import * as UserEndpoints from './endpoints/user-endpoints';
+import * as VideoEndpoints from './endpoints/video-endpoints';
+import { KickRequestor } from './kick-requestor';
+import { KICK_API_BASE, KickApiUser, PaginationOptions, PaginatedResult } from './kick-types';
 
 // ========== Global Rate Limiter ==========
 // Prevents 429 Too Many Requests by limiting request rate

@@ -8,6 +8,7 @@
 import { BrowserWindow, shell } from 'electron';
 
 import type { Platform } from '../../shared/auth-types';
+
 import {
     buildAuthorizationUrl,
     generatePkceChallenge,

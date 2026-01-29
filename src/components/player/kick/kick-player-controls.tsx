@@ -1,13 +1,17 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { PlayPauseButton } from '../play-pause-button';
-import { VolumeControl } from '../volume-control';
-import { SettingsMenu } from '../settings-menu';
-import { QualityLevel } from '../types';
 import { Maximize, Minimize } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+
+import { formatDuration } from '@/lib/utils';
+
 import { Button } from '../../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip';
+import { PlayPauseButton } from '../play-pause-button';
+import { SettingsMenu } from '../settings-menu';
+import { QualityLevel } from '../types';
+import { VolumeControl } from '../volume-control';
+
 import { KickProgressBar } from './kick-progress-bar';
-import { formatDuration } from '@/lib/utils';
+
 
 const TheaterOutlineIcon = ({ className }: { className?: string }) => (
     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>

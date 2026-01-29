@@ -1,18 +1,24 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { QualityLevel, PlayerError, Platform } from '../types';
-import { TwitchHlsPlayer } from './twitch-hls-player';
-import { TwitchLivePlayerControls } from './twitch-live-player-controls';
+
+import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
+import { useAdElementObserver } from '@/hooks/use-ad-element-observer';
 import { AdBlockStatus } from '@/shared/adblock-types';
 import { useAdBlockStore } from '@/store/adblock-store';
-import { VideoStatsOverlay } from './video-stats-overlay';
-import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
-import { usePictureInPicture } from '../hooks/use-picture-in-picture';
-import { useFullscreen } from '../hooks/use-fullscreen';
+
 import { useDefaultQuality } from '../hooks/use-default-quality';
+import { useFullscreen } from '../hooks/use-fullscreen';
+import { usePictureInPicture } from '../hooks/use-picture-in-picture';
+import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
 import { useVolume } from '../hooks/use-volume';
-import { useAdElementObserver } from '@/hooks/use-ad-element-observer';
-import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
+import { QualityLevel, PlayerError, Platform } from '../types';
+
 import { AdBlockFallbackOverlay } from './ad-block-fallback-overlay';
+import { TwitchHlsPlayer } from './twitch-hls-player';
+import { TwitchLivePlayerControls } from './twitch-live-player-controls';
+import { VideoStatsOverlay } from './video-stats-overlay';
+
+
+
 
 export interface TwitchLivePlayerProps {
     streamUrl: string;

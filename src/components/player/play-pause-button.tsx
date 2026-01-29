@@ -1,5 +1,6 @@
-import React from 'react';
 import { Play, Pause } from 'lucide-react';
+import React from 'react';
+
 import { Button } from '../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 

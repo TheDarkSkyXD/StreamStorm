@@ -10,9 +10,11 @@
  */
 
 import type { Platform, AuthToken, KickUser } from '../../shared/auth-types';
-import { tokenExchangeService } from './token-exchange';
-import { storageService } from '../services/storage-service';
 import { KICK_API_BASE } from '../api/platforms/kick/kick-types';
+import { storageService } from '../services/storage-service';
+
+import { tokenExchangeService } from './token-exchange';
+
 
 // ========== Kick Auth Service Class ==========
 

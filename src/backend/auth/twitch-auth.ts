@@ -11,10 +11,12 @@
  */
 
 import type { Platform, AuthToken, TwitchUser } from '../../shared/auth-types';
+import { TWITCH_API_BASE, type TwitchApiUser, type TwitchApiResponse } from '../api/platforms/twitch/twitch-types';
+import { storageService } from '../services/storage-service';
+
 import { getOAuthConfig } from './oauth-config';
 import { tokenExchangeService } from './token-exchange';
-import { storageService } from '../services/storage-service';
-import { TWITCH_API_BASE, type TwitchApiUser, type TwitchApiResponse } from '../api/platforms/twitch/twitch-types';
+
 
 // ========== Types ==========
 

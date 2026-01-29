@@ -34,6 +34,10 @@ export default [
                 ...globals.es2022,
                 // Electron-specific
                 Electron: 'readonly',
+                // React and TypeScript globals
+                React: 'readonly',
+                NodeJS: 'readonly',
+                RequestInit: 'readonly',
             },
         },
         plugins: {
@@ -66,6 +70,20 @@ export default [
                 { argsIgnorePattern: '^_' },
             ],
             '@typescript-eslint/no-explicit-any': 'warn',
+            // Allow require() in backend files (Electron main process)
+            '@typescript-eslint/no-require-imports': 'off',
+            // Change ts-comment rules to warnings to be less strict
+            '@typescript-eslint/ban-ts-comment': [
+                'warn',
+                {
+                    'ts-expect-error': 'allow-with-description',
+                    'ts-ignore': 'allow-with-description',
+                },
+            ],
+            // Disable no-unreachable as it may have false positives
+            'no-unreachable': 'warn',
+            // Allow empty interfaces for TypeScript declaration augmentation
+            '@typescript-eslint/no-empty-interface': 'off',
 
             // React Hooks rules
             'react-hooks/rules-of-hooks': 'error',

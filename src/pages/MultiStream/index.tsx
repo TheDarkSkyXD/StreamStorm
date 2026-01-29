@@ -1,12 +1,11 @@
 
+import { LayoutGrid, Maximize, MessageSquare } from 'lucide-react';
 import React, { useState, useEffect, useCallback } from 'react';
-import { useMultiStreamStore } from '@/store/multistream-store';
-import { MultiStreamGrid } from '@/components/multistream/grid-layout';
+
 import { AddStreamDialog } from '@/components/multistream/add-stream-dialog';
+import { MultiStreamGrid } from '@/components/multistream/grid-layout';
 import { Button } from '@/components/ui/button';
-import { Settings, LayoutGrid, Maximize, MessageSquare } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useMultiStreamStore } from '@/store/multistream-store';
 
 export function MultiStreamPage() {
     const {

@@ -1,12 +1,13 @@
 import type { UnifiedStream } from '../../../unified/platform-types';
 import type { TwitchRequestor } from '../twitch-requestor';
+import { transformTwitchStream } from '../twitch-transformers';
 import type {
     TwitchApiResponse,
     TwitchApiStream,
     PaginationOptions,
     PaginatedResult
 } from '../twitch-types';
-import { transformTwitchStream } from '../twitch-transformers';
+
 import { getUser, getUsersById } from './user-endpoints';
 
 /**

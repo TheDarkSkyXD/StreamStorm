@@ -1,10 +1,11 @@
 
-import React from 'react';
-import { useHistoryStore, HistoryItem } from '@/store/history-store';
-import { Button } from '@/components/ui/button';
-import { Trash2, History as HistoryIcon, Play } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
+import { Trash2, History as HistoryIcon, Play } from 'lucide-react';
+import React from 'react';
+
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { useHistoryStore, HistoryItem } from '@/store/history-store';
 
 const HistoryItemLink = ({ item, children, className }: { item: HistoryItem, children: React.ReactNode, className?: string }) => {
     if (item.type === 'video') {

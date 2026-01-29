@@ -5,7 +5,7 @@ import {
   Outlet,
   createHashHistory,
 } from '@tanstack/react-router';
-import { Suspense } from 'react';
+import React, { Suspense } from 'react';
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import {

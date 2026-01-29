@@ -1,9 +1,12 @@
 
-import React from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { StreamSlot } from './stream-slot';
+import React from 'react';
+
 import { Platform } from '@/shared/auth-types';
+
+import { StreamSlot } from './stream-slot';
+
 
 interface SortableStreamSlotProps {
     id: string; // The stream ID which will be the drag ID

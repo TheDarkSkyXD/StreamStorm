@@ -1,14 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
 import { useSearch } from '@tanstack/react-router';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from '@/components/ui/button';
-import { RelatedContentProps, VideoOrClip } from './types';
-import { ContentTabs, SortOption } from './ContentTabs';
+import React, { useState, useEffect, useCallback } from 'react';
 
-export type TimeRange = 'day' | 'week' | 'month' | 'all';
-import { VideoCard } from './VideoCard';
-import { ClipCard } from './ClipCard';
-import { ClipDialog } from './ClipDialog';
+import { Button } from '@/components/ui/button';
 import {
     Select,
     SelectContent,
@@ -16,6 +9,16 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { Skeleton } from '@/components/ui/skeleton';
+
+import { ClipCard } from './ClipCard';
+import { ClipDialog } from './ClipDialog';
+import { ContentTabs, SortOption } from './ContentTabs';
+import { VideoCard } from './VideoCard';
+import { RelatedContentProps, VideoOrClip } from './types';
+
+export type TimeRange = 'day' | 'week' | 'month' | 'all';
+
 
 export function RelatedContent({ platform, channelName, channelData, onClipSelectionChange }: RelatedContentProps) {
     const { tab: activeTab } = useSearch({ from: '/_app/stream/$platform/$channel' });

@@ -15,7 +15,7 @@ interface VolumeState {
  */
 export const useVolumeStore = create<VolumeState>()(
     persist(
-        (set, get) => ({
+        (set, _get) => ({
             volume: 100,
             isMuted: false,
 

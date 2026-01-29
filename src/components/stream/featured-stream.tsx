@@ -1,8 +1,9 @@
 import { Link } from '@tanstack/react-router';
+
 import { UnifiedStream } from '@/backend/api/unified/platform-types';
-import { ProxiedImage } from '@/components/ui/proxied-image';
-import { Button } from '@/components/ui/button';
 import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
+import { Button } from '@/components/ui/button';
+import { ProxiedImage } from '@/components/ui/proxied-image';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn, formatViewerCount } from '@/lib/utils';
 

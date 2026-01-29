@@ -2,11 +2,12 @@ import { Link } from '@tanstack/react-router';
 import { Menu } from 'lucide-react';
 import React from 'react';
 
-import { NotificationsDropdown } from './NotificationsDropdown';
-import { SearchBar } from './SearchBar';
 import { ProfileDropdown } from '@/components/auth';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/app-store';
+
+import { NotificationsDropdown } from './NotificationsDropdown';
+import { SearchBar } from './SearchBar';
 
 interface TopNavBarProps {
     className?: string;

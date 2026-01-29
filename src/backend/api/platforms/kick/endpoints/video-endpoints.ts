@@ -1,5 +1,5 @@
-import { KickRequestor } from '../kick-requestor';
 import { UnifiedVideo } from '../../../unified/platform-types'; // Assuming this type exists or will use generic format
+import { KickRequestor } from '../kick-requestor';
 import {
     KickLegacyApiVideo,
     PaginationOptions,

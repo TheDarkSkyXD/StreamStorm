@@ -1,8 +1,9 @@
 import { ipcMain } from 'electron';
-import { IPC_CHANNELS } from '../../../shared/ipc-channels';
+
 import { Platform } from '../../../shared/auth-types';
-import { TwitchStreamResolver } from '../../api/platforms/twitch/twitch-stream-resolver';
+import { IPC_CHANNELS } from '../../../shared/ipc-channels';
 import { KickStreamResolver } from '../../api/platforms/kick/kick-stream-resolver';
+import { TwitchStreamResolver } from '../../api/platforms/twitch/twitch-stream-resolver';
 
 // Instances
 const twitchResolver = new TwitchStreamResolver();

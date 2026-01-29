@@ -1,4 +1,5 @@
 import React from 'react';
+
 import { formatDuration, cn } from '@/lib/utils';
 
 interface SeekPreviewProps {

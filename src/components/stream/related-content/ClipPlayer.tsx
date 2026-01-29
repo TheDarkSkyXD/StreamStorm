@@ -1,10 +1,12 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Hls from 'hls.js';
 import { Play, Pause, Maximize, Minimize, Volume2, Volume1, VolumeX } from 'lucide-react';
-import { formatDuration } from '@/lib/utils';
-import { ClipPlayerProps } from './types';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+
 import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
+import { formatDuration } from '@/lib/utils';
 import { useVolumeStore } from '@/store/volume-store';
+
+import { ClipPlayerProps } from './types';
 
 /**
  * Custom clip player component with volume control on the left

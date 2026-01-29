@@ -8,6 +8,7 @@ import type {
     PaginationOptions,
     PaginatedResult
 } from '../twitch-types';
+
 import { getChannelsById } from './channel-endpoints';
 
 /**

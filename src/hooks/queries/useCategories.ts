@@ -1,7 +1,8 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { Platform } from '../../shared/auth-types';
+
 import { UnifiedCategory } from '../../backend/api/unified/platform-types';
+import { Platform } from '../../shared/auth-types';
 
 // Minimal interface for stream data needed for category aggregation
 interface StreamSummary {

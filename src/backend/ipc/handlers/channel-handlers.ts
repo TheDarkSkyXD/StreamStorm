@@ -1,4 +1,5 @@
 import { ipcMain } from 'electron';
+
 import { Platform } from '../../../shared/auth-types';
 import { IPC_CHANNELS } from '../../../shared/ipc-channels';
 

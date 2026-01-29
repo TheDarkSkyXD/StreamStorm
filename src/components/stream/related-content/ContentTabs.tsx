@@ -1,6 +1,6 @@
-import React from 'react';
 import { Link } from '@tanstack/react-router';
 import { Play, Clapperboard } from 'lucide-react';
+import React from 'react';
 
 export type SortOption = 'recent' | 'views';
 

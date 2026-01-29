@@ -1,11 +1,11 @@
 
-import React, { useState, useRef, useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
 import { User, Settings, LogOut, X } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
 
+import { ProxiedImage } from '@/components/ui/proxied-image';
 import { useUserInfo, useAuthStatus } from '@/hooks/useAuth';
 import { useAuthStore } from '@/store/auth-store';
-import { ProxiedImage } from '@/components/ui/proxied-image';
 
 // Stacked Avatar Component for multi-platform
 function StackedAvatars({

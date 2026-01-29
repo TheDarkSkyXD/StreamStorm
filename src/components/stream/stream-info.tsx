@@ -1,14 +1,13 @@
-import React, { useState, useEffect, useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
-import { Skeleton } from '@/components/ui/skeleton';
-import { PlatformAvatar } from '@/components/ui/platform-avatar';
-import { FollowButton } from '@/components/ui/follow-button';
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
-import { formatViewerCount, formatUptime } from '@/lib/utils';
-
 import { Users, Clock } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import React, { useState, useEffect } from 'react';
+
+import { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
+import { FollowButton } from '@/components/ui/follow-button';
+import { PlatformAvatar } from '@/components/ui/platform-avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { formatViewerCount, formatUptime } from '@/lib/utils';
 
 /**
  * Isolated uptime counter component to prevent re-rendering parent every second
@@ -60,7 +59,7 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
         );
     }
 
-    const platformColor = channel.platform === 'twitch' ? '#9146FF' : '#53FC18';
+
 
     return (
         <div className="flex justify-between items-start gap-4">

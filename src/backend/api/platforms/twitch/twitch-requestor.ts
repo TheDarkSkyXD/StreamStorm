@@ -1,6 +1,7 @@
 import { getOAuthConfig } from '../../../auth/oauth-config';
 import { twitchAuthService } from '../../../auth/twitch-auth';
 import { storageService } from '../../../services/storage-service';
+
 import {
     TWITCH_API_BASE,
     TwitchClientError,

@@ -1,7 +1,8 @@
 import { useParams, Link } from '@tanstack/react-router';
-import { Button } from '@/components/ui/button';
 import { Heart, HeartCrack } from 'lucide-react';
 import { useState, useEffect } from 'react';
+
+import { Button } from '@/components/ui/button';
 import { useHistoryStore } from '@/store/history-store';
 
 // Mock data matching the StreamPage mocks

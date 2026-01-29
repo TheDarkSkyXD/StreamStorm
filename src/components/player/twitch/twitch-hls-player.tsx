@@ -6,10 +6,15 @@
  * to intercept and process m3u8 playlists.
  */
 
-import React, { useEffect, useRef, forwardRef, useImperativeHandle, useCallback, useState } from 'react';
 import Hls from 'hls.js';
-import { QualityLevel, PlayerError } from '../types';
+import React, { useEffect, useRef, forwardRef, useImperativeHandle, useCallback, useState } from 'react';
+
 import { AdBlockStatus } from '@/shared/adblock-types';
+
+import { QualityLevel, PlayerError } from '../types';
+
+
+import { getAdBlockHlsConfig } from './twitch-adblock-loader';
 import {
     initAdBlockService,
     setPlayerCallbacks,
@@ -19,7 +24,6 @@ import {
     clearStreamInfo,
     isAdBlockEnabled,
 } from './twitch-adblock-service';
-import { getAdBlockHlsConfig } from './twitch-adblock-loader';
 
 export interface TwitchHlsPlayerProps extends Omit<React.VideoHTMLAttributes<HTMLVideoElement>, 'onError'> {
     src: string;

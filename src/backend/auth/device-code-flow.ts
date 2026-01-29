@@ -15,6 +15,7 @@
  */
 
 import type { AuthToken } from '../../shared/auth-types';
+
 import { getOAuthConfig } from './oauth-config';
 
 // ========== Types ==========

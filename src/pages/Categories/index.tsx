@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Search } from 'lucide-react';
-import { useTopCategories } from '@/hooks/queries/useCategories';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
+
 import { VirtualizedCategoryGrid } from '@/components/discovery/virtualized-category-grid';
+import { useTopCategories } from '@/hooks/queries/useCategories';
 
 // Initial categories to display, then load more on scroll
 const INITIAL_DISPLAY_COUNT = 30;

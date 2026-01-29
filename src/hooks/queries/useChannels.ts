@@ -1,7 +1,8 @@
 
 import { useQuery } from '@tanstack/react-query';
-import { Platform } from '../../shared/auth-types';
+
 import { UnifiedChannel } from '../../backend/api/unified/platform-types';
+import { Platform } from '../../shared/auth-types';
 
 export const CHANNEL_KEYS = {
     all: ['channels'] as const,

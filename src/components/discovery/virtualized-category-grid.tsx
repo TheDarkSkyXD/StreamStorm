@@ -1,8 +1,10 @@
 import { useRef, useState, useEffect, useMemo, useCallback } from 'react';
+
 import { UnifiedCategory } from '@/backend/api/unified/platform-types';
+import { cn } from '@/lib/utils';
+
 import { CategoryCard } from './category-card';
 import { CategoryCardSkeleton } from './category-card-skeleton';
-import { cn } from '@/lib/utils';
 
 interface VirtualizedCategoryGridProps {
     categories: UnifiedCategory[];

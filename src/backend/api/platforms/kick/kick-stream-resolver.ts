@@ -1,4 +1,5 @@
 import { StreamPlayback } from '../../../../components/player/types';
+
 import { KICK_LEGACY_API_V1_BASE } from './kick-types';
 
 export class KickStreamResolver {

@@ -1,7 +1,9 @@
 
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { Platform } from '../../shared/auth-types';
+
 import { UnifiedStream } from '../../backend/api/unified/platform-types';
+import { Platform } from '../../shared/auth-types';
+
 import { STREAM_KEYS } from './useStreams';
 
 export function useInfiniteTopStreams(platform?: Platform, limit: number = 20) {

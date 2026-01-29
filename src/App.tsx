@@ -1,9 +1,9 @@
 import { RouterProvider } from '@tanstack/react-router';
 
-import { QueryProvider } from '@/providers/query-provider';
 import { AuthProvider } from '@/components/auth/AuthProvider';
-import { router } from '@/routes/router';
 import { TooltipProvider } from '@/components/ui/tooltip';
+import { QueryProvider } from '@/providers/query-provider';
+import { router } from '@/routes/router';
 
 function App() {
   return (

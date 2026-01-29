@@ -8,6 +8,7 @@
 import { app, BrowserWindow } from 'electron';
 
 import type { Platform } from '../../shared/auth-types';
+
 import { PROTOCOL_SCHEME, PROTOCOL_PREFIX } from './oauth-config';
 
 // ========== Types ==========

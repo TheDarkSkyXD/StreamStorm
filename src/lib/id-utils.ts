@@ -12,8 +12,8 @@
  * - Checking follow status
  */
 
-import type { Platform } from '@/shared/auth-types';
 import type { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
+import type { Platform } from '@/shared/auth-types';
 
 /**
  * Creates a unique key for a channel that includes the platform.

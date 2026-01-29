@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
 import Hls from 'hls.js';
+import { useState, useRef, useEffect, useCallback } from 'react';
 
 export interface UseSeekPreviewProps {
     streamUrl: string | null;

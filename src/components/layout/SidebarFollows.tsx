@@ -1,16 +1,19 @@
-import { useMemo } from 'react';
 import { Link } from '@tanstack/react-router';
 import { Heart } from 'lucide-react';
+import { useMemo } from 'react';
+
+import { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
+import { PlatformAvatar } from '@/components/ui/platform-avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useFollowedChannels } from '@/hooks/queries/useChannels';
+import { useFollowedStreams } from '@/hooks/queries/useStreams';
+import { getChannelKey, getStreamKey, getChannelNameKey } from '@/lib/id-utils';
 import { cn, formatViewerCount } from '@/lib/utils';
 import { useAuthStore } from '@/store/auth-store';
 import { useFollowStore } from '@/store/follow-store';
-import { useFollowedChannels } from '@/hooks/queries/useChannels';
-import { useFollowedStreams } from '@/hooks/queries/useStreams';
-import { PlatformAvatar } from '@/components/ui/platform-avatar';
-import { Skeleton } from '@/components/ui/skeleton';
-import { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
+
 import { ScrollArea } from '../ui/scroll-area';
-import { getChannelKey, getStreamKey, getChannelNameKey } from '@/lib/id-utils';
+
 
 interface SidebarFollowsProps {
     collapsed: boolean;

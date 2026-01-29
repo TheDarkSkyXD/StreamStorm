@@ -6,6 +6,7 @@
  */
 
 import type { Platform, AuthToken } from '../../shared/auth-types';
+
 import { getOAuthConfig, type PkceChallenge } from './oauth-config';
 
 // ========== Types ==========

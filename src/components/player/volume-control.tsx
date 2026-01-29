@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
 import { Volume2, Volume1, VolumeX } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+
 import { Button } from '../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 

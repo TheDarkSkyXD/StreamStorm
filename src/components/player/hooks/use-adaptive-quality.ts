@@ -14,8 +14,9 @@
  * @module player/use-adaptive-quality
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
 import type Hls from 'hls.js';
+import { useState, useEffect, useCallback, useRef } from 'react';
+
 import { QualityLevel } from '../types';
 
 // Network Information API types (not in default TypeScript lib)

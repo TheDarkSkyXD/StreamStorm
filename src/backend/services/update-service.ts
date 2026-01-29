@@ -5,9 +5,10 @@
  * Supports both stable and pre-release channels.
  */
 
-import { autoUpdater, UpdateInfo as ElectronUpdateInfo, ProgressInfo } from 'electron-updater';
 import { app, BrowserWindow } from 'electron';
 import Store from 'electron-store';
+import { autoUpdater, UpdateInfo as ElectronUpdateInfo, ProgressInfo } from 'electron-updater';
+
 import type { UpdateStatus, UpdateInfo, UpdateProgress, UpdateState } from '../../shared/ipc-channels';
 
 // Store for update preferences

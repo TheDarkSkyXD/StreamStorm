@@ -1,7 +1,7 @@
 import type { UnifiedChannel } from '../../../unified/platform-types';
 import type { TwitchRequestor } from '../twitch-requestor';
-import type { TwitchApiResponse, TwitchApiChannel, TwitchApiUser } from '../twitch-types';
 import { transformTwitchChannel } from '../twitch-transformers';
+import type { TwitchApiResponse, TwitchApiChannel, TwitchApiUser } from '../twitch-types';
 
 /**
  * Get channel information by broadcaster IDs

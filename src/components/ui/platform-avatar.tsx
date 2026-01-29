@@ -1,6 +1,6 @@
-import { cn } from '@/lib/utils';
+
 import { ProxiedImage } from '@/components/ui/proxied-image';
-import { User } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface PlatformAvatarProps {
     src?: string | null;

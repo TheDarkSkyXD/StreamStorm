@@ -1,15 +1,16 @@
 
+import { X, MessageSquare, Volume2, VolumeX, GripVertical } from 'lucide-react';
 import React from 'react';
-import { useStreamPlayback } from '@/hooks/useStreamPlayback';
-import { useChannelByUsername } from '@/hooks/queries/useChannels';
+
 import { KickLivePlayer } from '@/components/player/kick';
 import { TwitchLivePlayer } from '@/components/player/twitch';
-import { useMultiStreamStore } from '@/store/multistream-store';
 import { Button } from '@/components/ui/button';
 import { ProxiedImage } from '@/components/ui/proxied-image';
-import { X, MessageSquare, Volume2, VolumeX, GripVertical } from 'lucide-react';
+import { useChannelByUsername } from '@/hooks/queries/useChannels';
+import { useStreamPlayback } from '@/hooks/useStreamPlayback';
 import { cn } from '@/lib/utils';
 import { Platform } from '@/shared/auth-types';
+import { useMultiStreamStore } from '@/store/multistream-store';
 
 interface StreamSlotProps {
     streamId: string;

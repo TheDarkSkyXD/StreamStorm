@@ -6,6 +6,7 @@
  */
 
 import { useCallback, useEffect } from 'react';
+
 import { useUpdateStore } from '@/store/update-store';
 import type { UpdateInfo, UpdateProgress, UpdateStatus } from '@/store/update-store';
 

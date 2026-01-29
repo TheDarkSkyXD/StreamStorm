@@ -59,7 +59,7 @@ export const usePlaybackPositionStore = create<PlaybackPositionState>()(
                 if (duration > 0 && position / duration > COMPLETION_THRESHOLD) {
                     // Remove if it exists (they finished it)
                     const key = createKey(platform, videoId);
-                    const { [key]: _, ...rest } = get().positions;
+                    const { [key]: __, ...rest } = get().positions;
                     set({ positions: rest });
                     return;
                 }
@@ -98,7 +98,7 @@ export const usePlaybackPositionStore = create<PlaybackPositionState>()(
             removePosition: (platform, videoId) => {
                 const key = createKey(platform, videoId);
                 set(state => {
-                    const { [key]: _, ...rest } = state.positions;
+                    const { [key]: __, ...rest } = state.positions;
                     return { positions: rest };
                 });
             },

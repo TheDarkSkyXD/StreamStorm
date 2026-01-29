@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Platform } from '@/shared/auth-types';
+
 import { StreamPlayback } from '@/components/player/types';
+import { Platform } from '@/shared/auth-types';
 
 // Maximum reload attempts before giving up (prevents infinite loops)
 const MAX_RELOAD_ATTEMPTS = 3;

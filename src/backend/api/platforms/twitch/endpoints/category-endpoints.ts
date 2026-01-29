@@ -1,12 +1,12 @@
 import type { UnifiedCategory } from '../../../unified/platform-types';
 import type { TwitchRequestor } from '../twitch-requestor';
+import { transformTwitchCategory } from '../twitch-transformers';
 import type {
     TwitchApiResponse,
     TwitchApiGame,
     PaginationOptions,
     PaginatedResult
 } from '../twitch-types';
-import { transformTwitchCategory } from '../twitch-transformers';
 
 /**
  * Get top categories/games

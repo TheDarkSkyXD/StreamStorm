@@ -1,5 +1,6 @@
-import { KickRequestor } from '../kick-requestor';
 import { UnifiedCategory } from '../../../unified/platform-types';
+import { KickRequestor } from '../kick-requestor';
+import { transformKickCategory } from '../kick-transformers';
 import {
     KickApiResponse,
     KickApiCategory,
@@ -7,7 +8,7 @@ import {
     PaginationOptions,
     PaginatedResult
 } from '../kick-types';
-import { transformKickCategory } from '../kick-transformers';
+
 import { getPublicTopStreams } from './stream-endpoints';
 
 /**
