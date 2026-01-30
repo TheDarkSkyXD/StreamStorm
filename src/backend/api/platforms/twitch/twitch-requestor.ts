@@ -11,8 +11,121 @@ export class TwitchRequestor {
     private readonly baseUrl = TWITCH_API_BASE;
     private config = getOAuthConfig('twitch');
 
+    // Retry configuration
+    private readonly MAX_RETRIES = 3;
+    private readonly BASE_DELAY = 1000;
+    private readonly REQUEST_TIMEOUT = 15000;
+
     /**
-     * Make an authenticated request to the Twitch API
+     * Check if an error is retryable (transient network issues)
+     */
+    private isRetryableError(error: unknown): boolean {
+        if (error instanceof Error) {
+            const message = error.message.toLowerCase();
+
+            // Network-level errors that are typically transient
+            if (message.includes('timeout') ||
+                message.includes('network') ||
+                message.includes('socket') ||
+                message.includes('econnreset') ||
+                message.includes('econnrefused') ||
+                message.includes('enetunreach') ||
+                message.includes('ehostunreach') ||
+                message.includes('aborted') ||
+                message.includes('disconnected')) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Make an HTTP request using Electron's net module
+     * This uses Chromium's network stack which is more reliable in Electron
+     * and respects system proxy settings
+     */
+    private async netRequest<T>(
+        url: string,
+        options: {
+            method?: string;
+            headers?: Record<string, string>;
+            body?: string;
+        } = {}
+    ): Promise<{ data: T; status: number; headers: Record<string, string> }> {
+        const { net } = require('electron');
+
+        return new Promise((resolve, reject) => {
+            const request = net.request({
+                method: options.method || 'GET',
+                url: url,
+            });
+
+            // Set headers
+            if (options.headers) {
+                for (const [key, value] of Object.entries(options.headers)) {
+                    request.setHeader(key, value);
+                }
+            }
+
+            // Set timeout
+            const timeout = setTimeout(() => {
+                request.abort();
+                reject(new Error(`Request timeout after ${this.REQUEST_TIMEOUT}ms`));
+            }, this.REQUEST_TIMEOUT);
+
+            request.on('response', (response: any) => {
+                clearTimeout(timeout);
+
+                const responseHeaders: Record<string, string> = {};
+                const rawHeaders = response.headers || {};
+                for (const [key, value] of Object.entries(rawHeaders)) {
+                    if (Array.isArray(value)) {
+                        responseHeaders[key.toLowerCase()] = value[0];
+                    } else if (typeof value === 'string') {
+                        responseHeaders[key.toLowerCase()] = value;
+                    }
+                }
+
+                let body = '';
+                response.on('data', (chunk: Buffer) => {
+                    body += chunk.toString();
+                });
+
+                response.on('end', () => {
+                    try {
+                        const data = body ? JSON.parse(body) : {};
+                        resolve({
+                            data: data as T,
+                            status: response.statusCode,
+                            headers: responseHeaders
+                        });
+                    } catch (e) {
+                        reject(new Error('Failed to parse JSON response'));
+                    }
+                });
+
+                response.on('error', (error: Error) => {
+                    reject(error);
+                });
+            });
+
+            request.on('error', (error: Error) => {
+                clearTimeout(timeout);
+                reject(error);
+            });
+
+            // Send body if present
+            if (options.body) {
+                request.write(options.body);
+            }
+
+            request.end();
+        });
+    }
+
+    /**
+     * Make an authenticated request to the Twitch API with retry logic
+     * Uses Electron's net module for better network compatibility
      */
     async request<T>(
         endpoint: string,
@@ -53,48 +166,77 @@ export class TwitchRequestor {
             ...(options.headers as Record<string, string>),
         };
 
-        try {
-            const response = await fetch(url, {
-                ...options,
-                headers,
-            });
+        let lastError: Error | null = null;
 
-            // Handle rate limiting
-            if (response.status === 429) {
-                const retryAfter = parseInt(response.headers.get('Retry-After') || '60', 10);
-                const error: TwitchClientError = {
-                    status: 429,
-                    message: 'Rate limited by Twitch API',
-                    retryAfter,
-                };
-                console.warn(`⚠️ Twitch API rate limited, retry after ${retryAfter}s`);
-                throw error;
-            }
+        for (let attempt = 0; attempt <= this.MAX_RETRIES; attempt++) {
+            try {
+                const response = await this.netRequest<T>(url, {
+                    method: (options.method as string) || 'GET',
+                    headers,
+                    body: options.body as string | undefined,
+                });
 
-            // Handle unauthorized (try token refresh)
-            if (response.status === 401) {
-                console.debug('🔄 Token expired, refreshing...');
-                const refreshed = await twitchAuthService.refreshToken();
-                if (refreshed) {
-                    // Retry the request with new token
-                    return this.request<T>(endpoint, options);
+                // Handle rate limiting
+                if (response.status === 429) {
+                    const retryAfter = parseInt(response.headers['retry-after'] || '60', 10);
+                    const error: TwitchClientError = {
+                        status: 429,
+                        message: 'Rate limited by Twitch API',
+                        retryAfter,
+                    };
+                    console.warn(`⚠️ Twitch API rate limited, retry after ${retryAfter}s`);
+                    throw error;
                 }
-                throw new Error('Authentication failed');
-            }
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(
-                    (errorData as { message?: string }).message ||
-                    `Twitch API error: ${response.status}`
-                );
-            }
+                // Handle unauthorized (try token refresh)
+                if (response.status === 401) {
+                    console.debug('🔄 Token expired, refreshing...');
+                    const refreshed = await twitchAuthService.refreshToken();
+                    if (refreshed) {
+                        // Retry the request with new token
+                        return this.request<T>(endpoint, options);
+                    }
+                    throw new Error('Authentication failed');
+                }
 
-            return (await response.json()) as T;
-        } catch (error) {
-            console.error(`❌ Twitch API request failed: ${endpoint}`, error);
-            throw error;
+                // Retry on transient server errors (502, 503, 504)
+                if (response.status >= 502 && response.status <= 504) {
+                    if (attempt < this.MAX_RETRIES) {
+                        const delay = this.BASE_DELAY * Math.pow(2, attempt);
+                        console.warn(`⚠️ Twitch API server error ${response.status} (attempt ${attempt + 1}/${this.MAX_RETRIES + 1}). Retrying in ${delay}ms...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+                }
+
+                if (response.status < 200 || response.status >= 300) {
+                    const errorData = response.data as { message?: string };
+                    throw new Error(
+                        errorData?.message ||
+                        `Twitch API error: ${response.status}`
+                    );
+                }
+
+                return response.data;
+            } catch (error) {
+                lastError = error as Error;
+                const isRetryable = this.isRetryableError(error);
+
+                // Don't retry non-retryable errors or if we've exhausted retries
+                if (!isRetryable || attempt === this.MAX_RETRIES) {
+                    console.error(`❌ Twitch API request failed: ${endpoint}`, error);
+                    throw error;
+                }
+
+                const delay = this.BASE_DELAY * Math.pow(2, attempt);
+                const errorMsg = (error as Error).message || 'Unknown error';
+                console.warn(`⚠️ Twitch API request failed (attempt ${attempt + 1}/${this.MAX_RETRIES + 1}). Retrying in ${delay}ms... Error: ${errorMsg}`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+            }
         }
+
+        // Should never reach here, but just in case
+        throw lastError || new Error('Request failed after retries');
     }
 
     /**
@@ -111,3 +253,4 @@ export class TwitchRequestor {
         return twitchAuthService.getAccessToken();
     }
 }
+

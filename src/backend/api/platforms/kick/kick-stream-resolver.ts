@@ -5,6 +5,68 @@ import { KICK_LEGACY_API_V1_BASE } from './kick-types';
 export class KickStreamResolver {
 
     /**
+     * Validate that a playback URL is actually accessible
+     * Returns true if the URL is valid, false if it returns 404/403
+     * This prevents returning stale URLs from Kick's API cache
+     * 
+     * NOTE: We use GET with Range header instead of HEAD because
+     * Amazon IVS (Kick's CDN) doesn't support HEAD requests for HLS manifests
+     */
+    private async validatePlaybackUrl(url: string): Promise<boolean> {
+        const { net } = require('electron');
+
+        return new Promise<boolean>((resolve) => {
+            const request = net.request({
+                method: 'GET',  // IVS doesn't support HEAD, use GET with Range
+                url: url,
+            });
+
+            request.setHeader('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+            request.setHeader('Origin', 'https://kick.com');
+            request.setHeader('Referer', 'https://kick.com/');
+            // Only fetch first 1KB to minimize bandwidth
+            request.setHeader('Range', 'bytes=0-1024');
+
+            // Set a short timeout for validation (5 seconds)
+            const timeout = setTimeout(() => {
+                request.abort();
+                // On timeout, assume URL might be valid (don't block on slow CDN)
+                resolve(true);
+            }, 5000);
+
+            request.on('response', (response: any) => {
+                clearTimeout(timeout);
+                // Abort the request immediately after getting status - we don't need the body
+                request.abort();
+
+                // 200-299 or 206 (Partial Content) = valid
+                // 404/403 = stream gone
+                if (response.statusCode >= 200 && response.statusCode < 300) {
+                    resolve(true);
+                } else if (response.statusCode === 206) {
+                    // Partial Content - Range request successful
+                    resolve(true);
+                } else if (response.statusCode === 404 || response.statusCode === 403) {
+                    console.debug(`[KickStreamResolver] Playback URL validation failed: ${response.statusCode}`);
+                    resolve(false);
+                } else {
+                    // Other status codes (e.g., 503) - assume temporary, let player handle
+                    console.debug(`[KickStreamResolver] Playback URL returned status ${response.statusCode}, assuming valid`);
+                    resolve(true);
+                }
+            });
+
+            request.on('error', () => {
+                clearTimeout(timeout);
+                // Network error - assume URL might be valid, let player handle
+                resolve(true);
+            });
+
+            request.end();
+        });
+    }
+
+    /**
      * Make a request using Electron's net module to bypass Cloudflare
      */
     private async netRequest<T>(url: string, context?: string): Promise<T> {
@@ -87,6 +149,15 @@ export class KickStreamResolver {
 
                 if (!playbackUrl) {
                     throw new Error('No playback URL found in response');
+                }
+
+                // CRITICAL: Validate that the playback URL is actually accessible
+                // Kick's API often returns stale playback_url for streams that just went offline
+                // This preflight check prevents the "404 → refresh → same 404" loop
+                const isUrlValid = await this.validatePlaybackUrl(playbackUrl);
+                if (!isUrlValid) {
+                    console.debug(`[KickStreamResolver] Playback URL returned 404 - stream likely just went offline`);
+                    throw new Error('Channel is offline');
                 }
 
                 return {

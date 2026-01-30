@@ -303,6 +303,8 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 const statusCode = data.response?.code || data.response?.status || data.networkDetails?.status;
 
                 // Handle critical manifest errors early - no point retrying these
+                // With preflight URL validation in the resolver, 404 means the stream just went offline
+                // Refreshing won't help - the resolver will now immediately detect offline state
                 if (data.details === 'manifestLoadError' && (statusCode === 404 || statusCode === 403)) {
                     console.debug(`[HLS] Stream unavailable (${statusCode}), stopping retries`);
                     hls?.destroy();
@@ -310,7 +312,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                         code: 'STREAM_OFFLINE',
                         message: 'Stream offline or unavailable',
                         fatal: true,
-                        shouldRefresh: true, // Allow parent to retry fetching a fresh URL
+                        shouldRefresh: false, // Don't refresh - preflight validation means offline is confirmed
                         originalError: data
                     });
                     return;
