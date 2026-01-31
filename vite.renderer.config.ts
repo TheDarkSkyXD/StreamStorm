@@ -2,6 +2,8 @@ import { defineConfig, type UserConfig } from 'vite';
 import path from 'path';
 import viteCompression from 'vite-plugin-compression';
 import { visualizer } from 'rollup-plugin-visualizer';
+import svgr from 'vite-plugin-svgr';
+import checker from 'vite-plugin-checker';
 
 // https://vitejs.dev/config
 export default defineConfig(async (): Promise<UserConfig> => {
@@ -12,6 +14,28 @@ export default defineConfig(async (): Promise<UserConfig> => {
   return {
     plugins: [
       react(),
+      // SVG as React components - import { ReactComponent as Logo } from './logo.svg'
+      svgr({
+        svgrOptions: {
+          icon: true, // Replace width/height with 1em for easier sizing
+          svgoConfig: {
+            plugins: [
+              { name: 'removeViewBox', active: false }, // Keep viewBox for scaling
+            ],
+          },
+        },
+      }),
+      // TypeScript and ESLint checking in dev mode (shows errors in browser overlay)
+      ...(!isProduction ? [checker({
+        typescript: true,
+        eslint: {
+          useFlatConfig: true,
+          lintCommand: 'eslint ./src',
+        },
+        overlay: {
+          initialIsOpen: false, // Don't auto-open overlay
+        },
+      })] : []),
       // Brotli compression for production builds - reduces transfer size by 20-30%
       ...(isProduction ? [viteCompression({
         algorithm: 'brotliCompress',
