@@ -35,6 +35,7 @@ export interface TwitchHlsPlayerProps extends Omit<React.VideoHTMLAttributes<HTM
     autoPlay?: boolean;
     currentLevel?: string;
     enableAdBlock?: boolean;
+    volume?: number;
 }
 
 export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps>(({
@@ -47,6 +48,7 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
     autoPlay = false,
     currentLevel,
     enableAdBlock = true,
+    volume,
     ...props
 }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -56,6 +58,13 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
     const playRequestIdRef = useRef(0);
     const lastRecoveryAttemptRef = useRef<number | null>(null);
     const [adBlockStatus, setAdBlockStatus] = useState<AdBlockStatus | null>(null);
+
+    // Apple volume on mount and change
+    useEffect(() => {
+        if (videoRef.current && volume !== undefined) {
+            videoRef.current.volume = Math.max(0, Math.min(1, volume));
+        }
+    }, [volume]);
 
     // Expose video ref to parent
     useImperativeHandle(ref, () => videoRef.current as HTMLVideoElement);

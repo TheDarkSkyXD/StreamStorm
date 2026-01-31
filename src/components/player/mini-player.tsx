@@ -31,12 +31,12 @@ export function MiniPlayer() {
 
     // Ad-block store setting
     const storeEnableAdBlock = useAdBlockStore((s) => s.enableAdBlock);
-    
+
     // Determine if this is a Twitch stream that needs ad-blocking
     const isTwitchStream = currentStream?.platform === 'twitch';
 
     // Persistent volume
-    const { isMuted, handleToggleMute, syncFromVideoElement } = useVolume({
+    const { isMuted, handleToggleMute, syncFromVideoElement, volume, handleVolumeChange } = useVolume({
         videoRef: videoRef as React.RefObject<HTMLVideoElement>,
         watch: currentStream?.streamUrl
     });
@@ -44,6 +44,7 @@ export function MiniPlayer() {
     // Dragging state
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [isDragging, setIsDragging] = useState(false);
+    const [isVolumeDragging, setIsVolumeDragging] = useState(false);
     const dragStart = useRef({ x: 0, y: 0 });
     const positionStart = useRef({ x: 0, y: 0 });
 
@@ -203,6 +204,7 @@ export function MiniPlayer() {
                         channelName={currentStream.channelName}
                         enableAdBlock={storeEnableAdBlock}
                         muted={isMuted}
+                        volume={volume / 100}
                         autoPlay={true}
                         currentLevel="auto"
                         onError={handleError}
@@ -214,6 +216,7 @@ export function MiniPlayer() {
                         ref={videoRef}
                         src={currentStream.streamUrl}
                         muted={isMuted}
+                        volume={volume / 100}
                         autoPlay={true}
                         currentLevel="auto"
                         onError={handleError}
@@ -313,27 +316,98 @@ export function MiniPlayer() {
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent container={containerRef.current}>
-                                    {isPlaying ? 'LuPause' : 'LuPlay'}
+                                    {isPlaying ? 'Pause' : 'Play'}
                                 </TooltipContent>
                             </Tooltip>
-                            <Tooltip delayDuration={0}>
-                                <TooltipTrigger asChild>
-                                    <button
-                                        onClick={handleToggleMute}
-                                        className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
-                                    >
-                                        {isMuted ? <LuVolumeX size={16} /> : <LuVolume2 size={16} />}
-                                    </button>
-                                </TooltipTrigger>
-                                <TooltipContent container={containerRef.current}>
-                                    {isMuted ? 'Unmute' : 'Mute'}
-                                </TooltipContent>
-                            </Tooltip>
+
+                            {/* Volume Control */}
+                            <div
+                                className="flex items-center group/volume"
+                                onMouseEnter={() => setIsHovered(true)}
+                                onMouseLeave={() => setIsHovered(true)}
+                            >
+                                <div
+                                    className="flex items-center"
+                                    onMouseEnter={() => { }}
+                                >
+                                    <Tooltip delayDuration={0}>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleToggleMute();
+                                                }}
+                                                className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors z-10"
+                                            >
+                                                {isMuted ? <LuVolumeX size={16} /> : <LuVolume2 size={16} />}
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent container={containerRef.current}>
+                                            {isMuted ? 'Unmute' : 'Mute'}
+                                        </TooltipContent>
+                                    </Tooltip>
+
+                                    <div className="w-0 group-hover/volume:w-20 group-hover/volume:ml-2 group-hover/volume:opacity-100 opacity-0 overflow-hidden transition-all duration-300 ease-out">
+                                        <div
+                                            className="relative w-20 h-4 flex items-center cursor-pointer"
+                                            onClick={(e) => e.stopPropagation()}
+                                            onMouseDown={(e) => {
+                                                e.stopPropagation();
+                                                e.preventDefault();
+                                                setIsVolumeDragging(true);
+
+                                                // Capture rect immediately to avoid e.currentTarget being null in event listeners
+                                                const rect = e.currentTarget.getBoundingClientRect();
+
+                                                const updateVolume = (clientX: number) => {
+                                                    const percent = Math.max(0, Math.min(100, ((clientX - rect.left) / rect.width) * 100));
+                                                    handleVolumeChange(percent);
+                                                };
+
+                                                updateVolume(e.clientX);
+
+                                                const handleMouseMove = (moveEvent: MouseEvent) => {
+                                                    updateVolume(moveEvent.clientX);
+                                                };
+
+                                                const handleMouseUp = () => {
+                                                    setIsVolumeDragging(false);
+                                                    document.removeEventListener('mousemove', handleMouseMove);
+                                                    document.removeEventListener('mouseup', handleMouseUp);
+                                                };
+
+                                                document.addEventListener('mousemove', handleMouseMove);
+                                                document.addEventListener('mouseup', handleMouseUp);
+                                            }}
+                                        >
+                                            {/* Track */}
+                                            <div className="absolute w-full h-1 bg-white/30 rounded-full" />
+                                            {/* Fill */}
+                                            <div
+                                                className="absolute h-1 bg-white rounded-full"
+                                                style={{ width: `${isMuted ? 0 : volume}%` }}
+                                            />
+                                            {/* Thumb */}
+                                            <Tooltip delayDuration={0} open={isVolumeDragging || undefined}>
+                                                <TooltipTrigger asChild>
+                                                    <div
+                                                        className="absolute w-3 h-3 bg-white rounded-full shadow-sm"
+                                                        style={{ left: `calc(${isMuted ? 0 : volume}% - 6px)` }}
+                                                    />
+                                                </TooltipTrigger>
+                                                <TooltipContent side="top">
+                                                    <p>{Math.round(isMuted ? 0 : volume)}%</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Viewer count */}
                         {currentStream.viewerCount !== undefined && (
-                            <span className="text-white/60 text-xs">
+                            <span className="text-white/60 text-xs ml-auto">
                                 {currentStream.viewerCount.toLocaleString()} viewers
                             </span>
                         )}
@@ -343,3 +417,6 @@ export function MiniPlayer() {
         </div>
     );
 }
+
+// Add volume to MiniPlayerProps if needed, but it seems to use store.
+
