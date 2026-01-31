@@ -1,6 +1,7 @@
 import { Link, useLocation } from '@tanstack/react-router';
-import { Home, Heart, Grid3X3, Settings, LayoutDashboard, History, Download } from 'lucide-react';
 import React from 'react';
+import { IoMdSettings } from 'react-icons/io';
+import { LuHouse, LuHeart, LuGrid3X3, LuLayoutDashboard, LuHistory, LuDownload } from 'react-icons/lu';
 
 import { MiniPlayer } from '@/components/player/mini-player';
 import { useAuthInitialize } from '@/hooks/useAuth';
@@ -17,13 +18,13 @@ interface AppLayoutProps {
 }
 
 const navItems = [
-  { path: '/', label: 'Home', icon: Home },
-  { path: '/following', label: 'Following', icon: Heart },
-  { path: '/categories', label: 'Categories', icon: Grid3X3 },
-  { path: '/multistream', label: 'MultiView', icon: LayoutDashboard },
-  { path: '/history', label: 'History', icon: History },
-  { path: '/downloads', label: 'Downloads', icon: Download },
-  { path: '/settings', label: 'Settings', icon: Settings },
+  { path: '/', label: 'Home', icon: LuHouse },
+  { path: '/following', label: 'Following', icon: LuHeart },
+  { path: '/categories', label: 'Categories', icon: LuGrid3X3 },
+  { path: '/multistream', label: 'MultiView', icon: LuLayoutDashboard },
+  { path: '/history', label: 'History', icon: LuHistory },
+  { path: '/downloads', label: 'Downloads', icon: LuDownload },
+  { path: '/settings', label: 'Settings', icon: IoMdSettings },
 ] as const;
 
 export function AppLayout({ children }: AppLayoutProps) {
@@ -38,7 +39,7 @@ export function AppLayout({ children }: AppLayoutProps) {
 
   return (
     <div className="h-full flex flex-col bg-[var(--color-background)] relative">
-            {/* Custom Title Bar (window controls) */}
+      {/* Custom Title Bar (window controls) */}
       <TitleBar />
 
       {/* Top Navigation Bar (search, user info) */}

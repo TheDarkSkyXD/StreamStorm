@@ -1,6 +1,6 @@
 
-import { MessageSquare, Layout } from 'lucide-react';
 import React from 'react';
+import { LuMessageSquare, LuLayoutTemplate } from 'react-icons/lu';
 
 import { getPlatformColor } from '@/assets/platforms';
 import { Button } from '@/components/ui/button';
@@ -45,7 +45,7 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
                         disabled={twitch.loading}
                     >
                         {/* Twitch Icon would go here */}
-                        <MessageSquare className="h-5 w-5 fill-current" />
+                        <LuMessageSquare className="h-5 w-5 fill-current" />
                         Continue with Twitch
                     </Button>
 
@@ -56,7 +56,7 @@ export function LoginDialog({ open, onOpenChange }: LoginDialogProps) {
                         disabled={true /* kick.loading || true */}
                     >
                         {/* Kick Icon would go here */}
-                        <Layout className="h-5 w-5 fill-current" />
+                        <LuLayoutTemplate className="h-5 w-5 fill-current" />
                         Continue with Kick (Coming Soon)
                     </Button>
 

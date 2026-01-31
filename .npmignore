@@ -1,0 +1,48 @@
+# .npmignore
+# This file controls what gets published to npm (if applicable)
+# For Electron apps, this primarily helps npm audit ignore dev-only vulnerabilities
+
+# Development files
+.git/
+.github/
+.vscode/
+.agent/
+.sisyphus/
+.playwright-mcp/
+
+# Test files
+tests/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+coverage/
+
+# Documentation
+docs/
+documentation/
+*.md
+!README.md
+
+# Config files
+.env
+.env.*
+.eslintcache
+.prettierrc
+eslint.config.mjs
+vitest.config.ts
+tsconfig.json
+
+# Build artifacts
+out/
+dist/
+.vite/
+*.tsbuildinfo
+
+# Development scripts
+vaft.user.js
+
+# Editor files
+*.swp
+*.swo
+*~

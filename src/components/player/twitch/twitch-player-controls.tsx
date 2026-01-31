@@ -1,5 +1,5 @@
-import { Maximize, Minimize } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { LuMaximize, LuMinimize } from 'react-icons/lu';
 
 import { formatDuration } from '@/lib/utils';
 
@@ -286,9 +286,9 @@ export function TwitchPlayerControls(props: TwitchPlayerControlsProps) {
                                     onClick={onToggleFullscreen}
                                 >
                                     {isFullscreen ? (
-                                        <Minimize className="w-5 h-5" />
+                                        <LuMinimize className="w-5 h-5" strokeWidth={3} />
                                     ) : (
-                                        <Maximize className="w-5 h-5" />
+                                        <LuMaximize className="w-5 h-5" strokeWidth={3} />
                                     )}
                                 </Button>
                             </TooltipTrigger>

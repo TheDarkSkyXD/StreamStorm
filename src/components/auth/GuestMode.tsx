@@ -7,8 +7,8 @@
  * - Login prompts
  */
 
-import { User, Lock, LogIn } from 'lucide-react';
 import React from 'react';
+import { LuUser, LuLock, LuLogIn } from 'react-icons/lu';
 
 import { useAuthStore } from '@/store/auth-store';
 
@@ -44,7 +44,7 @@ export function GuestBadge({ size = 'md', showIcon = true, className = '' }: Gue
         <span
             className={`inline-flex items-center rounded-full bg-[var(--color-background-tertiary)] text-[var(--color-foreground-muted)] font-medium ${sizeClasses[size]} ${className}`}
         >
-            {showIcon && <User size={iconSizes[size]} />}
+            {showIcon && <LuUser size={iconSizes[size]} />}
             Guest
         </span>
     );
@@ -169,7 +169,7 @@ export function LoginPrompt({
                 onClick={handleLoginClick}
                 className={`inline-flex items-center gap-1.5 text-sm text-[var(--color-storm-primary)] hover:text-[var(--color-storm-primary-hover)] transition-colors ${className}`}
             >
-                <LogIn size={14} />
+                <LuLogIn size={14} />
                 <span>Login to {displayTitle.toLowerCase()}</span>
             </button>
         );
@@ -181,7 +181,7 @@ export function LoginPrompt({
         >
             <div className="flex items-start gap-3">
                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[var(--color-storm-primary)]/10 flex items-center justify-center">
-                    <Lock size={20} className="text-[var(--color-storm-primary)]" />
+                    <LuLock size={20} className="text-[var(--color-storm-primary)]" />
                 </div>
                 <div className="flex-1 min-w-0">
                     <h3 className="text-sm font-semibold text-white mb-1">{displayTitle}</h3>

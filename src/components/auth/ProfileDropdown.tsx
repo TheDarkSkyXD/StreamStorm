@@ -1,7 +1,8 @@
 
 import { Link } from '@tanstack/react-router';
-import { User, Settings, LogOut, X } from 'lucide-react';
 import React, { useState, useRef, useEffect } from 'react';
+import { LuUser, LuLogOut, LuX } from 'react-icons/lu';
+import { IoMdSettings } from 'react-icons/io';
 
 import { ProxiedImage } from '@/components/ui/proxied-image';
 import { useUserInfo, useAuthStatus } from '@/hooks/useAuth';
@@ -182,7 +183,7 @@ export function ProfileDropdown() {
 
         return (
             <div className="w-8 h-8 rounded-full bg-[var(--color-background-tertiary)] flex items-center justify-center">
-                <User size={16} className="text-[var(--color-foreground-secondary)]" />
+                <LuUser size={16} className="text-[var(--color-foreground-secondary)]" />
             </div>
         );
     };
@@ -225,7 +226,7 @@ export function ProfileDropdown() {
 
         return (
             <div className="w-10 h-10 rounded-full bg-[var(--color-background-tertiary)] flex items-center justify-center">
-                <User size={20} className="text-[var(--color-foreground-secondary)]" />
+                <LuUser size={20} className="text-[var(--color-foreground-secondary)]" />
             </div>
         );
     };
@@ -300,7 +301,7 @@ export function ProfileDropdown() {
                                             className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all"
                                             title="Disconnect Twitch"
                                         >
-                                            <X size={14} className="text-red-400" />
+                                            <LuX size={14} className="text-red-400" />
                                         </button>
                                     </div>
                                 ) : (
@@ -341,7 +342,7 @@ export function ProfileDropdown() {
                                             className="p-1.5 rounded-md opacity-0 group-hover:opacity-100 hover:bg-red-500/20 transition-all"
                                             title="Disconnect Kick"
                                         >
-                                            <X size={14} className="text-red-400" />
+                                            <LuX size={14} className="text-red-400" />
                                         </button>
                                     </div>
                                 ) : (
@@ -390,7 +391,7 @@ export function ProfileDropdown() {
                             className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-white hover:bg-[var(--color-background-tertiary)] hover:text-white w-full text-left text-sm"
                             onClick={() => setIsOpen(false)}
                         >
-                            <Settings size={16} />
+                            <IoMdSettings size={16} />
                             Settings
                         </Link>
 
@@ -399,7 +400,7 @@ export function ProfileDropdown() {
                                 onClick={handleLogoutAll}
                                 className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-red-500 hover:bg-red-500/10 w-full text-left text-sm"
                             >
-                                <LogOut size={16} />
+                                <LuLogOut size={16} />
                                 Sign Out of All
                             </button>
                         )}

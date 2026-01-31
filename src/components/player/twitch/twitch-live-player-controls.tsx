@@ -1,5 +1,5 @@
-import { Maximize, Minimize, ShieldCheck } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { LuMaximize, LuMinimize, LuShieldCheck } from 'react-icons/lu';
 
 import { AdBlockStatus } from '@/shared/adblock-types';
 
@@ -247,7 +247,7 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
                                             cursor-help ml-1
                                         `}
                                     >
-                                        <ShieldCheck className="w-6 h-6" />
+                                        <LuShieldCheck className="w-6 h-6" />
                                     </Button>
                                 </TooltipTrigger>
                                 <TooltipContent container={containerRef.current}>
@@ -302,9 +302,9 @@ export function TwitchLivePlayerControls(props: TwitchLivePlayerControlsProps) {
                                     onClick={onToggleFullscreen}
                                 >
                                     {isFullscreen ? (
-                                        <Minimize className="w-6 h-6" />
+                                        <LuMinimize className="w-6 h-6" strokeWidth={3} />
                                     ) : (
-                                        <Maximize className="w-6 h-6" />
+                                        <LuMaximize className="w-6 h-6" strokeWidth={3} />
                                     )}
                                 </Button>
                             </TooltipTrigger>

@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import { Play, Clapperboard } from 'lucide-react';
 import React from 'react';
+import { LuPlay, LuClapperboard } from 'react-icons/lu';
 
 export type SortOption = 'recent' | 'views';
 
@@ -20,7 +20,7 @@ export function ContentTabs({ activeTab }: ContentTabsProps) {
                         : 'text-[var(--color-foreground-muted)] hover:text-[var(--color-foreground)]'
                         }`}
                 >
-                    <span className="flex items-center gap-2"><Play className="w-4 h-4" /> Videos</span>
+                    <span className="flex items-center gap-2"><LuPlay className="w-4 h-4" /> Videos</span>
                     {activeTab === 'videos' && (
                         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
                     )}
@@ -33,7 +33,7 @@ export function ContentTabs({ activeTab }: ContentTabsProps) {
                         : 'text-[var(--color-foreground-muted)] hover:text-[var(--color-foreground)]'
                         }`}
                 >
-                    <span className="flex items-center gap-2"><Clapperboard className="w-4 h-4" /> Clips</span>
+                    <span className="flex items-center gap-2"><LuClapperboard className="w-4 h-4" /> Clips</span>
                     {activeTab === 'clips' && (
                         <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white" />
                     )}

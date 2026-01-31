@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import { Bell, X } from 'lucide-react';
 import React from 'react';
+import { LuBell, LuX } from 'react-icons/lu';
 
 import { cn } from '@/lib/utils';
 
@@ -35,7 +35,7 @@ export function NotificationsDropdown() {
                 className="relative p-2 rounded-full hover:bg-[var(--color-background-secondary)] transition-colors outline-none"
                 title="Notifications"
             >
-                <Bell size={24} strokeWidth={3} className="text-white" />
+                <LuBell size={24} strokeWidth={3} className="text-white" />
                 {notifications.length > 0 && (
                     <span className="absolute -bottom-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-700 text-sm font-bold text-white ring-2 ring-[var(--color-background)]">
                         {notifications.length > 99 ? '99+' : notifications.length}
@@ -51,7 +51,7 @@ export function NotificationsDropdown() {
                     <div className="max-h-[300px] overflow-y-auto [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:bg-white [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-track]:bg-transparent">
                         {notifications.length === 0 ? (
                             <div className="p-8 flex flex-col items-center justify-center text-center">
-                                <Bell size={32} className="text-[var(--color-foreground-muted)] mb-2 opacity-50" />
+                                <LuBell size={32} className="text-[var(--color-foreground-muted)] mb-2 opacity-50" />
                                 <p className="text-sm text-[var(--color-foreground-secondary)]">No new notifications</p>
                             </div>
                         ) : (
@@ -77,7 +77,7 @@ export function NotificationsDropdown() {
                                         className="absolute top-2 right-2 text-white hover:bg-[var(--color-background-elevated)] rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                         title="Dismiss"
                                     >
-                                        <X size={14} />
+                                        <LuX size={14} />
                                     </button>
                                 </div>
                             ))

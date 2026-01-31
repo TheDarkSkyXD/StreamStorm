@@ -1,5 +1,5 @@
-import { Power, ExternalLink, AlertCircle } from 'lucide-react';
 import React from 'react';
+import { LuPower, LuExternalLink, LuCircleAlert } from 'react-icons/lu';
 
 import { getPlatformColor } from '@/assets/platforms';
 import { TwitchIcon, KickIcon } from '@/components/icons';
@@ -143,7 +143,7 @@ function PlatformCard({
                         disabled={loading}
                         className="w-full gap-2"
                     >
-                        <Power className="h-4 w-4" />
+                        <LuPower className="h-4 w-4" />
                         Disconnect
                     </Button>
                 ) : (
@@ -154,14 +154,14 @@ function PlatformCard({
                             ['--hover-bg' as string]: platform === 'kick' ? '#3FC912' : undefined,
                         }}
                         className={`w-full gap-2 transition-all duration-200 ${platform === 'kick'
-                                ? 'hover:!bg-[#3FC912] hover:scale-[1.02] hover:shadow-lg hover:shadow-[#53FC18]/30'
-                                : 'hover:brightness-110'
+                            ? 'hover:!bg-[#3FC912] hover:scale-[1.02] hover:shadow-lg hover:shadow-[#53FC18]/30'
+                            : 'hover:brightness-110'
                             } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
                         onClick={disabled ? undefined : onConnect}
                         disabled={loading || disabled}
                     >
                         {loading ? 'Connecting...' : `Connect ${platformName}`}
-                        {!loading && !disabled && <ExternalLink className="h-4 w-4" />}
+                        {!loading && !disabled && <LuExternalLink className="h-4 w-4" />}
                     </Button>
                 )}
             </CardFooter>

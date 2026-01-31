@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import { Play } from 'lucide-react';
 import React, { memo } from 'react';
+import { LuPlay } from 'react-icons/lu';
 
 import { UnifiedChannel } from '@/backend/api/unified/platform-types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -54,7 +54,7 @@ export const ClipCard = memo(function ClipCard({ clip, onClick, platform, channe
                 {/* Hover overlay */}
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center scale-90 group-hover:scale-100 transition-transform">
-                        <Play className="w-5 h-5 text-white fill-white" />
+                        <LuPlay className="w-5 h-5 text-white fill-white" />
                     </div>
                 </div>
             </div>

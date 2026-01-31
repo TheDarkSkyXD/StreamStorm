@@ -1,5 +1,5 @@
-import { Maximize, Minimize, Radio } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { LuMaximize, LuMinimize, LuRadio } from 'react-icons/lu';
 
 import { formatDuration } from '@/lib/utils';
 
@@ -287,7 +287,7 @@ export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
                                         handleGoLive();
                                     }}
                                 >
-                                    <Radio className="w-4 h-4 mr-1" />
+                                    <LuRadio className="w-4 h-4 mr-1" />
                                     Go Live
                                 </Button>
                             </>
@@ -337,9 +337,9 @@ export function KickLivePlayerControls(props: KickLivePlayerControlsProps) {
                                     onClick={onToggleFullscreen}
                                 >
                                     {isFullscreen ? (
-                                        <Minimize className="w-6 h-6" />
+                                        <LuMinimize className="w-6 h-6" strokeWidth={3} />
                                     ) : (
-                                        <Maximize className="w-6 h-6" />
+                                        <LuMaximize className="w-6 h-6" strokeWidth={3} />
                                     )}
                                 </Button>
                             </TooltipTrigger>

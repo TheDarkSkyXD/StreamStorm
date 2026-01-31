@@ -10,6 +10,7 @@ export interface HlsPlayerProps extends Omit<React.VideoHTMLAttributes<HTMLVideo
     onHlsInstance?: (hls: Hls) => void;
     autoPlay?: boolean;
     currentLevel?: string; // 'auto' or level index as string
+    volume?: number;
     sources?: { quality: string, url: string }[];
 }
 
@@ -21,6 +22,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
     autoPlay = false,
     currentLevel,
     sources,
+    volume,
     ...props
 }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
@@ -31,6 +33,14 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
     useEffect(() => {
         sourcesRef.current = sources;
     }, [sources]);
+
+    // Apple volume on mount and change
+    useEffect(() => {
+        if (videoRef.current && volume !== undefined) {
+            videoRef.current.volume = Math.max(0, Math.min(1, volume));
+        }
+    }, [volume]);
+
     const pendingPlayRef = useRef<Promise<void> | null>(null);
     const playRequestIdRef = useRef(0); // Track play request to cancel stale ones
     const lastRecoveryAttemptRef = useRef<number | null>(null); // Rate limit recovery attempts
@@ -303,6 +313,8 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 const statusCode = data.response?.code || data.response?.status || data.networkDetails?.status;
 
                 // Handle critical manifest errors early - no point retrying these
+                // With preflight URL validation in the resolver, 404 means the stream just went offline
+                // Refreshing won't help - the resolver will now immediately detect offline state
                 if (data.details === 'manifestLoadError' && (statusCode === 404 || statusCode === 403)) {
                     console.debug(`[HLS] Stream unavailable (${statusCode}), stopping retries`);
                     hls?.destroy();
@@ -310,7 +322,7 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                         code: 'STREAM_OFFLINE',
                         message: 'Stream offline or unavailable',
                         fatal: true,
-                        shouldRefresh: true, // Allow parent to retry fetching a fresh URL
+                        shouldRefresh: false, // Don't refresh - preflight validation means offline is confirmed
                         originalError: data
                     });
                     return;

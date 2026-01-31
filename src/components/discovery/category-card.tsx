@@ -1,6 +1,6 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { Link } from '@tanstack/react-router';
 import React from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 
 import { UnifiedCategory } from '@/backend/api/unified/platform-types';
 import { Card, CardContent } from '@/components/ui/card';

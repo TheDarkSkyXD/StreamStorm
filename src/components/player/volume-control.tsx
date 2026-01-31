@@ -1,5 +1,5 @@
-import { Volume2, Volume1, VolumeX } from 'lucide-react';
 import React, { useState, useRef } from 'react';
+import { LuVolume2, LuVolume1, LuVolumeX } from 'react-icons/lu';
 
 import { Button } from '../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
@@ -18,9 +18,9 @@ export function VolumeControl({ volume, muted, onVolumeChange, onMuteToggle, cla
     const sliderRef = useRef<HTMLDivElement>(null);
 
     const getIcon = () => {
-        if (muted || volume === 0) return <VolumeX className="w-6 h-6 fill-current" />;
-        if (volume < 50) return <Volume1 className="w-6 h-6 fill-current" />;
-        return <Volume2 className="w-6 h-6 fill-current" />;
+        if (muted || volume === 0) return <LuVolumeX className="w-6 h-6 fill-current" />;
+        if (volume < 50) return <LuVolume1 className="w-6 h-6 fill-current" />;
+        return <LuVolume2 className="w-6 h-6 fill-current" />;
     };
 
     const displayVolume = muted ? 0 : volume;

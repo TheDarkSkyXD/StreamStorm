@@ -1,7 +1,7 @@
 
 import { Link } from '@tanstack/react-router';
-import { Trash2, History as HistoryIcon, Play } from 'lucide-react';
 import React from 'react';
+import { LuTrash2, LuHistory as HistoryIcon, LuPlay } from 'react-icons/lu';
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -74,7 +74,7 @@ export function HistoryPage() {
                         onClick={handleClearHistory}
                         className="flex items-center gap-2"
                     >
-                        <Trash2 className="w-4 h-4" />
+                        <LuTrash2 className="w-4 h-4" />
                         Clear History
                     </Button>
                 )}
@@ -104,7 +104,7 @@ export function HistoryPage() {
                                     />
                                 ) : (
                                     <div className="w-full h-full flex items-center justify-center bg-zinc-800">
-                                        <Play className="w-8 h-8 text-white/20" />
+                                        <LuPlay className="w-8 h-8 text-white/20" />
                                     </div>
                                 )}
 
@@ -114,7 +114,7 @@ export function HistoryPage() {
                                         item={item}
                                         className="text-white bg-[var(--color-primary)] p-3 rounded-full hover:bg-[var(--color-primary-dark)] transform scale-100 hover:scale-110 transition-transform"
                                     >
-                                        <Play className="w-6 h-6 fill-current" />
+                                        <LuPlay className="w-6 h-6 fill-current" />
                                     </HistoryItemLink>
                                 </div>
 
@@ -138,7 +138,7 @@ export function HistoryPage() {
                                     className="absolute bottom-2 right-2 p-1.5 rounded-full bg-black/60 hover:bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity"
                                     title="Remove from history"
                                 >
-                                    <Trash2 className="w-3.5 h-3.5" />
+                                    <LuTrash2 className="w-3.5 h-3.5" />
                                 </button>
                             </div>
 

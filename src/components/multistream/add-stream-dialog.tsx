@@ -1,6 +1,6 @@
 
-import { Plus, MonitorPlay } from 'lucide-react';
 import React, { useState } from 'react';
+import { LuPlus, LuMonitorPlay } from 'react-icons/lu';
 
 import { UnifiedChannel } from '@/backend/api/unified/platform-types';
 import { TwitchIcon, KickIcon } from '@/components/icons/PlatformIcons';
@@ -31,14 +31,14 @@ export function AddStreamDialog() {
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
                 <Button size="sm" className="gap-2 bg-[var(--color-storm-primary)] hover:bg-[var(--color-storm-primary)]/90 text-black font-bold shadow-lg shadow-purple-900/20">
-                    <Plus className="h-4 w-4" />
+                    <LuPlus className="h-4 w-4" />
                     Add Stream
                 </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[480px] bg-[#0F0F12] border-[var(--color-border)] p-6 shadow-2xl">
                 <DialogHeader className="pb-4 border-b border-[var(--color-border)]">
                     <DialogTitle className="flex items-center gap-2 text-xl text-white">
-                        <MonitorPlay className="w-5 h-5 text-[var(--color-storm-primary)]" />
+                        <LuMonitorPlay className="w-5 h-5 text-[var(--color-storm-primary)]" />
                         Add Stream to Layout
                     </DialogTitle>
                     <DialogDescription className="text-[var(--color-foreground-muted)]">

@@ -1,6 +1,6 @@
 import { useParams, useSearch, Link } from '@tanstack/react-router';
-import { Heart, HeartCrack, AlertCircle, Lock } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
+import { LuHeart, LuHeartCrack, LuCircleAlert, LuLock } from 'react-icons/lu';
 
 import { KickVodPlayer } from '@/components/player/kick';
 import { TwitchVodPlayer } from '@/components/player/twitch';
@@ -287,7 +287,7 @@ export function VideoPage() {
                     {isSubOnly ? (
                         <div className="text-center">
                             <div className="w-16 h-16 rounded-full bg-purple-600/20 flex items-center justify-center mx-auto mb-4">
-                                <Lock className="w-8 h-8 text-purple-400" />
+                                <LuLock className="w-8 h-8 text-purple-400" />
                             </div>
                             <h3 className="text-xl font-semibold text-white mb-2">Subscriber Only VOD</h3>
                             <p className="text-white/60 max-w-md mx-auto">
@@ -317,7 +317,7 @@ export function VideoPage() {
                         )
                     ) : error ? (
                         <div className="text-center text-red-500">
-                            <AlertCircle className="w-8 h-8 mx-auto mb-2" />
+                            <LuCircleAlert className="w-8 h-8 mx-auto mb-2" />
                             <p>{error}</p>
                         </div>
                     ) : (
@@ -416,13 +416,13 @@ export function VideoPage() {
                             >
                                 {isFollowing ? (
                                     isHoveringFollow ? (
-                                        <HeartCrack className="w-5 h-5 text-red-500" strokeWidth={3} />
+                                        <LuHeartCrack className="w-5 h-5 text-red-500" strokeWidth={3} />
                                     ) : (
-                                        <Heart className="w-5 h-5 fill-current text-white" strokeWidth={3} />
+                                        <LuHeart className="w-5 h-5 fill-current text-white" strokeWidth={3} />
                                     )
                                 ) : (
                                     <>
-                                        <Heart className={`w-4 h-4 ${isHoveringFollow ? 'fill-current' : ''}`} strokeWidth={3} /> Follow
+                                        <LuHeart className={`w-4 h-4 ${isHoveringFollow ? 'fill-current' : ''}`} strokeWidth={3} /> Follow
                                     </>
                                 )}
                             </Button>

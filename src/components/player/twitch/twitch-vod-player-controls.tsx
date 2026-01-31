@@ -1,5 +1,5 @@
-import { Maximize, Minimize, Monitor } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
+import { LuMaximize, LuMinimize, LuMonitor } from 'react-icons/lu';
 
 import { formatDuration } from '@/lib/utils';
 
@@ -175,7 +175,7 @@ export function TwitchVodPlayerControls(props: TwitchVodPlayerControlsProps) {
                                     onClick={onToggleTheater}
                                     style={isTheater ? { color: twitchPurple } : undefined}
                                 >
-                                    <Monitor className="w-6 h-6" />
+                                    <LuMonitor className="w-6 h-6" />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -193,9 +193,9 @@ export function TwitchVodPlayerControls(props: TwitchVodPlayerControlsProps) {
                                 onClick={onToggleFullscreen}
                             >
                                 {isFullscreen ? (
-                                    <Minimize className="w-6 h-6" />
+                                    <LuMinimize className="w-6 h-6" strokeWidth={3} />
                                 ) : (
-                                    <Maximize className="w-6 h-6" />
+                                    <LuMaximize className="w-6 h-6" strokeWidth={3} />
                                 )}
                             </Button>
                         </TooltipTrigger>
