@@ -1,5 +1,5 @@
-import { Heart, HeartCrack } from 'lucide-react';
 import { MouseEvent, useState } from 'react';
+import { LuHeart, LuHeartCrack } from 'react-icons/lu';
 
 import { UnifiedChannel } from '@/backend/api/unified/platform-types';
 import { Button } from '@/components/ui/button';
@@ -56,13 +56,13 @@ export function FollowButton({
         >
             {isFollowing ? (
                 isHovering ? (
-                    <HeartCrack className="w-5 h-5 text-red-500" strokeWidth={3} />
+                    <LuHeartCrack className="w-5 h-5 text-red-500" strokeWidth={3} />
                 ) : (
-                    <Heart className="w-5 h-5 fill-current text-white" strokeWidth={3} />
+                    <LuHeart className="w-5 h-5 fill-current text-white" strokeWidth={3} />
                 )
             ) : (
                 <>
-                    <Heart className={cn("w-4 h-4", isHovering ? 'fill-current' : '')} strokeWidth={3} />
+                    <LuHeart className={cn("w-4 h-4", isHovering ? 'fill-current' : '')} strokeWidth={3} />
                     <span>Follow</span>
                 </>
             )}

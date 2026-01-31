@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import { Search, X, Clock, Sparkles, User, Grid } from 'lucide-react';
 import React from 'react';
+import { LuSearch, LuX, LuClock, LuSparkles, LuUser, LuLayoutGrid } from 'react-icons/lu';
 
 import { UnifiedChannel, UnifiedCategory } from '@/backend/api/unified/platform-types';
 import { ProxiedImage } from '@/components/ui/proxied-image';
@@ -69,7 +69,7 @@ export function UnifiedSearchInput({
     onSelectCategory,
     onSearch,
     showCategories = true,
-    placeholder = "Search streams, channels, categories...",
+    placeholder = "LuSearch streams, channels, categories...",
     className,
     inputClassName,
     initialValue = '',
@@ -306,7 +306,7 @@ export function UnifiedSearchInput({
         <div ref={containerRef} className={cn("relative w-full z-50", className)}>
             <div className="relative">
                 <div className={cn("absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none transition-colors", isFocused ? "text-white" : "text-[var(--color-foreground-muted)]")}>
-                    <Search size={16} />
+                    <LuSearch size={16} />
                 </div>
                 <input
                     ref={inputRef}
@@ -332,7 +332,7 @@ export function UnifiedSearchInput({
                         title="Clear search"
                         type="button"
                     >
-                        <X size={16} />
+                        <LuX size={16} />
                     </button>
                 )}
             </div>
@@ -352,7 +352,7 @@ export function UnifiedSearchInput({
                                     onClick={() => executeSearch(term)}
                                 >
                                     <div className="flex items-center gap-3 text-white/50 group-hover:text-white transition-colors">
-                                        <Clock size={16} />
+                                        <LuClock size={16} />
                                         <span className="font-medium text-sm text-white/70 group-hover:text-white">{term}</span>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -365,7 +365,7 @@ export function UnifiedSearchInput({
                                             title="Remove from history"
                                             type="button"
                                         >
-                                            <X size={14} />
+                                            <LuX size={14} />
                                         </button>
                                     </div>
                                 </div>
@@ -377,7 +377,7 @@ export function UnifiedSearchInput({
                     {topMatches.length > 0 && (
                         <div className={cn("py-2", showHistory && "border-t border-[var(--color-border)]")}>
                             <h3 className="px-4 py-1.5 text-xs font-bold text-[var(--color-storm-primary)] uppercase tracking-wider flex items-center gap-2">
-                                <Sparkles size={12} /> Best Match
+                                <LuSparkles size={12} /> Best Match
                             </h3>
                             {topMatches.map((channel) => (
                                 <ChannelItem key={`${channel.platform}-${channel.id}`} channel={channel} onClick={handleChannelClick} />
@@ -389,7 +389,7 @@ export function UnifiedSearchInput({
                     {otherMatches.length > 0 && (
                         <div className={cn("py-2", (showHistory || topMatches.length > 0) && "border-t border-[var(--color-border)]")}>
                             <h3 className="px-4 py-1.5 text-xs font-bold text-[var(--color-foreground-muted)] uppercase tracking-wider flex items-center gap-2">
-                                <User size={12} /> Channels
+                                <LuUser size={12} /> Channels
                             </h3>
                             {otherMatches.map((channel) => (
                                 <ChannelItem key={`${channel.platform}-${channel.id}`} channel={channel} onClick={handleChannelClick} />
@@ -401,7 +401,7 @@ export function UnifiedSearchInput({
                     {showCategories && categories && categories.length > 0 && (
                         <div className={cn("py-2 border-t border-[var(--color-border)]")}>
                             <h3 className="px-4 py-1.5 text-xs font-bold text-[var(--color-foreground-muted)] uppercase tracking-wider flex items-center gap-2">
-                                <Grid size={12} /> Categories
+                                <LuLayoutGrid size={12} /> Categories
                             </h3>
                             {categories.map((category) => {
                                 const Wrapper = onSelectCategory ? 'div' : Link;
@@ -422,7 +422,7 @@ export function UnifiedSearchInput({
                                             <img src={category.boxArtUrl} alt={category.name} className="w-6 h-8 rounded object-cover" />
                                         ) : (
                                             <div className="w-6 h-8 rounded bg-zinc-700 flex items-center justify-center">
-                                                <Grid size={14} className="text-white/50" />
+                                                <LuLayoutGrid size={14} className="text-white/50" />
                                             </div>
                                         )}
                                         <div className="flex-1 min-w-0">
@@ -445,7 +445,7 @@ export function UnifiedSearchInput({
                                 onClick={() => executeSearch(searchQuery)}
                                 className="w-full py-2 text-sm font-bold text-[var(--color-storm-primary)] hover:underline flex items-center justify-center gap-1"
                             >
-                                <Search size={14} />
+                                <LuSearch size={14} />
                                 See all results for "{searchQuery}"
                             </button>
                         </div>

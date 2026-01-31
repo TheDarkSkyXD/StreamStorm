@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import { Search, Heart } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { LuSearch, LuHeart } from 'react-icons/lu';
 
 import type { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
 import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
@@ -90,7 +90,7 @@ export function FollowingPage() {
         stream = streamByNameMap.get(getChannelNameKey(c.platform, c.username));
       }
 
-      // Filter by Search
+      // Filter by LuSearch
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         const matchesName = c.displayName.toLowerCase().includes(q) || c.username.toLowerCase().includes(q);
@@ -140,7 +140,7 @@ export function FollowingPage() {
     <div className="p-6 h-full flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-3xl font-bold flex items-center gap-3">
-          <Heart className="fill-red-500 text-red-500" />
+          <LuHeart className="fill-red-500 text-red-500" />
           Following
         </h1>
         <p className="text-[var(--color-foreground-secondary)]">
@@ -148,7 +148,7 @@ export function FollowingPage() {
         </p>
       </div>
 
-      {/* Filter and Search Bar */}
+      {/* Filter and LuSearch Bar */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-[var(--color-background-secondary)] p-4 rounded-xl border border-[var(--color-border)]">
         <div className="flex items-center gap-2">
           <Button
@@ -180,10 +180,10 @@ export function FollowingPage() {
         </div>
 
         <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-foreground-muted)]" />
+          <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-foreground-muted)]" />
           <input
             type="text"
-            placeholder="Search followed channels..."
+            placeholder="LuSearch followed channels..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full h-9 pl-9 pr-4 rounded-md bg-[var(--color-background-tertiary)] border border-[var(--color-border)] text-sm focus:outline-none focus:ring-2 focus:ring-white transition-all placeholder:text-[var(--color-foreground-muted)]"
@@ -275,7 +275,7 @@ export function FollowingPage() {
             {liveChannels.length === 0 && offlineChannels.length === 0 && (
               <div className="text-center py-24 flex flex-col items-center gap-4 text-[var(--color-foreground-muted)] animate-in fade-in zoom-in duration-300">
                 <div className="w-16 h-16 rounded-full bg-[var(--color-background-secondary)] flex items-center justify-center mb-2">
-                  <Heart className="w-8 h-8 text-[var(--color-foreground-muted)]" />
+                  <LuHeart className="w-8 h-8 text-[var(--color-foreground-muted)]" />
                 </div>
                 <h3 className="text-xl font-semibold text-[var(--color-foreground)]">No followed channels found</h3>
                 <p>

@@ -1,5 +1,5 @@
-import { Play, Pause } from 'lucide-react';
 import React from 'react';
+import { LuPlay, LuPause } from 'react-icons/lu';
 
 import { Button } from '../ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
@@ -25,14 +25,14 @@ export function PlayPauseButton({ isPlaying, isLoading, onToggle, className }: P
                     }}
                 >
                     {isPlaying ? (
-                        <Pause className="w-6 h-6 fill-current" />
+                        <LuPause className="w-6 h-6 fill-current" />
                     ) : (
-                        <Play className="w-6 h-6 fill-current" />
+                        <LuPlay className="w-6 h-6 fill-current" />
                     )}
                 </Button>
             </TooltipTrigger>
             <TooltipContent>
-                <p>{isPlaying ? 'Pause (Space)' : 'Play (Space)'}</p>
+                <p>{isPlaying ? 'LuPause (Space)' : 'LuPlay (Space)'}</p>
             </TooltipContent>
         </Tooltip>
     );

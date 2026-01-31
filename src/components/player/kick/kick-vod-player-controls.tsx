@@ -1,5 +1,5 @@
-import { Maximize, Minimize, Monitor } from 'lucide-react';
 import React, { useState, useEffect, useRef } from 'react';
+import { LuMaximize, LuMinimize, LuMonitor } from 'react-icons/lu';
 
 import { formatDuration } from '@/lib/utils';
 
@@ -175,7 +175,7 @@ export function KickVodPlayerControls(props: KickVodPlayerControlsProps) {
                                     onClick={onToggleTheater}
                                     style={isTheater ? { color: kickGreen } : undefined}
                                 >
-                                    <Monitor className="w-6 h-6" />
+                                    <LuMonitor className="w-6 h-6" />
                                 </Button>
                             </TooltipTrigger>
                             <TooltipContent>
@@ -193,9 +193,9 @@ export function KickVodPlayerControls(props: KickVodPlayerControlsProps) {
                                 onClick={onToggleFullscreen}
                             >
                                 {isFullscreen ? (
-                                    <Minimize className="w-6 h-6" />
+                                    <LuMinimize className="w-6 h-6" />
                                 ) : (
-                                    <Maximize className="w-6 h-6" />
+                                    <LuMaximize className="w-6 h-6" />
                                 )}
                             </Button>
                         </TooltipTrigger>

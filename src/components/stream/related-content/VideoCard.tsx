@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import { Play, Lock, Sparkles } from 'lucide-react';
 import React, { memo } from 'react';
+import { LuPlay, LuLock, LuSparkles } from 'react-icons/lu';
 
 import { UnifiedChannel } from '@/backend/api/unified/platform-types';
 import { Card, CardContent } from '@/components/ui/card';
@@ -80,7 +80,7 @@ export const VideoCard = memo(function VideoCard({ video, platform, channelName,
                 {/* Sub Only Badge: Top Right - Keep for Twitch, move for Kick */}
                 {video.isSubOnly && platform !== 'kick' && (
                     <div className="absolute top-2 right-2 px-1.5 py-0.5 rounded text-xs font-medium bg-purple-600 text-white flex items-center gap-1">
-                        <Lock className="w-3 h-3" />
+                        <LuLock className="w-3 h-3" />
                         SUB ONLY
                     </div>
                 )}
@@ -99,9 +99,9 @@ export const VideoCard = memo(function VideoCard({ video, platform, channelName,
                 <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center scale-90 group-hover:scale-100 transition-transform">
                         {video.isSubOnly ? (
-                            <Lock className="w-5 h-5 text-white" />
+                            <LuLock className="w-5 h-5 text-white" />
                         ) : (
-                            <Play className="w-5 h-5 text-white fill-white" />
+                            <LuPlay className="w-5 h-5 text-white fill-white" />
                         )}
                     </div>
                 </div>
@@ -144,7 +144,7 @@ export const VideoCard = memo(function VideoCard({ video, platform, channelName,
                     {video.isSubOnly && platform === 'kick' && (
                         <div className="mt-2 flex items-center">
                             <div className="px-1.5 py-1 rounded-md text-[11px] font-semibold bg-[#2b2b2b] text-white flex items-center gap-1.5">
-                                <Sparkles className="w-3 h-3 text-white" />
+                                <LuSparkles className="w-3 h-3 text-white" />
                                 <span>Sub-only</span>
                             </div>
                         </div>

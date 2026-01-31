@@ -5,8 +5,8 @@
  * Keep this minimal - user info is in TopNavBar.
  */
 
-import { Minus, Square, X, Copy } from 'lucide-react';
 import React from 'react';
+import { LuMinus, LuSquare, LuX, LuCopy } from 'react-icons/lu';
 
 import { useWindowControls } from '@/hooks';
 import { cn } from '@/lib/utils';
@@ -43,13 +43,13 @@ export function TitleBar({ className }: TitleBarProps) {
           style={{ WebkitAppRegion: 'no-drag' } as React.CSSProperties}
         >
           <WindowButton onClick={minimize} aria-label="Minimize">
-            <Minus size={20} />
+            <LuMinus size={20} />
           </WindowButton>
           <WindowButton onClick={maximize} aria-label={isMaximized ? 'Restore' : 'Maximize'}>
-            {isMaximized ? <Copy size={18} className="rotate-180" /> : <Square size={18} />}
+            {isMaximized ? <LuCopy size={18} className="rotate-180" /> : <LuSquare size={18} />}
           </WindowButton>
           <WindowButton onClick={close} isClose aria-label="Close">
-            <X size={20} />
+            <LuX size={20} />
           </WindowButton>
         </div>
       )}

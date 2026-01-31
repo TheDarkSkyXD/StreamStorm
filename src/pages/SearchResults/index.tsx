@@ -1,6 +1,6 @@
 import { Link, useSearch } from '@tanstack/react-router';
-import { Play, Clapperboard } from "lucide-react";
 import React from 'react';
+import { LuPlay, LuClapperboard } from 'react-icons/lu';
 
 import type { UnifiedChannel, UnifiedVideo, UnifiedClip } from '@/backend/api/unified/platform-types';
 import { CategoryGrid } from '@/components/discovery/category-grid';
@@ -338,7 +338,7 @@ export function SearchPage() {
       {showVideos && (
         <section>
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Play className="w-5 h-5 text-[var(--color-storm-primary)]" /> Videos
+            <LuPlay className="w-5 h-5 text-[var(--color-storm-primary)]" /> Videos
           </h2>
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
             {filteredVideos.map((video: UnifiedVideo) => (
@@ -374,7 +374,7 @@ export function SearchPage() {
       {showClips && (
         <section>
           <h2 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
-            <Clapperboard className="w-5 h-5 text-white" /> Clips
+            <LuClapperboard className="w-5 h-5 text-white" /> Clips
           </h2>
           <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-4">
             {filteredClips.map((clip: UnifiedClip) => (
@@ -387,7 +387,7 @@ export function SearchPage() {
                   <img src={clip.thumbnailUrl} alt={clip.title} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity">
                     <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
-                      <Play className="w-5 h-5 text-white fill-white" />
+                      <LuPlay className="w-5 h-5 text-white fill-white" />
                     </div>
                   </div>
 

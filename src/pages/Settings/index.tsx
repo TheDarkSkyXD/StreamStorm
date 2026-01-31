@@ -1,16 +1,16 @@
-import {
-  AlertCircle,
-  AlertTriangle,
-  Download,
-  RefreshCw,
-  Rocket,
-  ShieldCheck,
-  Monitor,
-  Link,
-  HelpCircle,
-  Settings,
-} from 'lucide-react';
 import { useState } from 'react';
+import {
+  LuCircleAlert,
+  LuTriangleAlert,
+  LuDownload,
+  LuRefreshCw,
+  LuRocket,
+  LuShieldCheck,
+  LuMonitor,
+  LuLink,
+  LuCircleHelp,
+} from 'react-icons/lu';
+import { IoMdSettings } from 'react-icons/io';
 
 import { AccountConnect } from '@/components/auth';
 import { Button } from '@/components/ui/button';
@@ -25,10 +25,10 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useAppVersion, useUpdater } from '@/hooks';
 import { useAuthError } from '@/hooks/useAuth';
+import { cn } from '@/lib/utils';
 import { VideoQuality, DEFAULT_PLAYBACK_PREFERENCES } from '@/shared/auth-types';
 import { useAdBlockStore } from '@/store/adblock-store';
 import { useAuthStore } from '@/store/auth-store';
-import { cn } from '@/lib/utils';
 
 export function SettingsPage() {
 
@@ -87,7 +87,7 @@ export function SettingsPage() {
       <div className='w-[280px] flex-shrink-0 flex flex-col border-r border-[#27272a] bg-[#121214]'>
         <div className='p-6 pb-2'>
           <h1 className='text-2xl font-bold flex items-center gap-2'>
-            <Settings className="w-6 h-6 text-white" />
+            <IoMdSettings className="w-6 h-6 text-zinc-400" />
             Settings
           </h1>
           <p className='text-zinc-500 text-xs font-medium mt-1 uppercase tracking-wide opacity-80'>App Settings & Project Settings</p>
@@ -100,35 +100,35 @@ export function SettingsPage() {
 
 
             <SidebarItem
-              icon={Monitor}
+              icon={LuMonitor}
               label="Playback"
               description="Stream quality & preferences"
               isActive={activeTab === 'playback'}
               onClick={() => setActiveTab('playback')}
             />
             <SidebarItem
-              icon={ShieldCheck}
+              icon={LuShieldCheck}
               label="Ad-Block"
               description="Twitch ad-blocking settings"
               isActive={activeTab === 'adblock'}
               onClick={() => setActiveTab('adblock')}
             />
             <SidebarItem
-              icon={Link}
+              icon={LuLink}
               label="Integrations"
               description="Connected accounts & APIs"
               isActive={activeTab === 'integrations'}
               onClick={() => setActiveTab('integrations')}
             />
             <SidebarItem
-              icon={RefreshCw}
+              icon={LuRefreshCw}
               label="Updates"
               description="Auto update preferences"
               isActive={activeTab === 'updates'}
               onClick={() => setActiveTab('updates')}
             />
             <SidebarItem
-              icon={HelpCircle}
+              icon={LuCircleHelp}
               label="About"
               description="Version & info"
               isActive={activeTab === 'about'}
@@ -201,7 +201,7 @@ export function SettingsPage() {
               <div className='p-6 rounded-xl border border-[#27272a] bg-[#121214]'>
                 <div className="flex items-center gap-3 mb-6">
                   <div className="p-2 rounded-lg bg-green-500/10 text-green-400">
-                    <ShieldCheck className="w-6 h-6" />
+                    <LuShieldCheck className="w-6 h-6" />
                   </div>
                   <div>
                     <h3 className="font-semibold text-lg">Client-Side Ad-Blocking</h3>
@@ -246,7 +246,7 @@ export function SettingsPage() {
                     ? 'bg-[#53FC18]/5 border-[#53FC18]/20 text-[#53FC18]'
                     : 'bg-red-500/5 border-red-500/20 text-red-400'
                   }`}>
-                  <AlertCircle size={20} className="flex-shrink-0 mt-0.5" />
+                  <LuCircleAlert size={20} className="flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
                     <p className="font-medium">
                       {error.platform === 'twitch' ? 'Twitch Connection Error' :
@@ -283,7 +283,7 @@ export function SettingsPage() {
                 <div className="p-6 border-b border-[#27272a]">
                   <div className="flex items-center gap-3">
                     <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
-                      <RefreshCw className="w-6 h-6" />
+                      <LuRefreshCw className="w-6 h-6" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-lg">Software Update</h3>
@@ -329,7 +329,7 @@ export function SettingsPage() {
                       disabled={isChecking || isDownloading}
                       className="bg-[#18181b] border-[#27272a] text-zinc-200 hover:bg-[#27272a] hover:text-white"
                     >
-                      <RefreshCw className={`w-4 h-4 mr-2 ${isChecking ? 'animate-spin' : ''}`} />
+                      <LuRefreshCw className={`w-4 h-4 mr-2 ${isChecking ? 'animate-spin' : ''}`} />
                       Check Now
                     </Button>
                   </div>
@@ -337,7 +337,7 @@ export function SettingsPage() {
                   {/* Errors */}
                   {hasError && updateError && (
                     <div className="flex items-start gap-3 p-3 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400">
-                      <AlertTriangle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+                      <LuTriangleAlert className="w-5 h-5 flex-shrink-0 mt-0.5" />
                       <div className="flex-1">
                         <p className="text-sm">{updateError}</p>
                       </div>
@@ -359,7 +359,7 @@ export function SettingsPage() {
                           )}
                         </div>
                         <Button size="sm" onClick={downloadUpdate} disabled={isDownloading}>
-                          <Download className="w-4 h-4 mr-2" />
+                          <LuDownload className="w-4 h-4 mr-2" />
                           Download Update
                         </Button>
                       </div>
@@ -385,7 +385,7 @@ export function SettingsPage() {
                   {/* Install */}
                   {isUpdateDownloaded && (
                     <Button onClick={installUpdate} className="w-full">
-                      <Rocket className="w-4 h-4 mr-2" /> Restart & Install
+                      <LuRocket className="w-4 h-4 mr-2" /> Restart & Install
                     </Button>
                   )}
                 </div>
@@ -403,7 +403,7 @@ export function SettingsPage() {
 
               <div className='p-8 rounded-xl border border-[#27272a] bg-[#121214] flex flex-col items-center text-center space-y-4'>
                 <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
-                  <Rocket className="w-8 h-8 text-white" />
+                  <LuRocket className="w-8 h-8 text-white" />
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-white">StreamStorm</h3>

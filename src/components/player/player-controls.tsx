@@ -1,5 +1,5 @@
-import { Maximize, Minimize } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { LuMaximize, LuMinimize } from 'react-icons/lu';
 
 import { formatDuration } from '@/lib/utils';
 
@@ -318,9 +318,9 @@ export function PlayerControls(props: PlayerControlsProps) {
                                     onClick={onToggleFullscreen}
                                 >
                                     {isFullscreen ? (
-                                        <Minimize className="w-6 h-6" />
+                                        <LuMinimize className="w-6 h-6" strokeWidth={3} />
                                     ) : (
-                                        <Maximize className="w-6 h-6" />
+                                        <LuMaximize className="w-6 h-6" strokeWidth={3} />
                                     )}
                                 </Button>
                             </TooltipTrigger>

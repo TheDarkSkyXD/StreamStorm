@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import { Heart } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { LuHeart } from 'react-icons/lu';
 
 import { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
 import { PlatformAvatar } from '@/components/ui/platform-avatar';
@@ -144,7 +144,7 @@ export function SidebarFollows({ collapsed }: SidebarFollowsProps) {
 
         return (
             <div className="p-4 text-center text-[var(--color-foreground-muted)] text-xs">
-                <Heart className="w-8 h-8 mx-auto mb-2 opacity-20" />
+                <LuHeart className="w-8 h-8 mx-auto mb-2 opacity-20" />
                 <p>Follow channels to see them here</p>
             </div>
         );

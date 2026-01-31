@@ -1,6 +1,6 @@
 
-import { X, MessageSquare, Volume2, VolumeX, GripVertical } from 'lucide-react';
 import React from 'react';
+import { LuX, LuMessageSquare, LuVolume2, LuVolumeX, LuGripVertical } from 'react-icons/lu';
 
 import { KickLivePlayer } from '@/components/player/kick';
 import { TwitchLivePlayer } from '@/components/player/twitch';
@@ -70,7 +70,7 @@ export function StreamSlot({
                         {...dragHandleProps}
                         title="Drag to Move"
                     >
-                        <GripVertical className="h-4 w-4" />
+                        <LuGripVertical className="h-4 w-4" />
                     </Button>
                 )}
 
@@ -84,7 +84,7 @@ export function StreamSlot({
                     }}
                     title="Show Chat"
                 >
-                    <MessageSquare className="h-4 w-4" />
+                    <LuMessageSquare className="h-4 w-4" />
                 </Button>
 
                 <Button
@@ -97,7 +97,7 @@ export function StreamSlot({
                     }}
                     title={isMuted ? "Unmute" : "Mute"}
                 >
-                    {isMuted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+                    {isMuted ? <LuVolumeX className="h-4 w-4" /> : <LuVolume2 className="h-4 w-4" />}
                 </Button>
 
                 <Button
@@ -110,7 +110,7 @@ export function StreamSlot({
                     }}
                     title="Remove Stream"
                 >
-                    <X className="h-4 w-4" />
+                    <LuX className="h-4 w-4" />
                 </Button>
             </div>
 

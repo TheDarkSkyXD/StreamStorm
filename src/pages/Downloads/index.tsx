@@ -1,6 +1,6 @@
 
-import { Download, CheckCircle, FileVideo, AlertCircle, PauseCircle, PlayCircle } from 'lucide-react';
 import React from 'react';
+import { LuDownload, LuCircleCheck, LuFileVideo, LuCircleAlert, LuCirclePause, LuCirclePlay } from 'react-icons/lu';
 
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -57,7 +57,7 @@ export function DownloadsPage() {
     return (
         <div className="p-6 max-w-5xl mx-auto space-y-8">
             <div className="flex items-center gap-3 mb-6">
-                <Download className="w-8 h-8 text-[var(--color-primary)]" />
+                <LuDownload className="w-8 h-8 text-[var(--color-primary)]" />
                 <h1 className="text-3xl font-bold">Downloads</h1>
             </div>
 
@@ -84,7 +84,7 @@ export function DownloadsPage() {
                                     {item.thumbnail ? (
                                         <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
                                     ) : (
-                                        <FileVideo className="w-full h-full p-3 text-[var(--color-foreground-secondary)]" />
+                                        <LuFileVideo className="w-full h-full p-3 text-[var(--color-foreground-secondary)]" />
                                     )}
                                     <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                                         {item.type === 'clip' ? '🎬' : '📹'}
@@ -118,15 +118,15 @@ export function DownloadsPage() {
                                 <div className="flex gap-2">
                                     {item.status === 'downloading' ? (
                                         <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-zinc-800">
-                                            <PauseCircle className="w-5 h-5" />
+                                            <LuCirclePause className="w-5 h-5" />
                                         </Button>
                                     ) : (
                                         <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-zinc-800">
-                                            <PlayCircle className="w-5 h-5" />
+                                            <LuCirclePlay className="w-5 h-5" />
                                         </Button>
                                     )}
                                     <Button size="icon" variant="ghost" className="h-8 w-8 hover:text-red-500 hover:bg-zinc-800">
-                                        <AlertCircle className="w-5 h-5" />
+                                        <LuCircleAlert className="w-5 h-5" />
                                     </Button>
                                 </div>
                             </div>
@@ -158,7 +158,7 @@ export function DownloadsPage() {
                                     {item.thumbnail ? (
                                         <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover" />
                                     ) : (
-                                        <FileVideo className="w-full h-full p-3 text-[var(--color-foreground-secondary)]" />
+                                        <LuFileVideo className="w-full h-full p-3 text-[var(--color-foreground-secondary)]" />
                                     )}
                                 </div>
 
@@ -166,7 +166,7 @@ export function DownloadsPage() {
                                 <div className="flex-1 min-w-0">
                                     <h3 className="font-medium truncate">{item.title}</h3>
                                     <div className="flex items-center gap-2 mt-1 text-xs text-[var(--color-foreground-secondary)]">
-                                        <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                                        <LuCircleCheck className="w-3.5 h-3.5 text-green-500" />
                                         <span>Download Complete</span>
                                         <span>•</span>
                                         <span>{item.size}</span>
@@ -179,7 +179,7 @@ export function DownloadsPage() {
                                 <div className="flex gap-2">
                                     <Button variant="outline" size="sm" className="hidden sm:flex">Show in Folder</Button>
                                     <Button size="icon" variant="ghost" className="h-8 w-8 hover:bg-zinc-800">
-                                        <PlayCircle className="w-5 h-5" />
+                                        <LuCirclePlay className="w-5 h-5" />
                                     </Button>
                                 </div>
                             </div>

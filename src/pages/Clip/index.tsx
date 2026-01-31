@@ -1,6 +1,6 @@
 import { useParams, Link } from '@tanstack/react-router';
-import { Heart, HeartCrack } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { LuHeart, LuHeartCrack } from 'react-icons/lu';
 
 import { Button } from '@/components/ui/button';
 import { useHistoryStore } from '@/store/history-store';
@@ -136,13 +136,13 @@ export function ClipPage() {
                                 >
                                     {isFollowing ? (
                                         isHoveringFollow ? (
-                                            <HeartCrack className="w-5 h-5 text-red-500" strokeWidth={3} />
+                                            <LuHeartCrack className="w-5 h-5 text-red-500" strokeWidth={3} />
                                         ) : (
-                                            <Heart className="w-5 h-5 fill-current text-white" strokeWidth={3} />
+                                            <LuHeart className="w-5 h-5 fill-current text-white" strokeWidth={3} />
                                         )
                                     ) : (
                                         <>
-                                            <Heart className={`w-4 h-4 ${isHoveringFollow ? 'fill-current' : ''}`} strokeWidth={3} /> Follow
+                                            <LuHeart className={`w-4 h-4 ${isHoveringFollow ? 'fill-current' : ''}`} strokeWidth={3} /> Follow
                                         </>
                                     )}
                                 </Button>

@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import { Users, Clock } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
+import { LuUsers, LuClock } from 'react-icons/lu';
 
 import { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
 import { FollowButton } from '@/components/ui/follow-button';
@@ -163,7 +163,7 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <div className="flex items-center gap-1.5 cursor-default">
-                                    <Users className="w-4 h-4 text-white" />
+                                    <LuUsers className="w-4 h-4 text-white" />
                                     <span className="font-semibold text-white">
                                         {formatViewerCount(stream.viewerCount)}
                                     </span>
@@ -178,7 +178,7 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                         <Tooltip>
                             <TooltipTrigger asChild>
                                 <div className="flex items-center gap-1.5 cursor-default">
-                                    <Clock className="w-4 h-4 text-white" />
+                                    <LuClock className="w-4 h-4 text-white" />
                                     {stream.startedAt && <UptimeCounter startedAt={stream.startedAt} />}
                                 </div>
                             </TooltipTrigger>

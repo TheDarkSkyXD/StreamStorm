@@ -4,8 +4,8 @@
  * A draggable, persistent mini-player for live streams that appears when navigating away from a stream
  */
 import { useNavigate } from '@tanstack/react-router';
-import { X, Maximize2, Volume2, VolumeX, Pause, Play } from 'lucide-react';
 import React, { useRef, useState, useEffect, useCallback } from 'react';
+import { LuX, LuMaximize2, LuVolume2, LuVolumeX, LuPause, LuPlay } from 'react-icons/lu';
 
 import { HlsPlayer } from '@/components/player/hls-player';
 import { TwitchHlsPlayer } from '@/components/player/twitch/twitch-hls-player';
@@ -254,7 +254,7 @@ export function MiniPlayer() {
                                     onClick={handleExpand}
                                     className="p-1.5 rounded-full bg-black/50 hover:bg-black/70 text-white transition-colors"
                                 >
-                                    <Maximize2 size={16} />
+                                    <LuMaximize2 size={16} />
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent container={containerRef.current}>
@@ -267,7 +267,7 @@ export function MiniPlayer() {
                                     onClick={closePip}
                                     className="p-1.5 rounded-full bg-black/50 hover:bg-red-500/80 text-white transition-colors"
                                 >
-                                    <X size={16} />
+                                    <LuX size={16} />
                                 </button>
                             </TooltipTrigger>
                             <TooltipContent container={containerRef.current}>
@@ -309,11 +309,11 @@ export function MiniPlayer() {
                                         onClick={togglePlay}
                                         className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
                                     >
-                                        {isPlaying ? <Pause size={16} /> : <Play size={16} />}
+                                        {isPlaying ? <LuPause size={16} /> : <LuPlay size={16} />}
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent container={containerRef.current}>
-                                    {isPlaying ? 'Pause' : 'Play'}
+                                    {isPlaying ? 'LuPause' : 'LuPlay'}
                                 </TooltipContent>
                             </Tooltip>
                             <Tooltip delayDuration={0}>
@@ -322,7 +322,7 @@ export function MiniPlayer() {
                                         onClick={handleToggleMute}
                                         className="p-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white transition-colors"
                                     >
-                                        {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                                        {isMuted ? <LuVolumeX size={16} /> : <LuVolume2 size={16} />}
                                     </button>
                                 </TooltipTrigger>
                                 <TooltipContent container={containerRef.current}>

@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { useParams, Link } from '@tanstack/react-router';
-import { ArrowLeft } from 'lucide-react';
+import { LuArrowLeft } from 'react-icons/lu';
 
 import { UnifiedCategory } from '@/backend/api/unified/platform-types';
 import { StreamGrid } from '@/components/stream/stream-grid';
@@ -89,7 +89,7 @@ export function CategoryDetailPage() {
       {!isLoading && (
         <div className="flex flex-col gap-6">
           <Link to="/categories" className="text-[var(--color-foreground-muted)] hover:text-white flex items-center gap-2 transition-colors w-fit">
-            <ArrowLeft size={20} />
+            <LuArrowLeft size={20} />
             Back to Categories
           </Link>
 

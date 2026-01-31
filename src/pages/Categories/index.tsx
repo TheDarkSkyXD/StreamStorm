@@ -1,5 +1,5 @@
-import { Search } from 'lucide-react';
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
+import { LuSearch } from 'react-icons/lu';
 
 import { VirtualizedCategoryGrid } from '@/components/discovery/virtualized-category-grid';
 import { useTopCategories } from '@/hooks/queries/useCategories';
@@ -66,7 +66,7 @@ export function CategoriesPage() {
         </div>
 
         <div className="relative w-full max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-foreground-muted)]" size={16} />
+          <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-foreground-muted)]" size={16} />
           <input
             type="text"
             placeholder="Filter categories..."

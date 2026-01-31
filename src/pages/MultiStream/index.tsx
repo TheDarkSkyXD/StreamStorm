@@ -1,6 +1,6 @@
 
-import { LayoutGrid, Maximize, MessageSquare } from 'lucide-react';
 import React, { useState, useEffect, useCallback } from 'react';
+import { LuLayoutGrid, LuMaximize, LuMessageSquare } from 'react-icons/lu';
 
 import { AddStreamDialog } from '@/components/multistream/add-stream-dialog';
 import { MultiStreamGrid } from '@/components/multistream/grid-layout';
@@ -69,7 +69,7 @@ export function MultiStreamPage() {
                         onClick={() => setLayout('grid')}
                         title="Grid Layout"
                     >
-                        <LayoutGrid className="h-4 w-4" />
+                        <LuLayoutGrid className="h-4 w-4" />
                     </Button>
                     <Button
                         variant={layout === 'focus' ? "secondary" : "ghost"}
@@ -78,7 +78,7 @@ export function MultiStreamPage() {
                         disabled={streams.length === 0}
                         title="Focus Layout"
                     >
-                        <Maximize className="h-4 w-4" />
+                        <LuMaximize className="h-4 w-4" />
                     </Button>
                 </div>
 
@@ -94,7 +94,7 @@ export function MultiStreamPage() {
                     onClick={toggleChat}
                     disabled={streams.length === 0}
                 >
-                    <MessageSquare className="h-4 w-4 mr-2" />
+                    <LuMessageSquare className="h-4 w-4 mr-2" />
                     Chat
                 </Button>
             </div>

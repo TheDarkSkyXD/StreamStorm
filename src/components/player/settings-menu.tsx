@@ -1,5 +1,6 @@
-import { Settings, Check, Activity, Timer, Mic, Type, FileText, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
+import { IoMdSettings } from 'react-icons/io';
+import { LuCheck, LuActivity, LuTimer, LuMic, LuType, LuFileText, LuChevronLeft, LuChevronRight, LuSlidersHorizontal } from 'react-icons/lu';
 
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
@@ -80,7 +81,7 @@ export function SettingsMenu({
                             toggleOpen();
                         }}
                     >
-                        <Settings className={`w-8 h-8 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`} />
+                        <IoMdSettings className={`w-8 h-8 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`} />
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent container={container}>
@@ -103,14 +104,14 @@ export function SettingsMenu({
                                     onClick={() => setActiveSubMenu('quality')}
                                 >
                                     <div className="flex items-center gap-4">
-                                        <SlidersHorizontal className="w-6 h-6" />
+                                        <LuSlidersHorizontal className="w-6 h-6" />
                                         <span>Quality</span>
                                     </div>
                                     <div className="flex items-center text-[#aaaaaa] gap-1">
                                         <span className="text-[13px]">
                                             {currentQualityLabel}
                                         </span>
-                                        <ChevronRight className="w-5 h-5" />
+                                        <LuChevronRight className="w-5 h-5" />
                                     </div>
                                 </button>
 
@@ -121,14 +122,14 @@ export function SettingsMenu({
                                         onClick={() => setActiveSubMenu('speed')}
                                     >
                                         <div className="flex items-center gap-4">
-                                            <Timer className="w-6 h-6" />
+                                            <LuTimer className="w-6 h-6" />
                                             <span>Playback speed</span>
                                         </div>
                                         <div className="flex items-center text-[#aaaaaa] gap-1">
                                             <span className="text-[13px]">
                                                 {playbackRate === 1 ? 'Normal' : playbackRate + 'x'}
                                             </span>
-                                            <ChevronRight className="w-5 h-5" />
+                                            <LuChevronRight className="w-5 h-5" />
                                         </div>
                                     </button>
                                 )}
@@ -139,12 +140,12 @@ export function SettingsMenu({
                                     disabled
                                 >
                                     <div className="flex items-center gap-4">
-                                        <FileText className="w-6 h-6" />
+                                        <LuFileText className="w-6 h-6" />
                                         <span>Subtitles/CC</span>
                                     </div>
                                     <div className="flex items-center text-[#aaaaaa] gap-1">
                                         <span className="text-[13px]">Off</span>
-                                        <ChevronRight className="w-5 h-5" />
+                                        <LuChevronRight className="w-5 h-5" />
                                     </div>
                                 </button>
 
@@ -155,7 +156,7 @@ export function SettingsMenu({
                                 {onToggleVideoStats && (
                                     <div className="w-full px-4 h-12 flex items-center justify-between hover:bg-[rgba(255,255,255,0.1)] transition-colors text-[15px] text-[#eee] font-medium cursor-pointer" onClick={() => onToggleVideoStats()}>
                                         <div className="flex items-center gap-4">
-                                            <Activity className="w-6 h-6" />
+                                            <LuActivity className="w-6 h-6" />
                                             <span>Video Stats</span>
                                         </div>
                                         <Switch
@@ -175,7 +176,7 @@ export function SettingsMenu({
                                     className="w-full px-3 h-12 flex items-center gap-3 hover:bg-[rgba(255,255,255,0.1)] transition-colors text-[15px] text-[#eee] font-medium border-b border-[#ffffff1a] mb-1"
                                     onClick={() => setActiveSubMenu('main')}
                                 >
-                                    <ChevronLeft className="w-7 h-7 text-[#eee]" />
+                                    <LuChevronLeft className="w-7 h-7 text-[#eee]" />
                                     <span>Quality</span>
                                 </button>
                                 <div className="max-h-80 overflow-y-auto custom-scrollbar">
@@ -189,7 +190,7 @@ export function SettingsMenu({
                                             }}
                                         >
                                             {currentQualityId === quality.id ? (
-                                                <Check className="w-5 h-5 text-[#3ea6ff]" /> // YouTube selection is often blue or white
+                                                <LuCheck className="w-5 h-5 text-[#3ea6ff]" /> // YouTube selection is often blue or white
                                             ) : <div className="w-5 h-5" />}
                                             <span>{quality.label}</span>
                                             {quality.isAuto && <span className="text-xs text-[#aaaaaa] ml-2"></span>}
@@ -205,7 +206,7 @@ export function SettingsMenu({
                                     className="w-full px-3 h-12 flex items-center gap-3 hover:bg-[rgba(255,255,255,0.1)] transition-colors text-[15px] text-[#eee] font-medium border-b border-[#ffffff1a] mb-1"
                                     onClick={() => setActiveSubMenu('main')}
                                 >
-                                    <ChevronLeft className="w-7 h-7 text-[#eee]" />
+                                    <LuChevronLeft className="w-7 h-7 text-[#eee]" />
                                     <span>Playback speed</span>
                                 </button>
                                 <div className="max-h-80 overflow-y-auto custom-scrollbar">
@@ -219,7 +220,7 @@ export function SettingsMenu({
                                             }}
                                         >
                                             {playbackRate === speed ? (
-                                                <Check className="w-5 h-5 text-[#3ea6ff]" />
+                                                <LuCheck className="w-5 h-5 text-[#3ea6ff]" />
                                             ) : <div className="w-5 h-5" />}
                                             <span>{speed === 1 ? 'Normal' : speed.toString()}</span>
                                         </button>

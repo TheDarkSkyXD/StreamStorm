@@ -1,6 +1,6 @@
 import Hls from 'hls.js';
-import { Play, Pause, Maximize, Minimize, Volume2, Volume1, VolumeX } from 'lucide-react';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { LuPlay, LuPause, LuMaximize, LuMinimize, LuVolume2, LuVolume1, LuVolumeX } from 'react-icons/lu';
 
 import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
 import { formatDuration } from '@/lib/utils';
@@ -236,9 +236,9 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
 
     // Get volume icon
     const getVolumeIcon = () => {
-        if (muted || volume === 0) return <VolumeX className="w-6 h-6" />;
-        if (volume < 50) return <Volume1 className="w-6 h-6" />;
-        return <Volume2 className="w-6 h-6" />;
+        if (muted || volume === 0) return <LuVolumeX className="w-6 h-6" />;
+        if (volume < 50) return <LuVolume1 className="w-6 h-6" />;
+        return <LuVolume2 className="w-6 h-6" />;
     };
 
     return (
@@ -279,17 +279,17 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
 
                 {/* Controls Row */}
                 <div className="flex items-center justify-between">
-                    {/* Left: Play + Volume */}
+                    {/* Left: LuPlay + Volume */}
                     <div className="flex items-center gap-3">
-                        {/* Play/Pause Button */}
+                        {/* LuPlay/LuPause Button */}
                         <button
                             className="text-white hover:text-white/80 transition-colors"
                             onClick={togglePlay}
                         >
                             {isPlaying ? (
-                                <Pause className="w-6 h-6 fill-white" />
+                                <LuPause className="w-6 h-6 fill-white" />
                             ) : (
-                                <Play className="w-6 h-6 fill-white" />
+                                <LuPlay className="w-6 h-6 fill-white" />
                             )}
                         </button>
 
@@ -360,9 +360,9 @@ export function ClipPlayer({ src, autoPlay = false, onError }: ClipPlayerProps) 
                             onClick={toggleFullscreen}
                         >
                             {isFullscreen ? (
-                                <Minimize className="w-6 h-6" />
+                                <LuMinimize className="w-6 h-6" />
                             ) : (
-                                <Maximize className="w-6 h-6" />
+                                <LuMaximize className="w-6 h-6" />
                             )}
                         </button>
                     </div>
