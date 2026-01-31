@@ -1,4 +1,4 @@
-import { Settings, PictureInPicture, Check, Activity } from 'lucide-react';
+import { Settings, Check, Activity, Timer, Mic, Type, FileText, ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 
 import { Button } from '../ui/button';
@@ -6,9 +6,6 @@ import { Switch } from '../ui/switch';
 import { Tooltip, TooltipTrigger, TooltipContent } from '../ui/tooltip';
 
 import { QualityLevel } from './types';
-
-// Custom Settings Menu (replaces simple QualitySelector)
-// Features: Quality, Theater Mode, Picture-in-Picture
 
 export interface SettingsMenuProps {
     qualities: QualityLevel[];
@@ -77,13 +74,13 @@ export function SettingsMenu({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="text-white hover:bg-white/20 cursor-pointer"
+                        className="text-white hover:bg-white/20 cursor-pointer w-10 h-10"
                         onClick={(e) => {
                             e.stopPropagation();
                             toggleOpen();
                         }}
                     >
-                        <Settings className={`w-6 h-6 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`} />
+                        <Settings className={`w-8 h-8 transition-transform duration-300 ${isOpen ? 'rotate-90' : ''}`} />
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent container={container}>
@@ -94,98 +91,108 @@ export function SettingsMenu({
             {isOpen && (
                 <>
                     {/* Backdrop to close */}
-                    <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+                    <div className="fixed inset-0 z-50" onClick={() => setIsOpen(false)} />
 
-                    <div className="absolute bottom-12 right-0 w-64 bg-[#1a1b1e]/95 backdrop-blur-md border border-[#2c2e33] rounded-lg shadow-xl overflow-hidden z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    <div className="absolute bottom-16 right-0 min-w-[300px] bg-[rgba(28,28,28,0.95)] backdrop-blur-sm rounded-[12px] overflow-hidden z-[60] animate-in fade-in slide-in-from-bottom-2 duration-200 py-2 shadow-[0_4px_32px_0_rgba(0,0,0,0.5)]">
 
                         {activeSubMenu === 'main' && (
-                            <div className="py-2">
+                            <div className="flex flex-col">
                                 {/* Quality Menu Item */}
                                 <button
-                                    className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white"
+                                    className="w-full px-4 h-12 flex items-center justify-between hover:bg-[rgba(255,255,255,0.1)] transition-colors text-[15px] text-[#eee] font-medium"
                                     onClick={() => setActiveSubMenu('quality')}
                                 >
-                                    <span>Quality</span>
-                                    <div className="flex items-center text-white">
-                                        <span className="mr-2">
+                                    <div className="flex items-center gap-4">
+                                        <SlidersHorizontal className="w-6 h-6" />
+                                        <span>Quality</span>
+                                    </div>
+                                    <div className="flex items-center text-[#aaaaaa] gap-1">
+                                        <span className="text-[13px]">
                                             {currentQualityLabel}
                                         </span>
-                                        <span className="rotate-[-90deg]">›</span>
+                                        <ChevronRight className="w-5 h-5" />
                                     </div>
                                 </button>
 
                                 {/* Speed Menu Item */}
                                 {onPlaybackRateChange && (
                                     <button
-                                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white"
+                                        className="w-full px-4 h-12 flex items-center justify-between hover:bg-[rgba(255,255,255,0.1)] transition-colors text-[15px] text-[#eee] font-medium"
                                         onClick={() => setActiveSubMenu('speed')}
                                     >
-                                        <span>Speed</span>
-                                        <div className="flex items-center text-white">
-                                            <span className="mr-2">
-                                                {playbackRate}x
+                                        <div className="flex items-center gap-4">
+                                            <Timer className="w-6 h-6" />
+                                            <span>Playback speed</span>
+                                        </div>
+                                        <div className="flex items-center text-[#aaaaaa] gap-1">
+                                            <span className="text-[13px]">
+                                                {playbackRate === 1 ? 'Normal' : playbackRate + 'x'}
                                             </span>
-                                            <span className="rotate-[-90deg]">›</span>
+                                            <ChevronRight className="w-5 h-5" />
                                         </div>
                                     </button>
                                 )}
 
-                                {/* PiP Toggle */}
-                                {onTogglePip && (
-                                    <button
-                                        className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white"
-                                        onClick={() => {
-                                            onTogglePip();
-                                            setIsOpen(false);
-                                        }}
-                                    >
-                                        <span className="flex items-center gap-2">
-                                            <PictureInPicture className="w-4 h-4" />
-                                            Picture in Picture
-                                        </span>
-                                    </button>
-                                )}
+                                {/* Subtitles Placeholder (for visual completeness if requested, but logic absent) */}
+                                <button
+                                    className="w-full px-4 h-12 flex items-center justify-between hover:bg-[rgba(255,255,255,0.1)] transition-colors text-[15px] text-[#eee] font-medium opacity-50 cursor-not-allowed"
+                                    disabled
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <FileText className="w-6 h-6" />
+                                        <span>Subtitles/CC</span>
+                                    </div>
+                                    <div className="flex items-center text-[#aaaaaa] gap-1">
+                                        <span className="text-[13px]">Off</span>
+                                        <ChevronRight className="w-5 h-5" />
+                                    </div>
+                                </button>
+
+
+
+
 
                                 {onToggleVideoStats && (
-                                    <div className="border-t border-white/10 mt-1 pt-1">
-                                        <div className="w-full px-4 py-3 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white">
-                                            <div className="flex items-center gap-2">
-                                                <Activity className="w-4 h-4" />
-                                                <span>Video Stats</span>
-                                            </div>
-                                            <Switch
-                                                checked={showVideoStats}
-                                                onCheckedChange={() => onToggleVideoStats()}
-                                                className="data-[state=checked]:!bg-[#9146FF] data-[state=checked]:!border-[#9146FF] data-[state=checked]:!border-2 data-[state=unchecked]:!bg-transparent data-[state=unchecked]:!border-white data-[state=unchecked]:!border-2"
-                                                thumbClassName="bg-white"
-                                            />
+                                    <div className="w-full px-4 h-12 flex items-center justify-between hover:bg-[rgba(255,255,255,0.1)] transition-colors text-[15px] text-[#eee] font-medium cursor-pointer" onClick={() => onToggleVideoStats()}>
+                                        <div className="flex items-center gap-4">
+                                            <Activity className="w-6 h-6" />
+                                            <span>Video Stats</span>
                                         </div>
+                                        <Switch
+                                            checked={showVideoStats}
+                                            onCheckedChange={() => onToggleVideoStats()}
+                                            className="data-[state=checked]:!bg-[#3ea6ff] data-[state=unchecked]:!bg-[#ffffff4d] border-none h-[14px] w-[36px]"
+                                            thumbClassName="bg-[#f1f1f1] w-[20px] h-[20px] shadow-sm data-[state=checked]:translate-x-[19px] translate-x-[-3px]"
+                                        />
                                     </div>
                                 )}
                             </div>
                         )}
 
                         {activeSubMenu === 'quality' && (
-                            <div className="py-2">
+                            <div>
                                 <button
-                                    className="w-full px-4 py-3 flex items-center gap-2 hover:bg-white/10 transition-colors text-sm text-white border-b border-white/5"
+                                    className="w-full px-3 h-12 flex items-center gap-3 hover:bg-[rgba(255,255,255,0.1)] transition-colors text-[15px] text-[#eee] font-medium border-b border-[#ffffff1a] mb-1"
                                     onClick={() => setActiveSubMenu('main')}
                                 >
-                                    <span className="rotate-90">›</span>
-                                    <span className="font-semibold">Quality</span>
+                                    <ChevronLeft className="w-7 h-7 text-[#eee]" />
+                                    <span>Quality</span>
                                 </button>
-                                <div className="max-h-60 overflow-y-auto">
+                                <div className="max-h-80 overflow-y-auto custom-scrollbar">
                                     {sortedQualities.map(quality => (
                                         <button
                                             key={quality.id}
-                                            className="w-full px-4 py-2 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white"
+                                            className="w-full px-4 h-12 flex items-center gap-4 hover:bg-[rgba(255,255,255,0.1)] transition-colors text-[14px] text-[#eee]"
                                             onClick={() => {
                                                 onQualityChange(quality.id);
                                                 setIsOpen(false);
                                             }}
                                         >
+                                            {currentQualityId === quality.id ? (
+                                                <Check className="w-5 h-5 text-[#3ea6ff]" /> // YouTube selection is often blue or white
+                                            ) : <div className="w-5 h-5" />}
                                             <span>{quality.label}</span>
-                                            {currentQualityId === quality.id && <Check className="w-4 h-4" />}
+                                            {quality.isAuto && <span className="text-xs text-[#aaaaaa] ml-2"></span>}
                                         </button>
                                     ))}
                                 </div>
@@ -193,26 +200,28 @@ export function SettingsMenu({
                         )}
 
                         {activeSubMenu === 'speed' && onPlaybackRateChange && (
-                            <div className="py-2">
+                            <div>
                                 <button
-                                    className="w-full px-4 py-3 flex items-center gap-2 hover:bg-white/10 transition-colors text-sm text-white border-b border-white/5"
+                                    className="w-full px-3 h-12 flex items-center gap-3 hover:bg-[rgba(255,255,255,0.1)] transition-colors text-[15px] text-[#eee] font-medium border-b border-[#ffffff1a] mb-1"
                                     onClick={() => setActiveSubMenu('main')}
                                 >
-                                    <span className="rotate-90">›</span>
-                                    <span className="font-semibold">Speed</span>
+                                    <ChevronLeft className="w-7 h-7 text-[#eee]" />
+                                    <span>Playback speed</span>
                                 </button>
-                                <div className="max-h-60 overflow-y-auto">
+                                <div className="max-h-80 overflow-y-auto custom-scrollbar">
                                     {PLAYBACK_SPEEDS.map(speed => (
                                         <button
                                             key={speed}
-                                            className="w-full px-4 py-2 flex items-center justify-between hover:bg-white/10 transition-colors text-sm text-white"
+                                            className="w-full px-4 h-12 flex items-center gap-4 hover:bg-[rgba(255,255,255,0.1)] transition-colors text-[14px] text-[#eee]"
                                             onClick={() => {
                                                 onPlaybackRateChange(speed);
                                                 setIsOpen(false);
                                             }}
                                         >
-                                            <span>{speed}x</span>
-                                            {playbackRate === speed && <Check className="w-4 h-4" />}
+                                            {playbackRate === speed ? (
+                                                <Check className="w-5 h-5 text-[#3ea6ff]" />
+                                            ) : <div className="w-5 h-5" />}
+                                            <span>{speed === 1 ? 'Normal' : speed.toString()}</span>
                                         </button>
                                     ))}
                                 </div>

@@ -162,7 +162,7 @@ export const StreamCard = React.memo(({ stream, showCategory = true }: StreamCar
                                     {finalTags.map((tag, index) => (
                                         <span
                                             key={`${tag}-${index}`}
-                                            className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#35373C] text-white hover:bg-[#464950] transition-colors whitespace-nowrap"
+                                            className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#35353b] text-white hover:bg-[#45454b] transition-colors whitespace-nowrap"
                                         >
                                             {tag}
                                         </span>

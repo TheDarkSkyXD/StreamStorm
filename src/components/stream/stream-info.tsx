@@ -89,7 +89,7 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                 </h1>
                 {/* Use stream title if live, otherwise fall back to channel's last stream title */}
                 <p className="text-white font-bold truncate pr-4">{stream?.title || channel.lastStreamTitle || channel.bio || "No title set"}</p>
-                <p className="text-[var(--color-foreground-muted)] text-sm capitalize flex items-center gap-1.5 mt-1">
+                <div className="text-[var(--color-foreground-muted)] text-sm capitalize flex flex-wrap items-center gap-2 mt-1">
                     {/* Use stream category if live, otherwise fall back to channel's last known category */}
                     {(stream?.categoryId || channel.categoryId) ? (
                         <Link
@@ -107,46 +107,47 @@ export function StreamInfo({ channel, stream, isLoading }: StreamInfoProps) {
                             {stream?.categoryName || channel.categoryName || "Variety"}
                         </span>
                     )}
-                </p>
-                {/* Stream Tags - Language, Mature, and Custom Tags */}
-                {stream?.isLive && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                        {/* Language Tag */}
-                        {stream.language && (
-                            <span className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default">
-                                {new Intl.DisplayNames(['en'], { type: 'language' }).of(stream.language) || stream.language.toUpperCase()}
-                            </span>
-                        )}
-                        {/* Mature Content Tag */}
-                        {stream.isMature && (
-                            <span className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default">
-                                18+
-                            </span>
-                        )}
-                        {/* Custom Tags from API - filter out language duplicates */}
-                        {stream.tags && stream.tags.length > 0 && (() => {
-                            // Get the display name of the stream's language to filter duplicates
-                            const languageDisplayName = stream.language
-                                ? new Intl.DisplayNames(['en'], { type: 'language' }).of(stream.language)?.toLowerCase()
-                                : null;
 
-                            return stream.tags
-                                .filter(tag => {
-                                    // Filter out tags that match the language display name (case insensitive)
-                                    const tagLower = tag.toLowerCase();
-                                    return tagLower !== languageDisplayName;
-                                })
-                                .map((tag, index) => (
-                                    <span
-                                        key={`${tag}-${index}`}
-                                        className="text-xs px-3 py-1 rounded-full font-medium bg-[#35353b] text-[#efeff1] hover:bg-[#45454b] transition-colors cursor-default"
-                                    >
-                                        {tag}
-                                    </span>
-                                ));
-                        })()}
-                    </div>
-                )}
+                    {/* Stream Tags - Language, Mature, and Custom Tags - Moved next to category */}
+                    {stream?.isLive && (
+                        <>
+                            {/* Language Tag */}
+                            {stream.language && (
+                                <span className="text-xs px-3 py-1 rounded-full font-bold bg-[#35353b] text-white hover:bg-[#45454b] transition-colors cursor-default">
+                                    {new Intl.DisplayNames(['en'], { type: 'language' }).of(stream.language) || stream.language.toUpperCase()}
+                                </span>
+                            )}
+                            {/* Mature Content Tag */}
+                            {stream.isMature && (
+                                <span className="text-xs px-3 py-1 rounded-full font-bold bg-[#35353b] text-white hover:bg-[#45454b] transition-colors cursor-default">
+                                    18+
+                                </span>
+                            )}
+                            {/* Custom Tags from API - filter out language duplicates */}
+                            {stream.tags && stream.tags.length > 0 && (() => {
+                                // Get the display name of the stream's language to filter duplicates
+                                const languageDisplayName = stream.language
+                                    ? new Intl.DisplayNames(['en'], { type: 'language' }).of(stream.language)?.toLowerCase()
+                                    : null;
+
+                                return stream.tags
+                                    .filter(tag => {
+                                        // Filter out tags that match the language display name (case insensitive)
+                                        const tagLower = tag.toLowerCase();
+                                        return tagLower !== languageDisplayName;
+                                    })
+                                    .map((tag, index) => (
+                                        <span
+                                            key={`${tag}-${index}`}
+                                            className="text-xs px-3 py-1 rounded-full font-bold bg-[#35353b] text-white hover:bg-[#45454b] transition-colors cursor-default"
+                                        >
+                                            {tag}
+                                        </span>
+                                    ));
+                            })()}
+                        </>
+                    )}
+                </div>
             </div>
 
             {/* Right side: Follow button and live stats */}
