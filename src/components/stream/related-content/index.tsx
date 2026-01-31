@@ -199,7 +199,9 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
     const loadMore = useCallback(async () => {
         if (isFetchingMore || isLoading) return;
 
-        const targetTab = activeTab || 'videos';
+        const targetTab = activeTab || 'home';
+        // Home tab doesn't use infinite scroll
+        if (targetTab === 'home') return;
         if (targetTab === 'videos' && !hasMoreVideos) return;
         if (targetTab === 'clips' && !hasMoreClips) return;
 
@@ -222,19 +224,43 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                 });
                 if (result.success) {
                     const newVideos = result.data || [];
+
+                    // Stop if no videos returned
                     if (newVideos.length === 0) {
+                        console.debug('[RelatedContent] No more videos to fetch');
                         setHasMoreVideos(false);
-                    } else {
-                        setVideos(prev => {
-                            // Filter out duplicates
-                            const existingIds = new Set(prev.map(v => v.id));
-                            const uniqueNewVideos = newVideos.filter((v: VideoOrClip) => !existingIds.has(v.id));
-                            return [...prev, ...uniqueNewVideos];
-                        });
-                        setVideoCursor(result.cursor);
-                        // If we got fewer than requested, we might be done, but rely on cursor if present
-                        if (!result.cursor) setHasMoreVideos(false);
+                        return;
                     }
+
+                    // Filter duplicates
+                    const existingIds = new Set(videos.map(v => v.id));
+                    const uniqueNewVideos = newVideos.filter((v: VideoOrClip) => !existingIds.has(v.id));
+
+                    // Stop if all returned videos are duplicates (we've looped back)
+                    if (uniqueNewVideos.length === 0) {
+                        console.debug('[RelatedContent] All videos are duplicates, stopping');
+                        setHasMoreVideos(false);
+                        return;
+                    }
+
+                    // Stop if cursor hasn't changed (stuck in a loop)
+                    if (result.cursor && result.cursor === videoCursor) {
+                        console.debug('[RelatedContent] Cursor unchanged, stopping');
+                        setHasMoreVideos(false);
+                        return;
+                    }
+
+                    setVideos(prev => [...prev, ...uniqueNewVideos]);
+                    setVideoCursor(result.cursor);
+
+                    // Stop if no cursor returned or got fewer than requested
+                    if (!result.cursor || newVideos.length < 5) {
+                        console.debug('[RelatedContent] No cursor or partial page, stopping');
+                        setHasMoreVideos(false);
+                    }
+                } else {
+                    // API error - stop trying
+                    setHasMoreVideos(false);
                 }
             } else if (targetTab === 'clips') {
                 const result = await api.clips.getByChannel({
@@ -248,18 +274,43 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                 });
                 if (result.success) {
                     const newClips = result.data || [];
+
+                    // Stop if no clips returned
                     if (newClips.length === 0) {
+                        console.debug('[RelatedContent] No more clips to fetch');
                         setHasMoreClips(false);
-                    } else {
-                        setClips(prev => {
-                            // Filter out duplicates
-                            const existingIds = new Set(prev.map(c => c.id));
-                            const uniqueNewClips = newClips.filter((c: VideoOrClip) => !existingIds.has(c.id));
-                            return [...prev, ...uniqueNewClips];
-                        });
-                        setClipCursor(result.cursor);
-                        if (!result.cursor) setHasMoreClips(false);
+                        return;
                     }
+
+                    // Filter duplicates
+                    const existingIds = new Set(clips.map(c => c.id));
+                    const uniqueNewClips = newClips.filter((c: VideoOrClip) => !existingIds.has(c.id));
+
+                    // Stop if all returned clips are duplicates
+                    if (uniqueNewClips.length === 0) {
+                        console.debug('[RelatedContent] All clips are duplicates, stopping');
+                        setHasMoreClips(false);
+                        return;
+                    }
+
+                    // Stop if cursor hasn't changed
+                    if (result.cursor && result.cursor === clipCursor) {
+                        console.debug('[RelatedContent] Clip cursor unchanged, stopping');
+                        setHasMoreClips(false);
+                        return;
+                    }
+
+                    setClips(prev => [...prev, ...uniqueNewClips]);
+                    setClipCursor(result.cursor);
+
+                    // Stop if no cursor returned or got fewer than requested
+                    if (!result.cursor || newClips.length < 5) {
+                        console.debug('[RelatedContent] No cursor or partial page, stopping clips');
+                        setHasMoreClips(false);
+                    }
+                } else {
+                    // API error - stop trying
+                    setHasMoreClips(false);
                 }
             }
         } catch (err) {
@@ -276,7 +327,7 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
         } finally {
             setIsFetchingMore(false);
         }
-    }, [isFetchingMore, isLoading, activeTab, hasMoreVideos, hasMoreClips, platform, channelName, channelData?.id, sortBy, timeRange, videoCursor, clipCursor]);
+    }, [isFetchingMore, isLoading, activeTab, hasMoreVideos, hasMoreClips, platform, channelName, channelData?.id, sortBy, timeRange, videoCursor, clipCursor, videos, clips]);
 
     // Intersection Observer Effect
     useEffect(() => {
@@ -536,8 +587,11 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                             )
                         )}
 
-                        {/* Sentinel for infinite scroll */}
-                        <div ref={loadMoreRef} className="col-span-full h-4 w-full" />
+                        {/* Sentinel for infinite scroll - only render when there's more data */}
+                        {((activeTab === 'videos' && hasMoreVideos && videos.length > 0) ||
+                            (activeTab === 'clips' && hasMoreClips && clips.length > 0)) && (
+                                <div ref={loadMoreRef} className="col-span-full h-4 w-full" />
+                            )}
 
                         {isFetchingMore && (
                             <div className="col-span-full py-4 flex justify-center">

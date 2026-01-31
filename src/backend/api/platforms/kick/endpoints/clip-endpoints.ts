@@ -68,7 +68,9 @@ export async function getClipsByChannelSlug(
 
         // Response usually: { clips: [...], nextCursor: ... }
         const clips = data.clips || [];
-        const nextCursor = data.nextCursor;
+        // Only return cursor if we got a full page (might be more data)
+        // If we got fewer than requested, we've reached the end
+        const nextCursor = (clips.length >= limit && data.nextCursor) ? data.nextCursor : undefined;
 
 
 

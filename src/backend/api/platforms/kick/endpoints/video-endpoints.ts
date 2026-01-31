@@ -73,13 +73,14 @@ export async function getVideosByChannelSlug(
 
         if (Array.isArray(data)) {
             videos = data;
-            // For V2 endpoint returning standard array, next cursor is often just offset + limit
-            // But if there's no wrapper with nextCursor, we have to infer or keep it basic.
-            // Let's assume pagination by offset if data is an array
-            nextCursor = videos.length > 0 ? (parseInt(cursor.toString()) + videos.length).toString() : undefined;
+            // For V2 endpoint returning standard array, use offset-based pagination
+            // Only return cursor if we got a full page (might be more data)
+            // If we got fewer than requested, we've reached the end
+            nextCursor = videos.length >= limit ? (parseInt(cursor.toString()) + videos.length).toString() : undefined;
         } else {
             videos = data.videos || [];
-            nextCursor = data.nextCursor;
+            // For wrapped response, only use nextCursor if we got a full page
+            nextCursor = (videos.length >= limit && data.nextCursor) ? data.nextCursor : undefined;
         }
 
         return {

@@ -36,8 +36,11 @@ export async function getClipsByBroadcaster(
         `/clips?${params.toString()}`
     );
 
+    const first = options.first || 20;
+
     return {
         data: data.data,
-        cursor: data.pagination?.cursor,
+        // Only return cursor if we got a full page (might be more data)
+        cursor: data.data.length >= first ? data.pagination?.cursor : undefined,
     };
 }
