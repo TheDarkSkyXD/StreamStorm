@@ -1,7 +1,8 @@
 
 import { Link } from '@tanstack/react-router';
 import React, { useState, useRef, useEffect } from 'react';
-import { LuUser, LuSettings, LuLogOut, LuX } from 'react-icons/lu';
+import { LuUser, LuLogOut, LuX } from 'react-icons/lu';
+import { IoMdSettings } from 'react-icons/io';
 
 import { ProxiedImage } from '@/components/ui/proxied-image';
 import { useUserInfo, useAuthStatus } from '@/hooks/useAuth';
@@ -390,8 +391,8 @@ export function ProfileDropdown() {
                             className="flex items-center gap-3 px-3 py-2 rounded-md transition-colors text-white hover:bg-[var(--color-background-tertiary)] hover:text-white w-full text-left text-sm"
                             onClick={() => setIsOpen(false)}
                         >
-                            <LuSettings size={16} />
-                            LuSettings
+                            <IoMdSettings size={16} />
+                            Settings
                         </Link>
 
                         {hasAnyUser && (
