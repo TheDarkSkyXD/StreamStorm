@@ -3,6 +3,7 @@ import React from 'react';
 import { IoMdSettings } from 'react-icons/io';
 import { LuHouse, LuHeart, LuGrid3X3, LuLayoutDashboard, LuHistory, LuDownload } from 'react-icons/lu';
 
+
 import { MiniPlayer } from '@/components/player/mini-player';
 import { useAuthInitialize } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';

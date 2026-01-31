@@ -25,6 +25,10 @@ interface AppState {
   addStream: (streamId: string) => void;
   removeStream: (streamId: string) => void;
   clearStreams: () => void;
+
+  // Debug
+  showDebugOverlay: boolean;
+  setShowDebugOverlay: (show: boolean) => void;
 }
 
 export const useAppStore = create<AppState>()(
@@ -52,6 +56,8 @@ export const useAppStore = create<AppState>()(
 
       // Multi-stream
       activeStreams: [],
+      showDebugOverlay: false,
+      setShowDebugOverlay: (show) => set({ showDebugOverlay: show }),
       addStream: (streamId) =>
         set((state) => ({
           activeStreams: state.activeStreams.includes(streamId)
@@ -70,6 +76,7 @@ export const useAppStore = create<AppState>()(
 
         sidebarCollapsed: state.sidebarCollapsed,
         userPrefersSidebarCollapsed: state.userPrefersSidebarCollapsed,
+        showDebugOverlay: state.showDebugOverlay,
       }),
     }
   )

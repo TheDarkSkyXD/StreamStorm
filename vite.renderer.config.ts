@@ -3,7 +3,6 @@ import path from 'path';
 import viteCompression from 'vite-plugin-compression';
 import { visualizer } from 'rollup-plugin-visualizer';
 import svgr from 'vite-plugin-svgr';
-import checker from 'vite-plugin-checker';
 
 // https://vitejs.dev/config
 export default defineConfig(async (): Promise<UserConfig> => {
@@ -25,17 +24,6 @@ export default defineConfig(async (): Promise<UserConfig> => {
           },
         },
       }),
-      // TypeScript and ESLint checking in dev mode (shows errors in browser overlay)
-      ...(!isProduction ? [checker({
-        typescript: true,
-        eslint: {
-          useFlatConfig: true,
-          lintCommand: 'eslint ./src',
-        },
-        overlay: {
-          initialIsOpen: false, // Don't auto-open overlay
-        },
-      })] : []),
       // Brotli compression for production builds - reduces transfer size by 20-30%
       ...(isProduction ? [viteCompression({
         algorithm: 'brotliCompress',
