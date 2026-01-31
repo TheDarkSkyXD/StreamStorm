@@ -1,6 +1,6 @@
 
 import { useParams } from '@tanstack/react-router';
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { KickLivePlayer } from '@/components/player/kick';
 import { TwitchLivePlayer } from '@/components/player/twitch';
@@ -48,26 +48,12 @@ export function StreamPage() {
   // Track clip dialog state to mute main player
   const [isClipDialogOpen, setIsClipDialogOpen] = useState(false);
 
-  // Proxy fallback notification state
-  const [proxyFallbackNotice, setProxyFallbackNotice] = useState<string | null>(null);
-  const fallbackTimeoutRef = useRef<number | null>(null);
 
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (fallbackTimeoutRef.current) {
-        clearTimeout(fallbackTimeoutRef.current);
-      }
-    };
-  }, []);
 
-  // Helper to trigger proxy fallback with notice and timeout management
-  const triggerProxyFallback = useCallback((message: string) => {
+  // Helper to trigger proxy fallback
+  const triggerProxyFallback = useCallback(() => {
     console.debug('[StreamPage] Triggering fallback to direct stream');
-    setProxyFallbackNotice(message);
     retryWithoutProxy();
-    if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
-    fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 8000);
   }, [retryWithoutProxy]);
 
   const handlePlayerError = useCallback((error: PlayerError) => {
@@ -87,16 +73,10 @@ export function StreamPage() {
       // Check if we haven't hit the max retries yet (3)
       if (reloadAttempts < 3) {
         console.debug(`[StreamPage] ${error.code} - attempting automatic refresh (${reloadAttempts + 1}/3)`);
-        setProxyFallbackNotice(
-          error.code === 'TOKEN_EXPIRED'
-            ? 'Playback session expired. Refreshing stream...'
-            : 'Stream unavailable. Refreshing connection...'
-        );
+
         reloadPlayback(); // Fetch fresh playback URL
 
-        // Auto-hide notification after 5 seconds
-        if (fallbackTimeoutRef.current) clearTimeout(fallbackTimeoutRef.current);
-        fallbackTimeoutRef.current = window.setTimeout(() => setProxyFallbackNotice(null), 5000);
+
         return; // Don't show error, let refresh attempt
       } else {
         console.debug(`[StreamPage] Max reload attempts reached for ${error.code}. Showing error.`);
@@ -105,7 +85,7 @@ export function StreamPage() {
 
     // PROXY_ERROR is specific to proxy server failures (500 errors)
     if (error.code === 'PROXY_ERROR' && isUsingProxy && platform === 'twitch') {
-      triggerProxyFallback('Proxy server unavailable. Falling back to direct stream (ads may show).');
+      triggerProxyFallback();
       return; // Don't show error, let fallback attempt
     }
 
@@ -115,7 +95,7 @@ export function StreamPage() {
 
       // If we were using proxy and got a network/offline error, try fallback to direct
       if (isUsingProxy && platform === 'twitch') {
-        triggerProxyFallback('Proxy connection failed. Falling back to direct stream.');
+        triggerProxyFallback();
         return; // Don't show error yet, let fallback attempt
       }
     } else {
@@ -123,7 +103,7 @@ export function StreamPage() {
 
       // Also try fallback for other network errors when using proxy
       if (isUsingProxy && platform === 'twitch') {
-        triggerProxyFallback('Proxy error. Switching to direct stream.');
+        triggerProxyFallback();
         return;
       }
     }
@@ -269,26 +249,7 @@ export function StreamPage() {
                 </div>
               </div>
             )}
-            {/* Proxy fallback notification toast */}
-            {proxyFallbackNotice && (
-              <div className="absolute bottom-4 left-4 z-40 animate-in slide-in-from-bottom-4 fade-in duration-300">
-                <div className="bg-amber-500/90 backdrop-blur-sm text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 max-w-md">
-                  <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <span className="text-sm font-medium">{proxyFallbackNotice}</span>
-                  <button
-                    onClick={() => setProxyFallbackNotice(null)}
-                    className="ml-2 hover:bg-white/20 rounded p-1"
-                    aria-label="Dismiss notification"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            )}
+
             {playerError && (
               <div className="absolute inset-0 z-20 overflow-hidden">
                 {/* Background: Offline banner if available, otherwise blurred avatar or gradient */}
