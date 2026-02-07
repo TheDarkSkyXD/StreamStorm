@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useAppVersion, useUpdater } from '@/hooks';
+import { useAppVersion, useAppVersionInfo, useUpdater } from '@/hooks';
 import { useAuthError } from '@/hooks/useAuth';
 import { cn } from '@/lib/utils';
 import { VideoQuality, DEFAULT_PLAYBACK_PREFERENCES } from '@/shared/auth-types';
@@ -33,6 +33,7 @@ import { useAuthStore } from '@/store/auth-store';
 export function SettingsPage() {
 
   const appVersion = useAppVersion();
+  const versionInfo = useAppVersionInfo();
   const [activeTab, setActiveTab] = useState('playback');
 
   // Get auth state
@@ -407,7 +408,14 @@ export function SettingsPage() {
                 </div>
                 <div>
                   <h3 className="text-xl font-bold text-white">StreamStorm</h3>
-                  <p className="text-zinc-500 mt-1">v{appVersion ?? '0.1.0'}</p>
+                  <div className="flex items-center justify-center gap-2 mt-1">
+                    <p className="text-zinc-500">v{versionInfo?.version ?? appVersion ?? '0.1.0'}</p>
+                    {versionInfo?.isPrerelease && (
+                      <span className="px-2 py-0.5 text-xs font-semibold rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+                        Pre-release
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="pt-6 text-sm text-zinc-500">
                   <p>Built with Electron + React + TailwindCSS</p>

@@ -17,12 +17,13 @@ import type {
   TwitchUser,
   KickUser,
 } from '../shared/auth-types';
-import { IPC_CHANNELS, AuthStatus } from '../shared/ipc-channels';
+import { IPC_CHANNELS, AuthStatus, type VersionInfo } from '../shared/ipc-channels';
 
 // Define the API exposed to the renderer
 const electronAPI = {
   // ========== App Info ==========
   getVersion: (): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_VERSION),
+  getVersionInfo: (): Promise<VersionInfo> => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_VERSION_INFO),
   getName: (): Promise<string> => ipcRenderer.invoke(IPC_CHANNELS.APP_GET_NAME),
 
   // ========== Window Controls ==========
@@ -413,17 +414,17 @@ const electronAPI = {
       error: string | null;
       allowPrerelease: boolean;
     }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CHECK),
-    
+
     download: (): Promise<{
       status: string;
       updateInfo: { version: string; releaseDate: string; releaseNotes: string | null; releaseName: string | null } | null;
       progress: { bytesPerSecond: number; percent: number; transferred: number; total: number } | null;
       error: string | null;
     }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_DOWNLOAD),
-    
+
     install: (): Promise<{ success: boolean }> =>
       ipcRenderer.invoke(IPC_CHANNELS.UPDATE_INSTALL),
-    
+
     getStatus: (): Promise<{
       status: string;
       updateInfo: { version: string; releaseDate: string; releaseNotes: string | null; releaseName: string | null } | null;
@@ -431,15 +432,15 @@ const electronAPI = {
       error: string | null;
       allowPrerelease: boolean;
     }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_GET_STATUS),
-    
+
     setAllowPrerelease: (allow: boolean): Promise<{
       status: string;
       allowPrerelease: boolean;
     }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_SET_ALLOW_PRERELEASE, { allow }),
-    
+
     getSettings: (): Promise<{ allowPrerelease: boolean }> =>
       ipcRenderer.invoke(IPC_CHANNELS.UPDATE_GET_SETTINGS),
-    
+
     onStatusChange: (callback: (state: {
       status: string;
       updateInfo: { version: string; releaseDate: string; releaseNotes: string | null; releaseName: string | null } | null;
@@ -451,7 +452,7 @@ const electronAPI = {
       ipcRenderer.on(IPC_CHANNELS.UPDATE_ON_STATUS_CHANGE, handler);
       return () => ipcRenderer.removeListener(IPC_CHANNELS.UPDATE_ON_STATUS_CHANGE, handler);
     },
-    
+
     onProgress: (callback: (progress: {
       bytesPerSecond: number;
       percent: number;

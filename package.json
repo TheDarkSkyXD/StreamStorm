@@ -1,7 +1,7 @@
 {
   "name": "streamstorm",
   "productName": "StreamStorm",
-  "version": "0.1.0",
+  "version": "1.0.0-beta.1",
   "description": "A unified desktop app for viewing Twitch and Kick streams",
   "main": ".vite/build/main.js",
   "scripts": {

@@ -1,6 +1,7 @@
 export {
   useIsElectron,
   useAppVersion,
+  useAppVersionInfo,
   useSystemTheme,
   useWindowControls,
   useOpenExternal,

@@ -10,6 +10,7 @@ import type { Platform, AuthToken, LocalFollow, UserPreferences, TwitchUser, Kic
 export const IPC_CHANNELS = {
   // App lifecycle
   APP_GET_VERSION: 'app:get-version',
+  APP_GET_VERSION_INFO: 'app:get-version-info',
   APP_GET_NAME: 'app:get-name',
   APP_QUIT: 'app:quit',
   APP_RELAUNCH: 'app:relaunch',
@@ -133,7 +134,7 @@ export const IPC_CHANNELS = {
   ADBLOCK_TOGGLE: 'adblock:toggle',
   ADBLOCK_GET_STATS: 'adblock:get-stats',
   ADBLOCK_PROXY_STATUS: 'adblock:proxy-status',
-  
+
   // ========== Cosmetic Injection ==========
   ADBLOCK_INJECT_COSMETICS: 'adblock:inject-cosmetics',
 
@@ -219,9 +220,24 @@ export interface AuthStatus {
   isGuest: boolean;
 }
 
+// ========== Version Info Types ==========
+
+export type ReleaseChannel = 'stable' | 'beta' | 'alpha' | 'rc';
+
+export interface VersionInfo {
+  /** Full version string (e.g., "1.0.1") */
+  version: string;
+  /** Whether this is a pre-release version */
+  isPrerelease: boolean;
+  /** Release channel: stable, beta, alpha, or rc */
+  channel: ReleaseChannel;
+  /** Display string for UI (e.g., "1.0.1 (Pre-release)") */
+  displayVersion: string;
+}
+
 // ========== App Auto-Update Types ==========
 
-export type UpdateStatus = 
+export type UpdateStatus =
   | 'idle'
   | 'checking'
   | 'available'

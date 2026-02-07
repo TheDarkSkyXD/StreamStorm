@@ -23,6 +23,36 @@ export function registerSystemHandlers(mainWindow: BrowserWindow): void {
         return app.getVersion();
     });
 
+    ipcMain.handle(IPC_CHANNELS.APP_GET_VERSION_INFO, () => {
+        const version = app.getVersion();
+
+        // Standard SemVer pre-release detection:
+        // Pre-releases have a suffix like -alpha, -beta, -rc
+        // Examples: 1.0.0-beta.1, 1.0.0-alpha.2, 1.0.0-rc.1
+        const isPrerelease = version.includes('-');
+
+        // Determine channel from version string
+        let channel: 'stable' | 'beta' | 'alpha' | 'rc' = 'stable';
+        if (version.includes('-alpha')) {
+            channel = 'alpha';
+        } else if (version.includes('-beta')) {
+            channel = 'beta';
+        } else if (version.includes('-rc')) {
+            channel = 'rc';
+        }
+
+        // Create display version string
+        const channelLabel = channel === 'stable' ? '' : ` (${channel.charAt(0).toUpperCase() + channel.slice(1)})`;
+        const displayVersion = `${version}${channelLabel}`;
+
+        return {
+            version,
+            isPrerelease,
+            channel,
+            displayVersion,
+        };
+    });
+
     ipcMain.handle(IPC_CHANNELS.APP_GET_NAME, () => {
         return app.getName();
     });

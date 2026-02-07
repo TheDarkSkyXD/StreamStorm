@@ -30,6 +30,31 @@ export function useAppVersion(): string | null {
 }
 
 /**
+ * Version info including pre-release status
+ */
+export interface VersionInfo {
+  version: string;
+  isPrerelease: boolean;
+  channel: 'stable' | 'beta' | 'alpha' | 'rc';
+  displayVersion: string;
+}
+
+/**
+ * Get extended version info including pre-release status
+ */
+export function useAppVersionInfo(): VersionInfo | null {
+  const [versionInfo, setVersionInfo] = useState<VersionInfo | null>(null);
+
+  useEffect(() => {
+    if (window.electronAPI?.getVersionInfo) {
+      window.electronAPI.getVersionInfo().then(setVersionInfo);
+    }
+  }, []);
+
+  return versionInfo;
+}
+
+/**
  * Get the system theme preference
  */
 export function useSystemTheme(): 'light' | 'dark' | null {

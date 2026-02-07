@@ -1,13 +1,24 @@
-name: Release (Beta/Pre-release)
+name: Release (Pre-release)
 
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+-*'  # Match pre-release tags like v1.0.0-beta.1, v1.0.0-alpha.2, v1.0.0-rc.1
+      # Match pre-release versions:
+      # - Patch versions with suffixes: v1.0.1-beta.1, v1.0.2-alpha.1, v1.0.3-rc.1
+      # - Also triggered manually via workflow_dispatch for patch releases
+      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+
+# Also allow manual trigger for first pre-release
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v1.0.1-beta.1)'
+        required: true
+        type: string
 
 # Ensure only one release job runs at a time
 concurrency:
-  group: beta-release-${{ github.ref }}
+  group: pre-release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -56,7 +67,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: streamstorm-beta-${{ matrix.platform }}-${{ matrix.arch }}
+          name: streamstorm-prerelease-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             out/make/**/*.exe
             out/make/**/*.nupkg
