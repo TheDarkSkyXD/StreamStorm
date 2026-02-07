@@ -3,6 +3,8 @@
   "productName": "StreamStorm",
   "version": "1.0.0-beta.1",
   "description": "A unified desktop app for viewing Twitch and Kick streams",
+  "author": "StreamStorm",
+  "type": "module",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start -- --remote-debugging-port=9222",
