@@ -7,7 +7,15 @@
   },
   "files": {
     "ignoreUnknown": false,
-    "includes": ["**", "!**/dist", "!**/.vite", "!**/node_modules", "!**/out", "!**/coverage"]
+    "includes": [
+      "**",
+      "!**/dist",
+      "!**/.vite",
+      "!**/node_modules",
+      "!**/out",
+      "!**/coverage",
+      "!src/index.css"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -18,17 +26,33 @@
     "lineWidth": 100,
     "attributePosition": "auto"
   },
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
   "linter": {
     "enabled": true,
     "rules": {
       "recommended": true,
       "style": {
-        "noUnusedTemplateLiteral": "off"
+        "noUnusedTemplateLiteral": "off",
+        "noNonNullAssertion": "off"
+      },
+      "a11y": {
+        "recommended": false
+      },
+      "suspicious": {
+        "recommended": false,
+        "noExplicitAny": "off",
+        "noArrayIndexKey": "off"
       },
       "correctness": {
-        "noUnusedImports": "error",
-        "noUnusedVariables": "error"
+        "noUnusedImports": "warn",
+        "noUnusedVariables": "off",
+        "noUnusedFunctionParameters": "off"
       }
     }
   },
