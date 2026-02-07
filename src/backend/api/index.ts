@@ -4,9 +4,9 @@
  * Central export point for all API-related functionality.
  */
 
-// Unified types and interfaces
-export * from './unified';
+export * as KickApi from "./platforms/kick";
 
 // Platform-specific modules
-export * as TwitchApi from './platforms/twitch';
-export * as KickApi from './platforms/kick';
+export * as TwitchApi from "./platforms/twitch";
+// Unified types and interfaces
+export * from "./unified";

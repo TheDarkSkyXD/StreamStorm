@@ -1,29 +1,28 @@
 /**
  * StreamStorm - Main Process Entry Point
- * 
+ *
  * This is the Electron main process that handles window creation,
  * system integration, and IPC communication with the renderer.
  */
 
 // Load environment variables from .env file FIRST (before other imports)
-import 'dotenv/config';
+import "dotenv/config";
 
-import * as fs from 'fs';
-import * as path from 'path';
+import * as fs from "node:fs";
+import * as path from "node:path";
+import { app, BrowserWindow, Menu, session } from "electron";
+import started from "electron-squirrel-startup";
 
-import { app, BrowserWindow, session, Menu } from 'electron';
-import started from 'electron-squirrel-startup';
-
-import { protocolHandler } from './backend/auth';
-import { registerIpcHandlers } from './backend/ipc-handlers';
-import { cosmeticInjectionService } from './backend/services/cosmetic-injection-service';
-import { networkAdBlockService } from './backend/services/network-adblock-service';
-import { twitchManifestProxy } from './backend/services/twitch-manifest-proxy';
-import { vaftPatternService } from './backend/services/vaft-pattern-service';
-import { windowManager } from './backend/window-manager';
+import { protocolHandler } from "./backend/auth";
+import { registerIpcHandlers } from "./backend/ipc-handlers";
+import { cosmeticInjectionService } from "./backend/services/cosmetic-injection-service";
+import { networkAdBlockService } from "./backend/services/network-adblock-service";
+import { twitchManifestProxy } from "./backend/services/twitch-manifest-proxy";
+import { vaftPatternService } from "./backend/services/vaft-pattern-service";
+import { windowManager } from "./backend/window-manager";
 
 // Sentinel file to track clean shutdown
-const CLEAN_SHUTDOWN_FILE = path.join(app.getPath('userData'), '.clean-shutdown');
+const CLEAN_SHUTDOWN_FILE = path.join(app.getPath("userData"), ".clean-shutdown");
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (started) {
@@ -37,27 +36,27 @@ if (started) {
 // ============================================================================
 
 // Limit V8 heap to 350MB per process - prevents unbounded memory growth
-app.commandLine.appendSwitch('max-old-space-size', '350');
+app.commandLine.appendSwitch("max-old-space-size", "350");
 
 // Expose garbage collector for manual GC in renderer processes + enable V8 memory cage
-app.commandLine.appendSwitch('js-flags', '--max-old-space-size=350 --expose-gc');
+app.commandLine.appendSwitch("js-flags", "--max-old-space-size=350 --expose-gc");
 
 // Linux: Use /tmp instead of shared memory for larger buffers (prevents SIGBUS)
-if (process.platform === 'linux') {
-  app.commandLine.appendSwitch('disable-dev-shm-usage');
+if (process.platform === "linux") {
+  app.commandLine.appendSwitch("disable-dev-shm-usage");
 }
 
 // V8 Memory Cage: Additional memory isolation for security and leak prevention
-app.commandLine.appendSwitch('enable-features', 'V8MemoryCage');
+app.commandLine.appendSwitch("enable-features", "V8MemoryCage");
 
 // Disable accessibility runtime (saves ~10-20MB if not needed)
-app.commandLine.appendSwitch('disable-renderer-accessibility');
+app.commandLine.appendSwitch("disable-renderer-accessibility");
 
 // Enable Chrome DevTools Protocol for Playwright MCP connectivity (development only)
 // This allows Playwright to connect to the running Electron app at ws://localhost:9222
-if (process.env.NODE_ENV !== 'production') {
-  app.commandLine.appendSwitch('remote-debugging-port', '9222');
-  console.debug('🔌 CDP remote debugging enabled on port 9222 for Playwright MCP');
+if (process.env.NODE_ENV !== "production") {
+  app.commandLine.appendSwitch("remote-debugging-port", "9222");
+  console.debug("🔌 CDP remote debugging enabled on port 9222 for Playwright MCP");
 }
 
 /**
@@ -82,7 +81,7 @@ function markSessionStarted(): void {
       fs.unlinkSync(CLEAN_SHUTDOWN_FILE);
     }
   } catch (e) {
-    console.warn('⚠️ Failed to remove clean shutdown marker:', e);
+    console.warn("⚠️ Failed to remove clean shutdown marker:", e);
   }
 }
 
@@ -93,17 +92,17 @@ function markCleanShutdown(): void {
   try {
     fs.writeFileSync(CLEAN_SHUTDOWN_FILE, new Date().toISOString());
   } catch (e) {
-    console.warn('⚠️ Failed to write clean shutdown marker:', e);
+    console.warn("⚠️ Failed to write clean shutdown marker:", e);
   }
 }
 
 /**
  * Setup request interceptors for Kick CDN domains that require special headers
  * and network-level ad blocking for Twitch.
- * 
+ *
  * NOTE: This is a SECONDARY fallback mechanism. The primary approach is the IPC proxy
  * in system-handlers.ts which uses Electron's net.request (more reliable).
- * 
+ *
  * This interceptor catches any direct image loads that bypass the ProxiedImage component.
  */
 function setupRequestInterceptors(): void {
@@ -113,10 +112,10 @@ function setupRequestInterceptors(): void {
 
   // Network-level ad blocking (onBeforeRequest)
   session.defaultSession.webRequest.onBeforeRequest(
-    { urls: ['<all_urls>'] },
+    { urls: ["<all_urls>"] },
     (details, callback) => {
       // Skip manifest URLs - handled by twitchManifestProxy
-      if (details.url.includes('ttvnw.net') && details.url.includes('.m3u8')) {
+      if (details.url.includes("ttvnw.net") && details.url.includes(".m3u8")) {
         callback({});
         return;
       }
@@ -134,15 +133,15 @@ function setupRequestInterceptors(): void {
   session.defaultSession.webRequest.onBeforeSendHeaders(
     {
       urls: [
-        'https://files.kick.com/*',
-        'https://*.files.kick.com/*',
-        'https://images.kick.com/*',
-        'https://*.images.kick.com/*',
-      ]
+        "https://files.kick.com/*",
+        "https://*.files.kick.com/*",
+        "https://images.kick.com/*",
+        "https://*.images.kick.com/*",
+      ],
     },
     (details, callback) => {
       const modifiedHeaders = { ...details.requestHeaders };
-      modifiedHeaders['Referer'] = 'https://kick.com/';
+      modifiedHeaders.Referer = "https://kick.com/";
       callback({ requestHeaders: modifiedHeaders });
     }
   );
@@ -150,25 +149,22 @@ function setupRequestInterceptors(): void {
   // CSP modification for Twitch ad blocking (onHeadersReceived)
   // Adds 'data:' to connect-src to allow blank video segment replacement
   session.defaultSession.webRequest.onHeadersReceived(
-    { urls: ['*://*.twitch.tv/*', '*://*.ttvnw.net/*'] },
+    { urls: ["*://*.twitch.tv/*", "*://*.ttvnw.net/*"] },
     (details, callback) => {
       const headers = { ...details.responseHeaders };
 
       // Find and modify Content-Security-Policy header
       const cspKey = Object.keys(headers).find(
-        key => key.toLowerCase() === 'content-security-policy'
+        (key) => key.toLowerCase() === "content-security-policy"
       );
 
       if (cspKey && headers[cspKey]) {
         const cspValues = headers[cspKey];
         if (Array.isArray(cspValues)) {
-          headers[cspKey] = cspValues.map(csp => {
+          headers[cspKey] = cspValues.map((csp) => {
             // Add 'data:' to connect-src if not already present
-            if (csp.includes('connect-src') && !csp.includes('data:')) {
-              return csp.replace(
-                /connect-src\s+([^;]+)/,
-                'connect-src $1 data: blob:'
-              );
+            if (csp.includes("connect-src") && !csp.includes("data:")) {
+              return csp.replace(/connect-src\s+([^;]+)/, "connect-src $1 data: blob:");
             }
             return csp;
           });
@@ -181,7 +177,7 @@ function setupRequestInterceptors(): void {
 }
 
 // App lifecycle events
-app.on('ready', async () => {
+app.on("ready", async () => {
   // Disable the default application menu since we use a custom frameless window
   // This saves memory and avoids unnecessary menu resource allocation
   Menu.setApplicationMenu(null);
@@ -191,15 +187,15 @@ app.on('ready', async () => {
   const cleanShutdown = wasCleanShutdown();
 
   if (!cleanShutdown) {
-    console.debug('🔍 Detected unclean shutdown, clearing cache to prevent corruption...');
+    console.debug("🔍 Detected unclean shutdown, clearing cache to prevent corruption...");
     try {
       await session.defaultSession.clearCache();
-      console.debug('🧹 Cleared disk cache');
+      console.debug("🧹 Cleared disk cache");
     } catch (e) {
-      console.warn('⚠️ Failed to clear cache:', e);
+      console.warn("⚠️ Failed to clear cache:", e);
     }
   } else {
-    console.debug('✅ Clean shutdown detected, preserving cache');
+    console.debug("✅ Clean shutdown detected, preserving cache");
   }
 
   // Mark session as started (remove sentinel until clean shutdown)
@@ -210,7 +206,7 @@ app.on('ready', async () => {
 
   // Initialize VAFT pattern service (auto-updates ad detection patterns)
   vaftPatternService.initialize().catch((error) => {
-    console.warn('[Main] VAFT pattern service initialization error:', error);
+    console.warn("[Main] VAFT pattern service initialization error:", error);
   });
 
   // Initialize ad blocking services
@@ -225,16 +221,16 @@ app.on('ready', async () => {
   cosmeticInjectionService.injectIntoWindow(mainWindow);
 
   registerIpcHandlers(mainWindow);
-  console.debug('🌩️ StreamStorm main process started');
+  console.debug("🌩️ StreamStorm main process started");
 });
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-app.on('activate', () => {
+app.on("activate", () => {
   if (BrowserWindow.getAllWindows().length === 0) {
     const mainWindow = windowManager.createMainWindow();
     cosmeticInjectionService.injectIntoWindow(mainWindow);
@@ -243,14 +239,14 @@ app.on('activate', () => {
 });
 
 // Mark clean shutdown before quitting
-app.on('before-quit', () => {
+app.on("before-quit", () => {
   markCleanShutdown();
 });
 
 // Security: Prevent new window creation from renderer
-app.on('web-contents-created', (_event, contents) => {
+app.on("web-contents-created", (_event, contents) => {
   contents.setWindowOpenHandler(() => {
-    return { action: 'deny' };
+    return { action: "deny" };
   });
 });
 
@@ -259,15 +255,15 @@ app.on('web-contents-created', (_event, contents) => {
 // Auto-recover from renderer crashes during long streaming sessions.
 // Video decoding + HLS buffers can cause renderer OOM after many hours.
 // ============================================================================
-app.on('child-process-gone', (_event, details) => {
+app.on("child-process-gone", (_event, details) => {
   console.warn(`[Main] Child process gone: type=${details.type}, reason=${details.reason}`);
 
-  if (details.type === 'GPU') {
+  if (details.type === "GPU") {
     // GPU process crash - Chromium will auto-restart it
-    console.warn('[Main] GPU process crashed - Chromium will auto-restart');
-  } else if (details.type === 'Utility') {
+    console.warn("[Main] GPU process crashed - Chromium will auto-restart");
+  } else if (details.type === "Utility") {
     // Utility process (e.g. network service) - usually auto-restarts
-    console.warn('[Main] Utility process crashed');
+    console.warn("[Main] Utility process crashed");
   }
   // Note: Renderer crashes are handled by 'render-process-gone' on webContents
   // We log here for telemetry but don't need manual recovery for renderers
@@ -275,13 +271,17 @@ app.on('child-process-gone', (_event, details) => {
 });
 
 // Handle renderer process crashes with more detail
-app.on('web-contents-created', (_event, contents) => {
-  contents.on('render-process-gone', (_e, details) => {
-    console.error(`[Main] Renderer crashed: reason=${details.reason}, exitCode=${details.exitCode}`);
+app.on("web-contents-created", (_event, contents) => {
+  contents.on("render-process-gone", (_e, details) => {
+    console.error(
+      `[Main] Renderer crashed: reason=${details.reason}, exitCode=${details.exitCode}`
+    );
 
     // If OOM killed, log for debugging
-    if (details.reason === 'oom' || details.reason === 'killed') {
-      console.error('[Main] Renderer was OOM killed - consider reducing buffer sizes or using BrowserView isolation for video');
+    if (details.reason === "oom" || details.reason === "killed") {
+      console.error(
+        "[Main] Renderer was OOM killed - consider reducing buffer sizes or using BrowserView isolation for video"
+      );
     }
   });
 });

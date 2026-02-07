@@ -1,24 +1,24 @@
-import { Link } from '@tanstack/react-router';
-import { useMemo, useState } from 'react';
-import { LuSearch, LuHeart } from 'react-icons/lu';
+import { Link } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { LuHeart, LuSearch } from "react-icons/lu";
 
-import type { UnifiedChannel, UnifiedStream } from '@/backend/api/unified/platform-types';
-import { KickIcon, TwitchIcon } from '@/components/icons/PlatformIcons';
-import { StreamGrid } from '@/components/stream/stream-grid';
-import { Button } from '@/components/ui/button';
-import { PlatformAvatar } from '@/components/ui/platform-avatar';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useFollowedChannels } from '@/hooks/queries/useChannels';
-import { useFollowedStreams } from '@/hooks/queries/useStreams';
-import { getChannelKey, getStreamKey, getChannelNameKey } from '@/lib/id-utils';
-import { cn } from '@/lib/utils';
-import type { Platform } from '@/shared/auth-types';
-import { useAuthStore } from '@/store/auth-store';
-import { useFollowStore } from '@/store/follow-store';
+import type { UnifiedChannel, UnifiedStream } from "@/backend/api/unified/platform-types";
+import { KickIcon, TwitchIcon } from "@/components/icons/PlatformIcons";
+import { StreamGrid } from "@/components/stream/stream-grid";
+import { Button } from "@/components/ui/button";
+import { PlatformAvatar } from "@/components/ui/platform-avatar";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useFollowedChannels } from "@/hooks/queries/useChannels";
+import { useFollowedStreams } from "@/hooks/queries/useStreams";
+import { getChannelKey, getChannelNameKey, getStreamKey } from "@/lib/id-utils";
+import { cn } from "@/lib/utils";
+import type { Platform } from "@/shared/auth-types";
+import { useAuthStore } from "@/store/auth-store";
+import { useFollowStore } from "@/store/follow-store";
 
 export function FollowingPage() {
-  const [filter, setFilter] = useState<Platform | 'all'>('all');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [filter, setFilter] = useState<Platform | "all">("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Auth status
   const { twitchConnected, kickConnected } = useAuthStore();
@@ -28,8 +28,12 @@ export function FollowingPage() {
 
   // 2. Remote follows
   // Only fetch if connected to respective platform
-  const { data: twitchFollows, isLoading: isLoadingTwitch } = useFollowedChannels('twitch', { enabled: twitchConnected });
-  const { data: kickFollows, isLoading: isLoadingKick } = useFollowedChannels('kick', { enabled: kickConnected });
+  const { data: twitchFollows, isLoading: isLoadingTwitch } = useFollowedChannels("twitch", {
+    enabled: twitchConnected,
+  });
+  const { data: kickFollows, isLoading: isLoadingKick } = useFollowedChannels("kick", {
+    enabled: kickConnected,
+  });
 
   // 3. Live streams (All platforms)
   // Backend now handles fetching streams for local follows even if disconnected
@@ -82,7 +86,7 @@ export function FollowingPage() {
     // Sort and filter
     allChannels.forEach((c) => {
       // Filter by Platform
-      if (filter !== 'all' && c.platform !== filter) return;
+      if (filter !== "all" && c.platform !== filter) return;
 
       // Try matching by platform-ID first, then by platform-username (slug)
       let stream = streamByIdMap.get(getChannelKey(c));
@@ -93,8 +97,11 @@ export function FollowingPage() {
       // Filter by LuSearch
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        const matchesName = c.displayName.toLowerCase().includes(q) || c.username.toLowerCase().includes(q);
-        const matchesGame = stream?.categoryName?.toLowerCase().includes(q) || stream?.title?.toLowerCase().includes(q);
+        const matchesName =
+          c.displayName.toLowerCase().includes(q) || c.username.toLowerCase().includes(q);
+        const matchesGame =
+          stream?.categoryName?.toLowerCase().includes(q) ||
+          stream?.title?.toLowerCase().includes(q);
         if (!matchesName && !matchesGame) return;
       }
 
@@ -109,9 +116,8 @@ export function FollowingPage() {
         // Channel is live
         // Ensure stream has avatar if missing (fallback to channel avatar)
         // Create a new object to avoid mutating React Query cache
-        const streamToAdd = (!stream.channelAvatar && c.avatarUrl)
-          ? { ...stream, channelAvatar: c.avatarUrl }
-          : stream;
+        const streamToAdd =
+          !stream.channelAvatar && c.avatarUrl ? { ...stream, channelAvatar: c.avatarUrl } : stream;
         live.push(streamToAdd);
       } else {
         // Channel is offline
@@ -134,7 +140,19 @@ export function FollowingPage() {
       offlineChannels: offline,
       isLoading: isLoadingStreams || loadingTwitch || loadingKick,
     };
-  }, [localFollows, twitchFollows, kickFollows, liveStreams, filter, searchQuery, isLoadingStreams, isLoadingTwitch, isLoadingKick, twitchConnected, kickConnected]);
+  }, [
+    localFollows,
+    twitchFollows,
+    kickFollows,
+    liveStreams,
+    filter,
+    searchQuery,
+    isLoadingStreams,
+    isLoadingTwitch,
+    isLoadingKick,
+    twitchConnected,
+    kickConnected,
+  ]);
 
   return (
     <div className="p-6 h-full flex flex-col gap-6">
@@ -153,25 +171,25 @@ export function FollowingPage() {
         <div className="flex items-center gap-2">
           <Button
             variant="secondary"
-            onClick={() => setFilter('all')}
-            className={filter === 'all' ? 'bg-white text-black hover:bg-white/90' : ''}
+            onClick={() => setFilter("all")}
+            className={filter === "all" ? "bg-white text-black hover:bg-white/90" : ""}
             size="sm"
           >
             All
           </Button>
           <Button
-            variant={filter === 'twitch' ? 'default' : 'secondary'}
-            onClick={() => setFilter('twitch')}
-            className={filter === 'twitch' ? 'bg-[#9146FF] hover:bg-[#9146FF]/90 text-white' : ''}
+            variant={filter === "twitch" ? "default" : "secondary"}
+            onClick={() => setFilter("twitch")}
+            className={filter === "twitch" ? "bg-[#9146FF] hover:bg-[#9146FF]/90 text-white" : ""}
             size="sm"
           >
             <TwitchIcon className="mr-2 h-4 w-4" />
             Twitch
           </Button>
           <Button
-            variant={filter === 'kick' ? 'default' : 'secondary'}
-            onClick={() => setFilter('kick')}
-            className={filter === 'kick' ? 'bg-[#53FC18] hover:bg-[#53FC18]/90 text-black' : ''}
+            variant={filter === "kick" ? "default" : "secondary"}
+            onClick={() => setFilter("kick")}
+            className={filter === "kick" ? "bg-[#53FC18] hover:bg-[#53FC18]/90 text-black" : ""}
             size="sm"
           >
             <KickIcon className="mr-2 h-4 w-4" />
@@ -242,7 +260,7 @@ export function FollowingPage() {
                       <Link
                         to="/stream/$platform/$channel"
                         params={{ platform: channel.platform, channel: channel.username }}
-                        search={{ tab: 'videos' }}
+                        search={{ tab: "videos" }}
                         className="flex flex-col items-center text-center p-3 rounded-xl hover:bg-[var(--color-background-secondary)] transition-all"
                       >
                         <div className="relative mb-2">
@@ -256,10 +274,14 @@ export function FollowingPage() {
                           <div
                             className={cn(
                               "absolute bottom-0 right-0 p-1 rounded-full bg-[var(--color-background)] border-2 border-[var(--color-background)]",
-                              channel.platform === 'twitch' ? "text-[#9146FF]" : "text-[#53FC18]"
+                              channel.platform === "twitch" ? "text-[#9146FF]" : "text-[#53FC18]"
                             )}
                           >
-                            {channel.platform === 'twitch' ? <TwitchIcon size={12} /> : <KickIcon size={12} />}
+                            {channel.platform === "twitch" ? (
+                              <TwitchIcon size={12} />
+                            ) : (
+                              <KickIcon size={12} />
+                            )}
                           </div>
                         </div>
                         <h3 className="font-medium text-sm truncate w-full group-hover:text-[var(--color-primary)] transition-colors">
@@ -277,7 +299,9 @@ export function FollowingPage() {
                 <div className="w-16 h-16 rounded-full bg-[var(--color-background-secondary)] flex items-center justify-center mb-2">
                   <LuHeart className="w-8 h-8 text-[var(--color-foreground-muted)]" />
                 </div>
-                <h3 className="text-xl font-semibold text-[var(--color-foreground)]">No followed channels found</h3>
+                <h3 className="text-xl font-semibold text-[var(--color-foreground)]">
+                  No followed channels found
+                </h3>
                 <p>
                   {searchQuery
                     ? `No matches for "${searchQuery}"`

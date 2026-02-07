@@ -4,71 +4,61 @@
  * Exports all authentication-related services and utilities.
  */
 
-// OAuth Configuration
-export {
-    PROTOCOL_SCHEME,
-    PROTOCOL_PREFIX,
-    TWITCH_OAUTH_CONFIG,
-    KICK_OAUTH_CONFIG,
-    getOAuthConfig,
-    generateCodeVerifier,
-    generateCodeChallenge,
-    generatePkceChallenge,
-    buildAuthorizationUrl,
-    generateState,
-    validateOAuthConfig,
-    isOAuthConfigured,
-    getRedirectUri,
-    DEFAULT_CALLBACK_PORT,
-    type OAuthConfig,
-    type PkceChallenge,
-    type AuthUrlParams,
-} from './oauth-config';
-
-// OAuth Callback Server (localhost HTTP server for OAuth callbacks)
-export {
-    oauthCallbackServer,
-    type OAuthCallbackResult,
-    type CallbackServerOptions,
-} from './oauth-callback-server';
-
-// Protocol Handler (for custom protocol - fallback)
-export {
-    protocolHandler,
-    type OAuthCallback,
-    type OAuthCallbackHandler,
-} from './protocol-handler';
-
 // Auth Window Manager
 export {
-    authWindowManager,
-    type AuthSession,
-    type OpenAuthWindowResult,
-    type OpenAuthWindowOptions,
-} from './auth-window';
-
-// Token Exchange
-export {
-    tokenExchangeService,
-    type TokenExchangeParams,
-    type TokenRefreshParams,
-    type TokenRevokeParams,
-} from './token-exchange';
-
-// Twitch Auth Service
-export {
-    twitchAuthService,
-    type TwitchAuthSession,
-} from './twitch-auth';
-
-// Kick Auth Service
-export {
-    kickAuthService,
-} from './kick-auth';
-
+  type AuthSession,
+  authWindowManager,
+  type OpenAuthWindowOptions,
+  type OpenAuthWindowResult,
+} from "./auth-window";
 // Device Code Flow (for Twitch - no redirect URI needed)
 export {
-    deviceCodeFlowService,
-    type DeviceCodeResult,
-} from './device-code-flow';
-
+  type DeviceCodeResult,
+  deviceCodeFlowService,
+} from "./device-code-flow";
+// Kick Auth Service
+export { kickAuthService } from "./kick-auth";
+// OAuth Callback Server (localhost HTTP server for OAuth callbacks)
+export {
+  type CallbackServerOptions,
+  type OAuthCallbackResult,
+  oauthCallbackServer,
+} from "./oauth-callback-server";
+// OAuth Configuration
+export {
+  type AuthUrlParams,
+  buildAuthorizationUrl,
+  DEFAULT_CALLBACK_PORT,
+  generateCodeChallenge,
+  generateCodeVerifier,
+  generatePkceChallenge,
+  generateState,
+  getOAuthConfig,
+  getRedirectUri,
+  isOAuthConfigured,
+  KICK_OAUTH_CONFIG,
+  type OAuthConfig,
+  type PkceChallenge,
+  PROTOCOL_PREFIX,
+  PROTOCOL_SCHEME,
+  TWITCH_OAUTH_CONFIG,
+  validateOAuthConfig,
+} from "./oauth-config";
+// Protocol Handler (for custom protocol - fallback)
+export {
+  type OAuthCallback,
+  type OAuthCallbackHandler,
+  protocolHandler,
+} from "./protocol-handler";
+// Token Exchange
+export {
+  type TokenExchangeParams,
+  type TokenRefreshParams,
+  type TokenRevokeParams,
+  tokenExchangeService,
+} from "./token-exchange";
+// Twitch Auth Service
+export {
+  type TwitchAuthSession,
+  twitchAuthService,
+} from "./twitch-auth";

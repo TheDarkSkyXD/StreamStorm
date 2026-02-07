@@ -1,3 +1,3 @@
-export { AppLayout } from './AppLayout';
-export { TitleBar } from './TitleBar';
-export { TopNavBar } from '../TopNavBar';
+export { TopNavBar } from "../TopNavBar";
+export { AppLayout } from "./AppLayout";
+export { TitleBar } from "./TitleBar";

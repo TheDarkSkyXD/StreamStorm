@@ -1,28 +1,26 @@
 export {
-  useIsElectron,
-  useAppVersion,
-  useAppVersionInfo,
-  useSystemTheme,
-  useWindowControls,
-  useOpenExternal,
-  useNotification,
-  useElectronStore,
-} from './useElectron';
-
-export {
-  useTwitchAuth,
-  useKickAuth,
+  useAuthError,
+  useAuthInitialize,
+  useAuthStatus,
+  useFollowsManager,
   useIsAuthenticated,
   useIsGuest,
-  useAuthStatus,
-  useAuthInitialize,
+  useKickAuth,
   useLocalFollows,
   usePlatformFollows,
-  useFollowsManager,
   usePreferences,
-  useAuthError,
+  useTwitchAuth,
   useUserInfo,
-} from './useAuth';
+} from "./useAuth";
+export {
+  useAppVersion,
+  useAppVersionInfo,
+  useElectronStore,
+  useIsElectron,
+  useNotification,
+  useOpenExternal,
+  useSystemTheme,
+  useWindowControls,
+} from "./useElectron";
 
-export { useUpdater, useUpdateSettings } from './useUpdater';
-
+export { useUpdater, useUpdateSettings } from "./useUpdater";

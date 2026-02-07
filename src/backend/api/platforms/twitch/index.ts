@@ -4,40 +4,37 @@
  * Exports all Twitch-specific API types, transformers, and client.
  */
 
-// Twitch API Types
-export type {
-    TwitchApiUser,
-    TwitchApiStream,
-    TwitchApiChannel,
-    TwitchApiGame,
-    TwitchApiFollow,
-    TwitchApiFollowedChannel,
-    TwitchApiVideo,
-    TwitchApiClip,
-    TwitchApiSearchChannel,
-    TwitchApiResponse,
-    TwitchTokenValidation,
-} from './twitch-types';
-
-export { TWITCH_API_BASE, TWITCH_AUTH_BASE } from './twitch-types';
-
-// Transformers
-export {
-    transformTwitchUser,
-    transformTwitchStream,
-    transformTwitchChannel,
-    transformTwitchCategory,
-    transformTwitchUserToChannel,
-    transformTwitchSearchChannel,
-    transformTwitchFollow,
-    transformTwitchVideo,
-    transformTwitchClip,
-} from './twitch-transformers';
-
 // Client
 export {
-    twitchClient,
-    type PaginationOptions,
-    type PaginatedResult,
-    type TwitchClientError,
-} from './twitch-client';
+  type PaginatedResult,
+  type PaginationOptions,
+  type TwitchClientError,
+  twitchClient,
+} from "./twitch-client";
+// Transformers
+export {
+  transformTwitchCategory,
+  transformTwitchChannel,
+  transformTwitchClip,
+  transformTwitchFollow,
+  transformTwitchSearchChannel,
+  transformTwitchStream,
+  transformTwitchUser,
+  transformTwitchUserToChannel,
+  transformTwitchVideo,
+} from "./twitch-transformers";
+// Twitch API Types
+export type {
+  TwitchApiChannel,
+  TwitchApiClip,
+  TwitchApiFollow,
+  TwitchApiFollowedChannel,
+  TwitchApiGame,
+  TwitchApiResponse,
+  TwitchApiSearchChannel,
+  TwitchApiStream,
+  TwitchApiUser,
+  TwitchApiVideo,
+  TwitchTokenValidation,
+} from "./twitch-types";
+export { TWITCH_API_BASE, TWITCH_AUTH_BASE } from "./twitch-types";

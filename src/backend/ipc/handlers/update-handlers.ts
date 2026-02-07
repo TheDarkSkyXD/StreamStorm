@@ -1,21 +1,21 @@
 /**
  * Update IPC Handlers
- * 
+ *
  * Handles IPC communication for app auto-update functionality.
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
+import { type BrowserWindow, ipcMain } from "electron";
 
-import { IPC_CHANNELS } from '../../../shared/ipc-channels';
+import { IPC_CHANNELS } from "../../../shared/ipc-channels";
 import {
-  initUpdateService,
   checkForUpdates,
   downloadUpdate,
-  installUpdate,
-  getUpdateStatus,
-  setAllowPrerelease,
   getUpdateSettings,
-} from '../../services/update-service';
+  getUpdateStatus,
+  initUpdateService,
+  installUpdate,
+  setAllowPrerelease,
+} from "../../services/update-service";
 
 export function registerUpdateHandlers(mainWindow: BrowserWindow): void {
   // IMPORTANT: Register IPC handlers FIRST, before initializing the service
@@ -27,12 +27,12 @@ export function registerUpdateHandlers(mainWindow: BrowserWindow): void {
     try {
       return await checkForUpdates();
     } catch (error) {
-      console.error('[Update] Check failed:', error);
+      console.error("[Update] Check failed:", error);
       return {
-        status: 'error',
+        status: "error",
         updateInfo: null,
         progress: null,
-        error: error instanceof Error ? error.message : 'Failed to check for updates',
+        error: error instanceof Error ? error.message : "Failed to check for updates",
         allowPrerelease: false,
       };
     }
@@ -43,12 +43,12 @@ export function registerUpdateHandlers(mainWindow: BrowserWindow): void {
     try {
       return await downloadUpdate();
     } catch (error) {
-      console.error('[Update] Download failed:', error);
+      console.error("[Update] Download failed:", error);
       return {
-        status: 'error',
+        status: "error",
         updateInfo: null,
         progress: null,
-        error: error instanceof Error ? error.message : 'Failed to download update',
+        error: error instanceof Error ? error.message : "Failed to download update",
         allowPrerelease: false,
       };
     }
@@ -59,14 +59,17 @@ export function registerUpdateHandlers(mainWindow: BrowserWindow): void {
     try {
       // Verify an update is actually downloaded before attempting install
       const { status } = getUpdateStatus();
-      if (status !== 'downloaded') {
-        return { success: false, error: 'No downloaded update to install' };
+      if (status !== "downloaded") {
+        return { success: false, error: "No downloaded update to install" };
       }
       installUpdate();
       return { success: true };
     } catch (error) {
-      console.error('[Update] Install failed:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Failed to install update' };
+      console.error("[Update] Install failed:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to install update",
+      };
     }
   });
 
@@ -75,12 +78,12 @@ export function registerUpdateHandlers(mainWindow: BrowserWindow): void {
     try {
       return getUpdateStatus();
     } catch (error) {
-      console.error('[Update] Get status failed:', error);
+      console.error("[Update] Get status failed:", error);
       return {
-        status: 'error',
+        status: "error",
         updateInfo: null,
         progress: null,
-        error: error instanceof Error ? error.message : 'Failed to get update status',
+        error: error instanceof Error ? error.message : "Failed to get update status",
         allowPrerelease: false,
       };
     }
@@ -92,24 +95,24 @@ export function registerUpdateHandlers(mainWindow: BrowserWindow): void {
     IPC_CHANNELS.UPDATE_SET_ALLOW_PRERELEASE,
     (_event, payload: { allow?: boolean } = {}) => {
       // Validate that allow is a boolean
-      if (typeof payload.allow !== 'boolean') {
+      if (typeof payload.allow !== "boolean") {
         return {
-          status: 'error',
+          status: "error",
           updateInfo: null,
           progress: null,
-          error: 'Invalid payload: allow must be a boolean',
+          error: "Invalid payload: allow must be a boolean",
           allowPrerelease: false,
         };
       }
       try {
         return setAllowPrerelease(payload.allow);
       } catch (error) {
-        console.error('[Update] Set prerelease failed:', error);
+        console.error("[Update] Set prerelease failed:", error);
         return {
-          status: 'error',
+          status: "error",
           updateInfo: null,
           progress: null,
-          error: error instanceof Error ? error.message : 'Failed to set prerelease preference',
+          error: error instanceof Error ? error.message : "Failed to set prerelease preference",
           allowPrerelease: false,
         };
       }
@@ -121,19 +124,22 @@ export function registerUpdateHandlers(mainWindow: BrowserWindow): void {
     try {
       return getUpdateSettings();
     } catch (error) {
-      console.error('[Update] Get settings failed:', error);
+      console.error("[Update] Get settings failed:", error);
       return { allowPrerelease: false };
     }
   });
 
-  console.log('[Update] IPC handlers registered');
+  console.log("[Update] IPC handlers registered");
 
   // NOW initialize the update service (after handlers are registered)
   // Wrap in try-catch to prevent initialization errors from breaking the app
   try {
     initUpdateService(mainWindow);
-    console.log('[Update] Update service initialized');
+    console.log("[Update] Update service initialized");
   } catch (error) {
-    console.warn('[Update] Update service initialization failed (this is normal in development):', error);
+    console.warn(
+      "[Update] Update service initialization failed (this is normal in development):",
+      error
+    );
   }
 }

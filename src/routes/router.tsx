@@ -1,27 +1,28 @@
 import {
-  createRouter,
+  createHashHistory,
   createRootRoute,
   createRoute,
+  createRouter,
   Outlet,
-  createHashHistory,
-} from '@tanstack/react-router';
-import React, { Suspense } from 'react';
+} from "@tanstack/react-router";
+import type React from "react";
+import { Suspense } from "react";
 
-import { AppLayout } from '@/components/layout/AppLayout';
+import { AppLayout } from "@/components/layout/AppLayout";
 import {
-  HomePage,
-  FollowingPage,
   CategoriesPage,
   CategoryDetailPage,
+  ClipPage,
+  DownloadsPage,
+  FollowingPage,
+  HistoryPage,
+  HomePage,
+  MultiStreamPage,
   SearchPage,
+  SettingsPage,
   StreamPage,
   VideoPage,
-  SettingsPage,
-  ClipPage,
-  MultiStreamPage,
-  HistoryPage,
-  DownloadsPage,
-} from '@/pages';
+} from "@/pages";
 
 // Loading fallback for lazy-loaded pages
 const PageLoader = () => (
@@ -45,7 +46,7 @@ const rootRoute = createRootRoute({
 // App Layout Route (Pathless) - provides the sidebar/navbar
 const appLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
-  id: '_app',
+  id: "_app",
   component: () => (
     <AppLayout>
       <Outlet />
@@ -55,41 +56,40 @@ const appLayoutRoute = createRoute({
 
 // Popout Route (Minimal layout)
 
-
 // Home/Browse page
 const homeRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/',
+  path: "/",
   component: withSuspense(HomePage),
 });
 
 // Following page
 const followingRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/following',
+  path: "/following",
   component: withSuspense(FollowingPage),
 });
 
 // Categories page
 const categoriesRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/categories',
+  path: "/categories",
   component: withSuspense(CategoriesPage),
 });
 
 // Category detail page
 const categoryDetailRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/categories/$platform/$categoryId',
+  path: "/categories/$platform/$categoryId",
   component: withSuspense(CategoryDetailPage),
 });
 
 // Search page
 const searchRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/search',
+  path: "/search",
   validateSearch: (search: Record<string, unknown>) => ({
-    q: (search.q as string) || '',
+    q: (search.q as string) || "",
   }),
   component: withSuspense(SearchPage),
 });
@@ -97,9 +97,9 @@ const searchRoute = createRoute({
 // Stream viewing page
 const streamRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/stream/$platform/$channel',
-  validateSearch: (search: Record<string, unknown>): { tab: 'home' | 'videos' | 'clips' } => ({
-    tab: (search.tab as 'home' | 'videos' | 'clips') || 'home',
+  path: "/stream/$platform/$channel",
+  validateSearch: (search: Record<string, unknown>): { tab: "home" | "videos" | "clips" } => ({
+    tab: (search.tab as "home" | "videos" | "clips") || "home",
   }),
   component: withSuspense(StreamPage),
 });
@@ -107,8 +107,10 @@ const streamRoute = createRoute({
 // Video viewing page (VOD)
 const videoRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/video/$platform/$videoId',
-  validateSearch: (search: Record<string, unknown>): {
+  path: "/video/$platform/$videoId",
+  validateSearch: (
+    search: Record<string, unknown>
+  ): {
     src?: string;
     title?: string;
     channelName?: string;
@@ -132,10 +134,10 @@ const videoRoute = createRoute({
     date: (search.date as string) || undefined,
     category: (search.category as string) || undefined,
     duration: (search.duration as string) || undefined,
-    isSubOnly: search.isSubOnly === true || search.isSubOnly === 'true' || undefined,
+    isSubOnly: search.isSubOnly === true || search.isSubOnly === "true" || undefined,
     tags: (search.tags as string[]) || undefined,
     language: (search.language as string) || undefined,
-    isMature: search.isMature === true || search.isMature === 'true' || undefined,
+    isMature: search.isMature === true || search.isMature === "true" || undefined,
   }),
   component: withSuspense(VideoPage),
 });
@@ -143,35 +145,35 @@ const videoRoute = createRoute({
 // Clip viewing page
 const clipRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/clip/$platform/$clipId',
+  path: "/clip/$platform/$clipId",
   component: withSuspense(ClipPage),
 });
 
 // Settings page
 const settingsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/settings',
+  path: "/settings",
   component: withSuspense(SettingsPage),
 });
 
 // MultiStream page
 const multiStreamRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/multistream',
+  path: "/multistream",
   component: withSuspense(MultiStreamPage),
 });
 
 // History page
 const historyRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/history',
+  path: "/history",
   component: withSuspense(HistoryPage),
 });
 
 // Downloads page
 const downloadsRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
-  path: '/downloads',
+  path: "/downloads",
   component: withSuspense(DownloadsPage),
 });
 
@@ -200,7 +202,7 @@ export const router = createRouter({
 });
 
 // Type declarations for type-safe routing
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
   }

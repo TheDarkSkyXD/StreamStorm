@@ -1,11 +1,11 @@
 /**
  * Cosmetic Injection Service
- * 
+ *
  * Handles CSS injection and scriptlet execution for ad element hiding.
  * Inspired by Ghostery's insertCSS and executeJavaScript patterns.
  */
 
-import { BrowserWindow } from 'electron';
+import type { BrowserWindow } from "electron";
 
 // CSS rules to hide Twitch ad elements (if they ever appear in our context)
 const TWITCH_COSMETIC_CSS = `
@@ -69,49 +69,57 @@ class CosmeticInjectionService {
 
   initialize(): void {
     // IPC handler registered in adblock-handlers.ts to avoid duplicate registration
-    console.debug('[CosmeticInjection] Service initialized');
+    console.debug("[CosmeticInjection] Service initialized");
   }
 
   // Inject into a specific window (called on window creation)
   async injectIntoWindow(window: BrowserWindow): Promise<void> {
     if (!this.isEnabled) return;
     if (this.injectedWindows.has(window.webContents)) return;
-    
+
     try {
-      await window.webContents.insertCSS(TWITCH_COSMETIC_CSS, { cssOrigin: 'user' });
+      await window.webContents.insertCSS(TWITCH_COSMETIC_CSS, { cssOrigin: "user" });
       await window.webContents.executeJavaScript(TWITCH_SCRIPTLETS, true);
       this.injectedWindows.add(window.webContents);
-      console.debug('[CosmeticInjection] Injected into window');
+      console.debug("[CosmeticInjection] Injected into window");
     } catch (e) {
-      console.error('[CosmeticInjection] Failed to inject into window:', e);
+      console.error("[CosmeticInjection] Failed to inject into window:", e);
     }
   }
 
   // Inject into WebContents directly (called from IPC handler)
-  async injectIntoWebContents(webContents: Electron.WebContents): Promise<{ injected: boolean; error?: string }> {
+  async injectIntoWebContents(
+    webContents: Electron.WebContents
+  ): Promise<{ injected: boolean; error?: string }> {
     if (!this.isEnabled) {
-      return { injected: false, error: 'cosmetic injection disabled' };
+      return { injected: false, error: "cosmetic injection disabled" };
     }
-    
+
     if (this.injectedWindows.has(webContents)) {
       return { injected: true }; // Already injected
     }
-    
+
     try {
-      await webContents.insertCSS(TWITCH_COSMETIC_CSS, { cssOrigin: 'user' });
+      await webContents.insertCSS(TWITCH_COSMETIC_CSS, { cssOrigin: "user" });
       await webContents.executeJavaScript(TWITCH_SCRIPTLETS, true);
       this.injectedWindows.add(webContents);
-      console.debug('[CosmeticInjection] Injected into WebContents');
+      console.debug("[CosmeticInjection] Injected into WebContents");
       return { injected: true };
     } catch (e) {
-      console.error('[CosmeticInjection] Failed to inject into WebContents:', e);
+      console.error("[CosmeticInjection] Failed to inject into WebContents:", e);
       return { injected: false, error: String(e) };
     }
   }
 
-  enable(): void { this.isEnabled = true; }
-  disable(): void { this.isEnabled = false; }
-  isActive(): boolean { return this.isEnabled; }
+  enable(): void {
+    this.isEnabled = true;
+  }
+  disable(): void {
+    this.isEnabled = false;
+  }
+  isActive(): boolean {
+    return this.isEnabled;
+  }
 }
 
 export const cosmeticInjectionService = new CosmeticInjectionService();

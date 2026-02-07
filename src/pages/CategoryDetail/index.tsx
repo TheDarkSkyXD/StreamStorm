@@ -1,32 +1,31 @@
+import { useQuery } from "@tanstack/react-query";
+import { Link, useParams } from "@tanstack/react-router";
+import { LuArrowLeft } from "react-icons/lu";
 
-import { useQuery } from '@tanstack/react-query';
-import { useParams, Link } from '@tanstack/react-router';
-import { LuArrowLeft } from 'react-icons/lu';
-
-import { UnifiedCategory } from '@/backend/api/unified/platform-types';
-import { StreamGrid } from '@/components/stream/stream-grid';
-import { ProxiedImage } from '@/components/ui/proxied-image';
-import { useCategoryById } from '@/hooks/queries/useCategories';
-import { useStreamsByCategory } from '@/hooks/queries/useStreams';
-import { normalizeCategoryName, formatViewerCount } from '@/lib/utils';
-import { Platform } from '@/shared/auth-types';
+import type { UnifiedCategory } from "@/backend/api/unified/platform-types";
+import { StreamGrid } from "@/components/stream/stream-grid";
+import { ProxiedImage } from "@/components/ui/proxied-image";
+import { useCategoryById } from "@/hooks/queries/useCategories";
+import { useStreamsByCategory } from "@/hooks/queries/useStreams";
+import { formatViewerCount, normalizeCategoryName } from "@/lib/utils";
+import type { Platform } from "@/shared/auth-types";
 
 export function CategoryDetailPage() {
-  const { platform, categoryId } = useParams({ from: '/_app/categories/$platform/$categoryId' });
+  const { platform, categoryId } = useParams({ from: "/_app/categories/$platform/$categoryId" });
 
   // 1. Fetch primary category details
-  const {
-    data: category,
-    isLoading: isCategoryLoading
-  } = useCategoryById(categoryId, platform as Platform);
+  const { data: category, isLoading: isCategoryLoading } = useCategoryById(
+    categoryId,
+    platform as Platform
+  );
 
   // 2. Determine other platform
   const currentPlatform = platform as Platform;
-  const otherPlatform: Platform = currentPlatform === 'twitch' ? 'kick' : 'twitch';
+  const otherPlatform: Platform = currentPlatform === "twitch" ? "kick" : "twitch";
 
   // 3. Find corresponding category on other platform
   const { data: otherCategory } = useQuery({
-    queryKey: ['category-match', category?.name, otherPlatform],
+    queryKey: ["category-match", category?.name, otherPlatform],
     queryFn: async () => {
       if (!category?.name) return null;
       const normalizedName = normalizeCategoryName(category.name);
@@ -34,35 +33,36 @@ export function CategoryDetailPage() {
       const response = await window.electronAPI.categories.search({
         query: category.name,
         platform: otherPlatform,
-        limit: 10
+        limit: 10,
       });
 
       const candidates = (response.data as UnifiedCategory[]) || [];
-      return candidates.find(c => normalizeCategoryName(c.name) === normalizedName) || null;
+      return candidates.find((c) => normalizeCategoryName(c.name) === normalizedName) || null;
     },
     enabled: !!category?.name,
-    staleTime: 1000 * 60 * 5 // Cache for 5 mins
+    staleTime: 1000 * 60 * 5, // Cache for 5 mins
   });
 
   // 4. Fetch streams for primary category
-  const {
-    data: primaryStreams,
-    isLoading: isPrimaryStreamsLoading
-  } = useStreamsByCategory(categoryId, currentPlatform, 50);
+  const { data: primaryStreams, isLoading: isPrimaryStreamsLoading } = useStreamsByCategory(
+    categoryId,
+    currentPlatform,
+    50
+  );
 
   // 5. Fetch streams for secondary category (if found)
-  const {
-    data: secondaryStreams,
-    isLoading: _isSecondaryStreamsLoading
-  } = useStreamsByCategory(otherCategory?.id || '', otherPlatform, 50);
+  const { data: secondaryStreams, isLoading: _isSecondaryStreamsLoading } = useStreamsByCategory(
+    otherCategory?.id || "",
+    otherPlatform,
+    50
+  );
 
   const isLoading = isCategoryLoading || isPrimaryStreamsLoading;
 
   // 6. Merge and sort streams
-  const streams = [
-    ...(primaryStreams || []),
-    ...(secondaryStreams || [])
-  ].sort((a, b) => b.viewerCount - a.viewerCount);
+  const streams = [...(primaryStreams || []), ...(secondaryStreams || [])].sort(
+    (a, b) => b.viewerCount - a.viewerCount
+  );
 
   // Calculate total viewers from streams
   const totalViewers = streams.reduce((acc, stream) => acc + (stream.viewerCount || 0), 0);
@@ -88,7 +88,10 @@ export function CategoryDetailPage() {
 
       {!isLoading && (
         <div className="flex flex-col gap-6">
-          <Link to="/categories" className="text-[var(--color-foreground-muted)] hover:text-white flex items-center gap-2 transition-colors w-fit">
+          <Link
+            to="/categories"
+            className="text-[var(--color-foreground-muted)] hover:text-white flex items-center gap-2 transition-colors w-fit"
+          >
             <LuArrowLeft size={20} />
             Back to Categories
           </Link>
@@ -97,7 +100,7 @@ export function CategoryDetailPage() {
             <div className="w-48 aspect-[3/4] bg-[var(--color-background-tertiary)] rounded-xl shadow-2xl flex items-center justify-center shrink-0 border border-[var(--color-border)] relative overflow-hidden group">
               {category?.boxArtUrl ? (
                 <ProxiedImage
-                  src={category.boxArtUrl.replace('{width}', '285').replace('{height}', '380')}
+                  src={category.boxArtUrl.replace("{width}", "285").replace("{height}", "380")}
                   alt={category.name}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                 />
@@ -111,7 +114,9 @@ export function CategoryDetailPage() {
               <h1 className="text-4xl md:text-6xl font-black tracking-tight">{category?.name}</h1>
               <div className="flex items-center justify-center md:justify-start gap-3 text-lg">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-[var(--color-primary)] text-xl">{formatViewerCount(totalViewers)}</span>
+                  <span className="font-bold text-[var(--color-primary)] text-xl">
+                    {formatViewerCount(totalViewers)}
+                  </span>
                   <span className="text-[var(--color-foreground-secondary)]">Viewers</span>
                 </div>
               </div>

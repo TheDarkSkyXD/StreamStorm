@@ -1,118 +1,135 @@
-
-import { ProxiedImage } from '@/components/ui/proxied-image';
-import { cn } from '@/lib/utils';
+import { ProxiedImage } from "@/components/ui/proxied-image";
+import { cn } from "@/lib/utils";
 
 interface PlatformAvatarProps {
-    src?: string | null;
-    alt: string;
-    platform: 'twitch' | 'kick';
-    size?: string; // e.g., "w-10 h-10" or "w-16 h-16"
-    className?: string;
-    showBadge?: boolean;
-    isLive?: boolean;
-    liveStatusType?: 'dot' | 'badge';
-    disablePlatformBorder?: boolean;
+  src?: string | null;
+  alt: string;
+  platform: "twitch" | "kick";
+  size?: string; // e.g., "w-10 h-10" or "w-16 h-16"
+  className?: string;
+  showBadge?: boolean;
+  isLive?: boolean;
+  liveStatusType?: "dot" | "badge";
+  disablePlatformBorder?: boolean;
 }
 
 export function PlatformAvatar({
-    src,
-    alt,
-    platform,
-    size = "w-10 h-10",
-    className,
-    showBadge = true,
-    isLive = false,
-    liveStatusType = 'dot',
-    disablePlatformBorder = false,
+  src,
+  alt,
+  platform,
+  size = "w-10 h-10",
+  className,
+  showBadge = true,
+  isLive = false,
+  liveStatusType = "dot",
+  disablePlatformBorder = false,
 }: PlatformAvatarProps) {
-    // Platform specific styles
-    const styles = {
-        twitch: {
-            badgeBg: 'bg-[#9146FF]',
-            badgeText: 'text-white',
-            badgeLabel: 'T',
-            ring: 'ring-[#9146FF]',
-        },
-        kick: {
-            badgeBg: 'bg-[#53FC18]',
-            badgeText: 'text-black',
-            badgeLabel: 'K',
-            ring: 'ring-[#53FC18]',
-        }
-    };
+  // Platform specific styles
+  const styles = {
+    twitch: {
+      badgeBg: "bg-[#9146FF]",
+      badgeText: "text-white",
+      badgeLabel: "T",
+      ring: "ring-[#9146FF]",
+    },
+    kick: {
+      badgeBg: "bg-[#53FC18]",
+      badgeText: "text-black",
+      badgeLabel: "K",
+      ring: "ring-[#53FC18]",
+    },
+  };
 
-    const platformStyle = styles[platform] || styles.twitch;
+  const platformStyle = styles[platform] || styles.twitch;
 
-    // Extract width value to calculate badge size roughly (or just use fixed sizes)
-    // A heuristic for badge size based on avatar size class could be useful, 
-    // but for now let's use a reasonable default relative to the container.
-    // Actually, fixed sizes based on specific classes might be safer if passed in.
-    // Let's assume standard tailwind classes.
+  // Extract width value to calculate badge size roughly (or just use fixed sizes)
+  // A heuristic for badge size based on avatar size class could be useful,
+  // but for now let's use a reasonable default relative to the container.
+  // Actually, fixed sizes based on specific classes might be safer if passed in.
+  // Let's assume standard tailwind classes.
 
-    const isLarge = size.includes('w-16') || size.includes('w-20') || size.includes('w-24');
-    const badgeSize = isLarge ? "w-5 h-5 text-[10px]" : "w-4 h-4 text-[8px]";
-    const badgeOffset = isLarge ? "-bottom-1 -right-1" : "-bottom-0.5 -right-0.5";
-    const borderSize = isLarge ? "border-2" : "border-[1.5px]";
+  const isLarge = size.includes("w-16") || size.includes("w-20") || size.includes("w-24");
+  const badgeSize = isLarge ? "w-5 h-5 text-[10px]" : "w-4 h-4 text-[8px]";
+  const badgeOffset = isLarge ? "-bottom-1 -right-1" : "-bottom-0.5 -right-0.5";
+  const borderSize = isLarge ? "border-2" : "border-[1.5px]";
 
-    return (
-        <div className={cn("relative shrink-0 rounded-full", size, className)}>
-            <div className={cn(
-                "w-full h-full rounded-full",
-                !disablePlatformBorder && "p-0.5",
-                !disablePlatformBorder && (platform === 'twitch' ? 'bg-[#9146FF]' : 'bg-[#53FC18]')
-            )}>
-                <ProxiedImage
-                    src={src}
-                    alt={alt}
-                    className={cn(
-                        "w-full h-full rounded-full object-cover",
-                        "bg-[var(--color-background-tertiary)]", // Background while loading
-                        !disablePlatformBorder && "border-2 border-[var(--color-background)]" // Inner border to separate image from platform color
-                    )}
-                    fallback={
-                        <div className={cn(
-                            "w-full h-full rounded-full flex items-center justify-center",
-                            "bg-[var(--color-background-tertiary)] border-2 border-[var(--color-background)]"
-                        )}>
-                            <span className="font-bold text-[var(--color-foreground-muted)] uppercase select-none" style={{ fontSize: '120%' }}>
-                                {(alt || '?').slice(0, 1)}
-                            </span>
-                        </div>
-                    }
-                />
+  return (
+    <div className={cn("relative shrink-0 rounded-full", size, className)}>
+      <div
+        className={cn(
+          "w-full h-full rounded-full",
+          !disablePlatformBorder && "p-0.5",
+          !disablePlatformBorder && (platform === "twitch" ? "bg-[#9146FF]" : "bg-[#53FC18]")
+        )}
+      >
+        <ProxiedImage
+          src={src}
+          alt={alt}
+          className={cn(
+            "w-full h-full rounded-full object-cover",
+            "bg-[var(--color-background-tertiary)]", // Background while loading
+            !disablePlatformBorder && "border-2 border-[var(--color-background)]" // Inner border to separate image from platform color
+          )}
+          fallback={
+            <div
+              className={cn(
+                "w-full h-full rounded-full flex items-center justify-center",
+                "bg-[var(--color-background-tertiary)] border-2 border-[var(--color-background)]"
+              )}
+            >
+              <span
+                className="font-bold text-[var(--color-foreground-muted)] uppercase select-none"
+                style={{ fontSize: "120%" }}
+              >
+                {(alt || "?").slice(0, 1)}
+              </span>
             </div>
+          }
+        />
+      </div>
 
-            {/* Live Indicator (overrides badge usually, or sits alongside?) 
+      {/* Live Indicator (overrides badge usually, or sits alongside?) 
                 In SearchResults: Red dot bottom-right.
                 In StreamCard: "LIVE" text top-left (on thumbnail).
             */}
-            {isLive ? (
-                liveStatusType === 'badge' ? (
-                    <div className={cn(
-                        "absolute -bottom-2.5 left-1/2 -translate-x-1/2 rounded border-[3px] flex items-center justify-center font-bold px-1.5 py-0.5 text-[10px] leading-none",
-                        platform === 'twitch' ? 'bg-[#9146FF] text-white border-[var(--color-background)]' : 'bg-[#53FC18] text-black !border-[#53FC18]'
-                    )}>
-                        LIVE
-                    </div>
-                ) : (
-                    <div className={cn(
-                        "absolute bg-red-500 rounded-full border-[2px] border-[var(--color-background)]",
-                        badgeOffset,
-                        isLarge ? "w-4 h-4" : "w-3 h-3"
-                    )} />
-                )
-            ) : showBadge && platform !== 'twitch' && (
-                <div className={cn(
-                    "absolute rounded-full border-[var(--color-background)] flex items-center justify-center font-bold select-none",
-                    badgeOffset,
-                    badgeSize,
-                    borderSize,
-                    platformStyle.badgeBg,
-                    platformStyle.badgeText
-                )}>
-                    {platformStyle.badgeLabel}
-                </div>
+      {isLive ? (
+        liveStatusType === "badge" ? (
+          <div
+            className={cn(
+              "absolute -bottom-2.5 left-1/2 -translate-x-1/2 rounded border-[3px] flex items-center justify-center font-bold px-1.5 py-0.5 text-[10px] leading-none",
+              platform === "twitch"
+                ? "bg-[#9146FF] text-white border-[var(--color-background)]"
+                : "bg-[#53FC18] text-black !border-[#53FC18]"
             )}
-        </div>
-    );
+          >
+            LIVE
+          </div>
+        ) : (
+          <div
+            className={cn(
+              "absolute bg-red-500 rounded-full border-[2px] border-[var(--color-background)]",
+              badgeOffset,
+              isLarge ? "w-4 h-4" : "w-3 h-3"
+            )}
+          />
+        )
+      ) : (
+        showBadge &&
+        platform !== "twitch" && (
+          <div
+            className={cn(
+              "absolute rounded-full border-[var(--color-background)] flex items-center justify-center font-bold select-none",
+              badgeOffset,
+              badgeSize,
+              borderSize,
+              platformStyle.badgeBg,
+              platformStyle.badgeText
+            )}
+          >
+            {platformStyle.badgeLabel}
+          </div>
+        )
+      )}
+    </div>
+  );
 }

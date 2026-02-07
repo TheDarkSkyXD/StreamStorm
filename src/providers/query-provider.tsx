@@ -1,15 +1,16 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React, { lazy, Suspense } from 'react';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type React from "react";
+import { lazy, Suspense } from "react";
 
 // Lazy load ReactQueryDevtools only in development to avoid bundling in production
 // This can save ~200KB+ in production bundle size
-const isDev = process.env.NODE_ENV !== 'production';
+const isDev = process.env.NODE_ENV !== "production";
 const ReactQueryDevtools = isDev
   ? lazy(() =>
-    import('@tanstack/react-query-devtools').then((mod) => ({
-      default: mod.ReactQueryDevtools,
-    }))
-  )
+      import("@tanstack/react-query-devtools").then((mod) => ({
+        default: mod.ReactQueryDevtools,
+      }))
+    )
   : () => null;
 
 // Create a client with sensible defaults

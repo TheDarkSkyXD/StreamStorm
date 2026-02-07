@@ -6,21 +6,21 @@
  * but allows http://localhost for desktop apps.
  */
 
-import http from 'http';
-import { URL } from 'url';
+import http from "node:http";
+import { URL } from "node:url";
 
-import type { Platform } from '../../shared/auth-types';
+import type { Platform } from "../../shared/auth-types";
 
 // ========== Types ==========
 
 export interface OAuthCallbackResult {
-    code: string;
-    state: string;
+  code: string;
+  state: string;
 }
 
 export interface CallbackServerOptions {
-    port?: number;
-    timeout?: number; // ms
+  port?: number;
+  timeout?: number; // ms
 }
 
 // ========== Constants ==========
@@ -32,47 +32,47 @@ const PORT_RANGE_SIZE = 100; // Will try ports 8765-8864
 // ========== Callback Server Class ==========
 
 class OAuthCallbackServer {
-    private server: http.Server | null = null;
-    private currentPort: number = DEFAULT_PORT;
+  private server: http.Server | null = null;
+  private currentPort: number = DEFAULT_PORT;
 
-    /**
-     * Get the redirect URI for a platform
-     */
-    getRedirectUri(platform: Platform): string {
-        return `http://localhost:${this.currentPort}/auth/${platform}/callback`;
-    }
+  /**
+   * Get the redirect URI for a platform
+   */
+  getRedirectUri(platform: Platform): string {
+    return `http://localhost:${this.currentPort}/auth/${platform}/callback`;
+  }
 
-    /**
-     * Start the callback server and wait for the OAuth callback
-     */
-    async waitForCallback(
-        platform: Platform,
-        expectedState: string,
-        options: CallbackServerOptions = {}
-    ): Promise<OAuthCallbackResult> {
-        const timeout = options.timeout ?? 5 * 60 * 1000; // 5 minute default
-        const port = options.port ?? DEFAULT_PORT;
+  /**
+   * Start the callback server and wait for the OAuth callback
+   */
+  async waitForCallback(
+    platform: Platform,
+    expectedState: string,
+    options: CallbackServerOptions = {}
+  ): Promise<OAuthCallbackResult> {
+    const timeout = options.timeout ?? 5 * 60 * 1000; // 5 minute default
+    const port = options.port ?? DEFAULT_PORT;
 
-        return new Promise((resolve, reject) => {
-            let resolved = false;
+    return new Promise((resolve, reject) => {
+      let resolved = false;
 
-            // Create the server
-            this.server = http.createServer((req, res) => {
-                try {
-                    const url = new URL(req.url || '', `http://localhost:${port}`);
+      // Create the server
+      this.server = http.createServer((req, res) => {
+        try {
+          const url = new URL(req.url || "", `http://localhost:${port}`);
 
-                    // Check if this is the callback path
-                    if (url.pathname === `/auth/${platform}/callback`) {
-                        const code = url.searchParams.get('code');
-                        const state = url.searchParams.get('state');
-                        const error = url.searchParams.get('error');
-                        const errorDescription = url.searchParams.get('error_description');
+          // Check if this is the callback path
+          if (url.pathname === `/auth/${platform}/callback`) {
+            const code = url.searchParams.get("code");
+            const state = url.searchParams.get("state");
+            const error = url.searchParams.get("error");
+            const errorDescription = url.searchParams.get("error_description");
 
-                        // Send response to browser
-                        res.writeHead(200, { 'Content-Type': 'text/html' });
+            // Send response to browser
+            res.writeHead(200, { "Content-Type": "text/html" });
 
-                        if (error) {
-                            res.end(`
+            if (error) {
+              res.end(`
                                 <!DOCTYPE html>
                                 <html>
                                 <head>
@@ -87,16 +87,16 @@ class OAuthCallbackServer {
                                 </html>
                             `);
 
-                            if (!resolved) {
-                                resolved = true;
-                                this.stop();
-                                reject(new Error(errorDescription || error || 'Authentication failed'));
-                            }
-                            return;
-                        }
+              if (!resolved) {
+                resolved = true;
+                this.stop();
+                reject(new Error(errorDescription || error || "Authentication failed"));
+              }
+              return;
+            }
 
-                        if (!code || !state) {
-                            res.end(`
+            if (!code || !state) {
+              res.end(`
                                 <!DOCTYPE html>
                                 <html>
                                 <head>
@@ -111,17 +111,17 @@ class OAuthCallbackServer {
                                 </html>
                             `);
 
-                            if (!resolved) {
-                                resolved = true;
-                                this.stop();
-                                reject(new Error('Invalid callback: missing code or state'));
-                            }
-                            return;
-                        }
+              if (!resolved) {
+                resolved = true;
+                this.stop();
+                reject(new Error("Invalid callback: missing code or state"));
+              }
+              return;
+            }
 
-                        // Validate state
-                        if (state !== expectedState) {
-                            res.end(`
+            // Validate state
+            if (state !== expectedState) {
+              res.end(`
                                 <!DOCTYPE html>
                                 <html>
                                 <head>
@@ -136,21 +136,23 @@ class OAuthCallbackServer {
                                 </html>
                             `);
 
-                            if (!resolved) {
-                                resolved = true;
-                                this.stop();
-                                reject(new Error('State mismatch'));
-                            }
-                            return;
-                        }
+              if (!resolved) {
+                resolved = true;
+                this.stop();
+                reject(new Error("State mismatch"));
+              }
+              return;
+            }
 
-                        // Success!
-                        // Use platform-specific colors
-                        const bgColor = platform === 'twitch' ? '#9146FF' : platform === 'kick' ? '#53FC18' : '#1a1a2e';
-                        const spinnerColor = platform === 'twitch' ? '#ffffff' : platform === 'kick' ? '#1a1a2e' : '#9146ff';
-                        const textColor = platform === 'kick' ? '#1a1a2e' : '#ffffff';
+            // Success!
+            // Use platform-specific colors
+            const bgColor =
+              platform === "twitch" ? "#9146FF" : platform === "kick" ? "#53FC18" : "#1a1a2e";
+            const spinnerColor =
+              platform === "twitch" ? "#ffffff" : platform === "kick" ? "#1a1a2e" : "#9146ff";
+            const textColor = platform === "kick" ? "#1a1a2e" : "#ffffff";
 
-                        res.end(`
+            res.end(`
                             <!DOCTYPE html>
                             <html>
                             <head>
@@ -193,75 +195,74 @@ class OAuthCallbackServer {
                             </html>
                         `);
 
-
-                        if (!resolved) {
-                            resolved = true;
-                            this.stop();
-                            resolve({ code, state });
-                        }
-                    } else {
-                        // Not the callback path
-                        res.writeHead(404, { 'Content-Type': 'text/plain' });
-                        res.end('Not found');
-                    }
-                } catch (error) {
-                    console.error('Error handling callback:', error);
-                    res.writeHead(500, { 'Content-Type': 'text/plain' });
-                    res.end('Internal server error');
-                }
-            });
-
-            // Handle server errors
-            this.server.on('error', (error: NodeJS.ErrnoException) => {
-                if (error.code === 'EADDRINUSE') {
-                    // Port in use, try next port
-                    this.currentPort++;
-                    if (this.currentPort < DEFAULT_PORT + PORT_RANGE_SIZE) {
-                        console.debug(`⚠️ Port ${port} in use, trying ${this.currentPort}...`);
-                        this.server?.close();
-                        this.server?.listen(this.currentPort);
-                    } else {
-                        reject(new Error('No available ports for OAuth callback server'));
-                    }
-                } else {
-                    reject(error);
-                }
-            });
-
-            // Start listening
-            this.currentPort = port;
-            this.server.listen(port, () => {
-                console.debug(`🔐 OAuth callback server listening on http://localhost:${this.currentPort}`);
-            });
-
-            // Set timeout
-            setTimeout(() => {
-                if (!resolved) {
-                    resolved = true;
-                    this.stop();
-                    reject(new Error('OAuth timeout - no callback received'));
-                }
-            }, timeout);
-        });
-    }
-
-    /**
-     * Stop the callback server
-     */
-    stop(): void {
-        if (this.server) {
-            this.server.close();
-            this.server = null;
-            console.debug('🔐 OAuth callback server stopped');
+            if (!resolved) {
+              resolved = true;
+              this.stop();
+              resolve({ code, state });
+            }
+          } else {
+            // Not the callback path
+            res.writeHead(404, { "Content-Type": "text/plain" });
+            res.end("Not found");
+          }
+        } catch (error) {
+          console.error("Error handling callback:", error);
+          res.writeHead(500, { "Content-Type": "text/plain" });
+          res.end("Internal server error");
         }
-    }
+      });
 
-    /**
-     * Get the current port
-     */
-    getPort(): number {
-        return this.currentPort;
+      // Handle server errors
+      this.server.on("error", (error: NodeJS.ErrnoException) => {
+        if (error.code === "EADDRINUSE") {
+          // Port in use, try next port
+          this.currentPort++;
+          if (this.currentPort < DEFAULT_PORT + PORT_RANGE_SIZE) {
+            console.debug(`⚠️ Port ${port} in use, trying ${this.currentPort}...`);
+            this.server?.close();
+            this.server?.listen(this.currentPort);
+          } else {
+            reject(new Error("No available ports for OAuth callback server"));
+          }
+        } else {
+          reject(error);
+        }
+      });
+
+      // Start listening
+      this.currentPort = port;
+      this.server.listen(port, () => {
+        console.debug(`🔐 OAuth callback server listening on http://localhost:${this.currentPort}`);
+      });
+
+      // Set timeout
+      setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          this.stop();
+          reject(new Error("OAuth timeout - no callback received"));
+        }
+      }, timeout);
+    });
+  }
+
+  /**
+   * Stop the callback server
+   */
+  stop(): void {
+    if (this.server) {
+      this.server.close();
+      this.server = null;
+      console.debug("🔐 OAuth callback server stopped");
     }
+  }
+
+  /**
+   * Get the current port
+   */
+  getPort(): number {
+    return this.currentPort;
+  }
 }
 
 // ========== Export Singleton ==========

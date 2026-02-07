@@ -4,37 +4,35 @@
  * Central export point for all emote-related services and types.
  */
 
-// Types
-export * from './emote-types';
-
+export { SevenTVEmoteProvider, sevenTVEmoteProvider } from "./7tv-emotes";
+export { BTTVEmoteProvider, bttvEmoteProvider } from "./bttv-emotes";
 // Manager
-export { emoteManager, EmoteManager } from './emote-manager';
-
+export { EmoteManager, emoteManager } from "./emote-manager";
+// Types
+export * from "./emote-types";
+export { FFZEmoteProvider, ffzEmoteProvider } from "./ffz-emotes";
+export { KickEmoteProvider, kickEmoteProvider } from "./kick-emotes";
 // Providers
-export { twitchEmoteProvider, TwitchEmoteProvider } from './twitch-emotes';
-export { kickEmoteProvider, KickEmoteProvider } from './kick-emotes';
-export { bttvEmoteProvider, BTTVEmoteProvider } from './bttv-emotes';
-export { ffzEmoteProvider, FFZEmoteProvider } from './ffz-emotes';
-export { sevenTVEmoteProvider, SevenTVEmoteProvider } from './7tv-emotes';
+export { TwitchEmoteProvider, twitchEmoteProvider } from "./twitch-emotes";
 
+import { sevenTVEmoteProvider } from "./7tv-emotes";
+import { bttvEmoteProvider } from "./bttv-emotes";
 // Initialize providers with the manager
-import { emoteManager } from './emote-manager';
-import { twitchEmoteProvider } from './twitch-emotes';
-import { kickEmoteProvider } from './kick-emotes';
-import { bttvEmoteProvider } from './bttv-emotes';
-import { ffzEmoteProvider } from './ffz-emotes';
-import { sevenTVEmoteProvider } from './7tv-emotes';
+import { emoteManager } from "./emote-manager";
+import { ffzEmoteProvider } from "./ffz-emotes";
+import { kickEmoteProvider } from "./kick-emotes";
+import { twitchEmoteProvider } from "./twitch-emotes";
 
 /**
  * Register all emote providers with the manager
  * Call this during app initialization
  */
 export function initializeEmoteProviders(): void {
-    emoteManager.registerProvider(twitchEmoteProvider);
-    emoteManager.registerProvider(kickEmoteProvider);
-    emoteManager.registerProvider(bttvEmoteProvider);
-    emoteManager.registerProvider(ffzEmoteProvider);
-    emoteManager.registerProvider(sevenTVEmoteProvider);
+  emoteManager.registerProvider(twitchEmoteProvider);
+  emoteManager.registerProvider(kickEmoteProvider);
+  emoteManager.registerProvider(bttvEmoteProvider);
+  emoteManager.registerProvider(ffzEmoteProvider);
+  emoteManager.registerProvider(sevenTVEmoteProvider);
 }
 
 /**
@@ -43,7 +41,7 @@ export function initializeEmoteProviders(): void {
  * @param accessToken - Twitch OAuth access token
  */
 export async function initializeTwitchEmotes(clientId: string, accessToken: string): Promise<void> {
-    twitchEmoteProvider.configure(clientId, accessToken);
+  twitchEmoteProvider.configure(clientId, accessToken);
 }
 
 /**
@@ -51,5 +49,5 @@ export async function initializeTwitchEmotes(clientId: string, accessToken: stri
  * @param accessToken - Kick OAuth access token
  */
 export function initializeKickEmotes(accessToken: string): void {
-    kickEmoteProvider.configure(accessToken);
+  kickEmoteProvider.configure(accessToken);
 }

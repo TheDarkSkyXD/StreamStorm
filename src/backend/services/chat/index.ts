@@ -5,52 +5,49 @@
  * Twitch and Kick platforms.
  */
 
-// Twitch Chat
-export { TwitchChatService, twitchChatService } from './twitch-chat';
-export { parseTwitchMessage } from './twitch-parser';
-export type { TwitchTags } from './twitch-parser';
-
-// Kick Chat
-export { KickChatService, kickChatService } from './kick-chat';
-export {
-    parseKickChatMessage,
-    parseKickSubscription,
-    parseKickGiftedSub,
-    parseKickUserBanned,
-    parseKickMessageDeleted,
-    parseKickChatCleared,
-    parseKickHostRaid,
-    isBroadcaster as isKickBroadcaster,
-    isModerator as isKickModerator,
-    isVIP as isKickVIP,
-    isSubscriber as isKickSubscriber,
-} from './kick-parser';
-export type {
-    KickChatMessageEvent,
-    KickSubscriptionEvent,
-    KickGiftedSubEvent,
-    KickUserBannedEvent,
-    KickMessageDeletedEvent,
-    KickChatClearedEvent,
-    KickHostRaidEvent,
-    KickBadge,
-    PusherEvent,
-} from './kick-parser';
-
-// Badge Resolver
-export { BadgeResolver, badgeResolver } from './badge-resolver';
-
 // Re-export chat types for convenience
 export type {
-    ChatMessage,
-    ChatBadge,
-    ChatEmote,
-    ContentFragment,
-    UserNotice,
-    ClearChat,
-    MessageDeletion,
-    ChatConnectionStatus,
-    ChatConnectionState,
-    ChatPlatform,
-    ChatServiceEvents,
-} from '../../../shared/chat-types';
+  ChatBadge,
+  ChatConnectionState,
+  ChatConnectionStatus,
+  ChatEmote,
+  ChatMessage,
+  ChatPlatform,
+  ChatServiceEvents,
+  ClearChat,
+  ContentFragment,
+  MessageDeletion,
+  UserNotice,
+} from "../../../shared/chat-types";
+// Badge Resolver
+export { BadgeResolver, badgeResolver } from "./badge-resolver";
+// Kick Chat
+export { KickChatService, kickChatService } from "./kick-chat";
+export type {
+  KickBadge,
+  KickChatClearedEvent,
+  KickChatMessageEvent,
+  KickGiftedSubEvent,
+  KickHostRaidEvent,
+  KickMessageDeletedEvent,
+  KickSubscriptionEvent,
+  KickUserBannedEvent,
+  PusherEvent,
+} from "./kick-parser";
+export {
+  isBroadcaster as isKickBroadcaster,
+  isModerator as isKickModerator,
+  isSubscriber as isKickSubscriber,
+  isVIP as isKickVIP,
+  parseKickChatCleared,
+  parseKickChatMessage,
+  parseKickGiftedSub,
+  parseKickHostRaid,
+  parseKickMessageDeleted,
+  parseKickSubscription,
+  parseKickUserBanned,
+} from "./kick-parser";
+// Twitch Chat
+export { TwitchChatService, twitchChatService } from "./twitch-chat";
+export type { TwitchTags } from "./twitch-parser";
+export { parseTwitchMessage } from "./twitch-parser";

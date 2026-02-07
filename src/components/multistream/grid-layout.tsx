@@ -1,151 +1,145 @@
-
 import {
-    DndContext,
-    closestCenter,
-    KeyboardSensor,
-    PointerSensor,
-    useSensor,
-    useSensors,
-    DragEndEvent,
-} from '@dnd-kit/core';
+  closestCenter,
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
 import {
-    SortableContext,
-    rectSortingStrategy,
-    sortableKeyboardCoordinates,
-} from '@dnd-kit/sortable';
-import React from 'react';
+  rectSortingStrategy,
+  SortableContext,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
 
-import { cn } from '@/lib/utils';
-import { useMultiStreamStore } from '@/store/multistream-store';
+import { useMultiStreamStore } from "@/store/multistream-store";
 
-import { SortableStreamSlot } from './sortable-stream-slot';
-import { StreamSlot } from './stream-slot';
+import { SortableStreamSlot } from "./sortable-stream-slot";
+import { StreamSlot } from "./stream-slot";
 
 export function MultiStreamGrid() {
-    const {
-        streams,
-        removeStream,
-        layout,
-        focusedStreamId,
-        setFocusedStream,
-        toggleMute,
-        reorderStreams
-    } = useMultiStreamStore();
+  const {
+    streams,
+    removeStream,
+    layout,
+    focusedStreamId,
+    setFocusedStream,
+    toggleMute,
+    reorderStreams,
+  } = useMultiStreamStore();
 
-    const sensors = useSensors(
-        useSensor(PointerSensor),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates,
-        })
-    );
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
-    function handleDragEnd(event: DragEndEvent) {
-        const { active, over } = event;
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
 
-        if (over && active.id !== over.id) {
-            const oldIndex = streams.findIndex(s => s.id === active.id);
-            const newIndex = streams.findIndex(s => s.id === over.id);
+    if (over && active.id !== over.id) {
+      const oldIndex = streams.findIndex((s) => s.id === active.id);
+      const newIndex = streams.findIndex((s) => s.id === over.id);
 
-            if (oldIndex !== -1 && newIndex !== -1) {
-                reorderStreams(oldIndex, newIndex);
-            }
-        }
+      if (oldIndex !== -1 && newIndex !== -1) {
+        reorderStreams(oldIndex, newIndex);
+      }
     }
+  }
 
-    if (streams.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center h-full text-[var(--color-foreground-muted)]">
-                <p className="text-xl mb-4">No active streams</p>
-                <p className="text-sm">Add a stream to get started</p>
-            </div>
-        );
-    }
-
-    // Layout Logic
-    let gridClass = "grid gap-1 h-full w-full";
-
-    if (layout === 'focus' && focusedStreamId) {
-        // Focus layout handled mainly via logic below
-        gridClass = "flex flex-col h-full w-full";
-    } else {
-        // Grid Setup
-        const count = streams.length;
-        if (count === 1) gridClass += " grid-cols-1 grid-rows-1";
-        else if (count === 2) gridClass += " grid-cols-2 grid-rows-1";
-        else if (count <= 4) gridClass += " grid-cols-2 grid-rows-2";
-        else gridClass += " grid-cols-3 grid-rows-2";
-    }
-
+  if (streams.length === 0) {
     return (
-        <div className={gridClass}>
-            {layout === 'focus' && focusedStreamId ? (
-                // Focus Mode implementation
-                <>
-                    {/* Main Focus Stream */}
-                    <div className="flex-[3] min-h-0 bg-black">
-                        {streams.filter(s => s.id === focusedStreamId).map(stream => (
-                            <StreamSlot
-                                key={stream.id}
-                                streamId={stream.id}
-                                platform={stream.platform}
-                                channelName={stream.channelName}
-                                isMuted={stream.isMuted}
-                                onRemove={() => removeStream(stream.id)}
-                                onFocus={() => { }}
-                                isFocused={true}
-                            />
-                        ))}
-                    </div>
-                    {/* Side Bar for others */}
-                    <div className="flex-1 min-h-[150px] flex overflow-x-auto overflow-y-hidden border-t border-[var(--color-border)] bg-[var(--color-background-secondary)] p-1 gap-1">
-                        {streams.filter(s => s.id !== focusedStreamId).map(stream => (
-                            <div key={stream.id} className="aspect-video h-full shrink-0">
-                                <StreamSlot
-                                    streamId={stream.id}
-                                    platform={stream.platform}
-                                    channelName={stream.channelName}
-                                    isMuted={stream.isMuted}
-                                    onRemove={() => removeStream(stream.id)}
-                                    onFocus={() => setFocusedStream(stream.id)}
-                                    isFocused={false}
-                                />
-                            </div>
-                        ))}
-                    </div>
-                </>
-            ) : (
-                // Grid Mode with wrapped DndContext
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                >
-                    <SortableContext
-                        items={streams.map(s => s.id)}
-                        strategy={rectSortingStrategy}
-                    >
-                        {streams.map(stream => (
-                            <SortableStreamSlot
-                                key={stream.id}
-                                id={stream.id}
-                                platform={stream.platform}
-                                channelName={stream.channelName}
-                                isMuted={stream.isMuted}
-                                onRemove={() => removeStream(stream.id)}
-                                onFocus={() => {
-                                    if (stream.isMuted) {
-                                        toggleMute(stream.id);
-                                        streams.forEach(s => {
-                                            if (s.id !== stream.id && !s.isMuted) toggleMute(s.id);
-                                        });
-                                    }
-                                }}
-                                isFocused={focusedStreamId === stream.id && false}
-                            />
-                        ))}
-                    </SortableContext>
-                </DndContext>
-            )}
-        </div>
+      <div className="flex flex-col items-center justify-center h-full text-[var(--color-foreground-muted)]">
+        <p className="text-xl mb-4">No active streams</p>
+        <p className="text-sm">Add a stream to get started</p>
+      </div>
     );
+  }
+
+  // Layout Logic
+  let gridClass = "grid gap-1 h-full w-full";
+
+  if (layout === "focus" && focusedStreamId) {
+    // Focus layout handled mainly via logic below
+    gridClass = "flex flex-col h-full w-full";
+  } else {
+    // Grid Setup
+    const count = streams.length;
+    if (count === 1) gridClass += " grid-cols-1 grid-rows-1";
+    else if (count === 2) gridClass += " grid-cols-2 grid-rows-1";
+    else if (count <= 4) gridClass += " grid-cols-2 grid-rows-2";
+    else gridClass += " grid-cols-3 grid-rows-2";
+  }
+
+  return (
+    <div className={gridClass}>
+      {layout === "focus" && focusedStreamId ? (
+        // Focus Mode implementation
+        <>
+          {/* Main Focus Stream */}
+          <div className="flex-[3] min-h-0 bg-black">
+            {streams
+              .filter((s) => s.id === focusedStreamId)
+              .map((stream) => (
+                <StreamSlot
+                  key={stream.id}
+                  streamId={stream.id}
+                  platform={stream.platform}
+                  channelName={stream.channelName}
+                  isMuted={stream.isMuted}
+                  onRemove={() => removeStream(stream.id)}
+                  onFocus={() => {}}
+                  isFocused={true}
+                />
+              ))}
+          </div>
+          {/* Side Bar for others */}
+          <div className="flex-1 min-h-[150px] flex overflow-x-auto overflow-y-hidden border-t border-[var(--color-border)] bg-[var(--color-background-secondary)] p-1 gap-1">
+            {streams
+              .filter((s) => s.id !== focusedStreamId)
+              .map((stream) => (
+                <div key={stream.id} className="aspect-video h-full shrink-0">
+                  <StreamSlot
+                    streamId={stream.id}
+                    platform={stream.platform}
+                    channelName={stream.channelName}
+                    isMuted={stream.isMuted}
+                    onRemove={() => removeStream(stream.id)}
+                    onFocus={() => setFocusedStream(stream.id)}
+                    isFocused={false}
+                  />
+                </div>
+              ))}
+          </div>
+        </>
+      ) : (
+        // Grid Mode with wrapped DndContext
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={streams.map((s) => s.id)} strategy={rectSortingStrategy}>
+            {streams.map((stream) => (
+              <SortableStreamSlot
+                key={stream.id}
+                id={stream.id}
+                platform={stream.platform}
+                channelName={stream.channelName}
+                isMuted={stream.isMuted}
+                onRemove={() => removeStream(stream.id)}
+                onFocus={() => {
+                  if (stream.isMuted) {
+                    toggleMute(stream.id);
+                    streams.forEach((s) => {
+                      if (s.id !== stream.id && !s.isMuted) toggleMute(s.id);
+                    });
+                  }
+                }}
+                isFocused={focusedStreamId === stream.id && false}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
+      )}
+    </div>
+  );
 }

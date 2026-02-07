@@ -14,227 +14,226 @@
  * @see https://dev.twitch.tv/docs/authentication/getting-tokens-oauth/#device-code-grant-flow
  */
 
-import type { AuthToken } from '../../shared/auth-types';
+import type { AuthToken } from "../../shared/auth-types";
 
-import { getOAuthConfig } from './oauth-config';
+import { getOAuthConfig } from "./oauth-config";
 
 // ========== Types ==========
 
 export interface DeviceCodeResponse {
-    device_code: string;
-    user_code: string;
-    verification_uri: string;
-    expires_in: number;
-    interval: number;
+  device_code: string;
+  user_code: string;
+  verification_uri: string;
+  expires_in: number;
+  interval: number;
 }
 
 export interface DeviceCodeResult {
-    deviceCode: string;
-    userCode: string;
-    verificationUri: string;
-    expiresIn: number;
-    interval: number;
+  deviceCode: string;
+  userCode: string;
+  verificationUri: string;
+  expiresIn: number;
+  interval: number;
 }
 
 interface TokenResponse {
-    access_token: string;
-    refresh_token?: string;
-    token_type: string;
-    expires_in?: number;
-    scope?: string | string[];
+  access_token: string;
+  refresh_token?: string;
+  token_type: string;
+  expires_in?: number;
+  scope?: string | string[];
 }
 
 interface TokenErrorResponse {
-    error: string;
-    error_description?: string;
-    message?: string;
+  error: string;
+  error_description?: string;
+  message?: string;
 }
 
 // ========== Constants ==========
 
-const DEVICE_AUTH_ENDPOINT = 'https://id.twitch.tv/oauth2/device';
-const TOKEN_ENDPOINT = 'https://id.twitch.tv/oauth2/token';
+const DEVICE_AUTH_ENDPOINT = "https://id.twitch.tv/oauth2/device";
+const TOKEN_ENDPOINT = "https://id.twitch.tv/oauth2/token";
 
 // ========== Device Code Flow Service ==========
 
 class DeviceCodeFlowService {
-    private currentDeviceCode: string | null = null;
-    private pollingInterval: NodeJS.Timeout | null = null;
+  private pollingInterval: NodeJS.Timeout | null = null;
 
-    /**
-     * Step 1: Request a device code and user code from Twitch
-     */
-    async requestDeviceCode(scopes: string[]): Promise<DeviceCodeResult> {
-        const config = getOAuthConfig('twitch');
+  /**
+   * Step 1: Request a device code and user code from Twitch
+   */
+  async requestDeviceCode(scopes: string[]): Promise<DeviceCodeResult> {
+    const config = getOAuthConfig("twitch");
 
-        if (!config.clientId) {
-            throw new Error(
-                'TWITCH_CLIENT_ID not set. Please configure your .env file. ' +
-                'See .env.example for instructions.'
-            );
+    if (!config.clientId) {
+      throw new Error(
+        "TWITCH_CLIENT_ID not set. Please configure your .env file. " +
+          "See .env.example for instructions."
+      );
+    }
+
+    const body = new URLSearchParams({
+      client_id: config.clientId,
+      scopes: scopes.join(" "),
+    });
+
+    console.debug("🔐 Requesting device code from Twitch...");
+
+    const response = await fetch(DEVICE_AUTH_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: body.toString(),
+    });
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => ({}))) as TokenErrorResponse;
+      throw new Error(error.error_description || error.message || "Failed to request device code");
+    }
+
+    const data = (await response.json()) as DeviceCodeResponse;
+
+    this.currentDeviceCode = data.device_code;
+
+    console.debug(`✅ Device code received. User code: ${data.user_code}`);
+    console.debug(`🔗 Verification URL: ${data.verification_uri}`);
+
+    return {
+      deviceCode: data.device_code,
+      userCode: data.user_code,
+      verificationUri: data.verification_uri,
+      expiresIn: data.expires_in,
+      interval: data.interval,
+    };
+  }
+
+  /**
+   * Step 2: Poll for the access token
+   * Returns a promise that resolves when the user authorizes or rejects after timeout
+   */
+  async pollForToken(
+    deviceCode: string,
+    interval: number,
+    expiresIn: number,
+    onStatusChange?: (
+      status: "pending" | "authorized" | "expired" | "error",
+      message?: string
+    ) => void
+  ): Promise<AuthToken> {
+    const config = getOAuthConfig("twitch");
+    const startTime = Date.now();
+    const expiryTime = startTime + expiresIn * 1000;
+
+    return new Promise((resolve, reject) => {
+      const poll = async () => {
+        // Check if expired
+        if (Date.now() >= expiryTime) {
+          this.stopPolling();
+          onStatusChange?.("expired", "Device code expired");
+          reject(new Error("Device code expired. Please try again."));
+          return;
         }
 
-
-        const body = new URLSearchParams({
+        try {
+          const body = new URLSearchParams({
             client_id: config.clientId,
-            scopes: scopes.join(' '),
-        });
+            device_code: deviceCode,
+            grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+          });
 
-        console.debug('🔐 Requesting device code from Twitch...');
-
-        const response = await fetch(DEVICE_AUTH_ENDPOINT, {
-            method: 'POST',
+          const response = await fetch(TOKEN_ENDPOINT, {
+            method: "POST",
             headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
+              "Content-Type": "application/x-www-form-urlencoded",
             },
             body: body.toString(),
-        });
+          });
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({})) as TokenErrorResponse;
-            throw new Error(error.error_description || error.message || 'Failed to request device code');
-        }
+          const data = await response.json();
 
-        const data = await response.json() as DeviceCodeResponse;
+          if (response.ok) {
+            // Success! User has authorized
+            this.stopPolling();
+            const tokenData = data as TokenResponse;
 
-        this.currentDeviceCode = data.device_code;
-
-        console.debug(`✅ Device code received. User code: ${data.user_code}`);
-        console.debug(`🔗 Verification URL: ${data.verification_uri}`);
-
-        return {
-            deviceCode: data.device_code,
-            userCode: data.user_code,
-            verificationUri: data.verification_uri,
-            expiresIn: data.expires_in,
-            interval: data.interval,
-        };
-    }
-
-    /**
-     * Step 2: Poll for the access token
-     * Returns a promise that resolves when the user authorizes or rejects after timeout
-     */
-    async pollForToken(
-        deviceCode: string,
-        interval: number,
-        expiresIn: number,
-        onStatusChange?: (status: 'pending' | 'authorized' | 'expired' | 'error', message?: string) => void
-    ): Promise<AuthToken> {
-        const config = getOAuthConfig('twitch');
-        const startTime = Date.now();
-        const expiryTime = startTime + (expiresIn * 1000);
-
-        return new Promise((resolve, reject) => {
-            const poll = async () => {
-                // Check if expired
-                if (Date.now() >= expiryTime) {
-                    this.stopPolling();
-                    onStatusChange?.('expired', 'Device code expired');
-                    reject(new Error('Device code expired. Please try again.'));
-                    return;
-                }
-
-                try {
-                    const body = new URLSearchParams({
-                        client_id: config.clientId,
-                        device_code: deviceCode,
-                        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-                    });
-
-                    const response = await fetch(TOKEN_ENDPOINT, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/x-www-form-urlencoded',
-                        },
-                        body: body.toString(),
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok) {
-                        // Success! User has authorized
-                        this.stopPolling();
-                        const tokenData = data as TokenResponse;
-
-                        const token: AuthToken = {
-                            accessToken: tokenData.access_token,
-                            refreshToken: tokenData.refresh_token,
-                            expiresAt: tokenData.expires_in
-                                ? Date.now() + (tokenData.expires_in * 1000)
-                                : undefined,
-                            scope: Array.isArray(tokenData.scope)
-                                ? tokenData.scope
-                                : tokenData.scope?.split(' '),
-                        };
-
-                        console.debug('✅ User authorized! Token obtained.');
-                        onStatusChange?.('authorized', 'Authorization successful!');
-                        resolve(token);
-                        return;
-                    }
-
-                    // Handle error responses
-                    const errorData = data as TokenErrorResponse;
-
-                    switch (errorData.error) {
-                        case 'authorization_pending':
-                            // User hasn't authorized yet - keep polling
-                            onStatusChange?.('pending', 'Waiting for user to authorize...');
-                            break;
-                        case 'slow_down':
-                            // We're polling too fast - increase interval
-                            console.debug('⚠️ Polling too fast, slowing down...');
-                            interval += 5;
-                            break;
-                        case 'access_denied':
-                            // User denied the request
-                            this.stopPolling();
-                            onStatusChange?.('error', 'Authorization denied by user');
-                            reject(new Error('Authorization denied by user'));
-                            return;
-                        case 'expired_token':
-                            // Device code expired
-                            this.stopPolling();
-                            onStatusChange?.('expired', 'Device code expired');
-                            reject(new Error('Device code expired. Please try again.'));
-                            return;
-                        default:
-                            // Unknown error
-                            this.stopPolling();
-                            onStatusChange?.('error', errorData.error_description || errorData.error);
-                            reject(new Error(errorData.error_description || errorData.error || 'Unknown error'));
-                            return;
-                    }
-                } catch (error) {
-                    console.error('Polling error:', error);
-                    // Network error - continue polling
-                }
+            const token: AuthToken = {
+              accessToken: tokenData.access_token,
+              refreshToken: tokenData.refresh_token,
+              expiresAt: tokenData.expires_in
+                ? Date.now() + tokenData.expires_in * 1000
+                : undefined,
+              scope: Array.isArray(tokenData.scope) ? tokenData.scope : tokenData.scope?.split(" "),
             };
 
-            // Start polling
-            poll();
-            this.pollingInterval = setInterval(poll, interval * 1000);
-        });
-    }
+            console.debug("✅ User authorized! Token obtained.");
+            onStatusChange?.("authorized", "Authorization successful!");
+            resolve(token);
+            return;
+          }
 
-    /**
-     * Stop polling for token
-     */
-    stopPolling(): void {
-        if (this.pollingInterval) {
-            clearInterval(this.pollingInterval);
-            this.pollingInterval = null;
+          // Handle error responses
+          const errorData = data as TokenErrorResponse;
+
+          switch (errorData.error) {
+            case "authorization_pending":
+              // User hasn't authorized yet - keep polling
+              onStatusChange?.("pending", "Waiting for user to authorize...");
+              break;
+            case "slow_down":
+              // We're polling too fast - increase interval
+              console.debug("⚠️ Polling too fast, slowing down...");
+              interval += 5;
+              break;
+            case "access_denied":
+              // User denied the request
+              this.stopPolling();
+              onStatusChange?.("error", "Authorization denied by user");
+              reject(new Error("Authorization denied by user"));
+              return;
+            case "expired_token":
+              // Device code expired
+              this.stopPolling();
+              onStatusChange?.("expired", "Device code expired");
+              reject(new Error("Device code expired. Please try again."));
+              return;
+            default:
+              // Unknown error
+              this.stopPolling();
+              onStatusChange?.("error", errorData.error_description || errorData.error);
+              reject(new Error(errorData.error_description || errorData.error || "Unknown error"));
+              return;
+          }
+        } catch (error) {
+          console.error("Polling error:", error);
+          // Network error - continue polling
         }
-        this.currentDeviceCode = null;
-    }
+      };
 
-    /**
-     * Check if currently polling
-     */
-    isPolling(): boolean {
-        return this.pollingInterval !== null;
+      // Start polling
+      poll();
+      this.pollingInterval = setInterval(poll, interval * 1000);
+    });
+  }
+
+  /**
+   * Stop polling for token
+   */
+  stopPolling(): void {
+    if (this.pollingInterval) {
+      clearInterval(this.pollingInterval);
+      this.pollingInterval = null;
     }
+    this.currentDeviceCode = null;
+  }
+
+  /**
+   * Check if currently polling
+   */
+  isPolling(): boolean {
+    return this.pollingInterval !== null;
+  }
 }
 
 // ========== Export Singleton ==========

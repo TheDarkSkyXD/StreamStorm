@@ -1,270 +1,277 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { useSeekPreview } from '@/components/player/hooks/use-seek-preview';
-import { TwitchLoadingSpinner } from '@/components/ui/loading-spinner';
+import { useSeekPreview } from "@/components/player/hooks/use-seek-preview";
+import { TwitchLoadingSpinner } from "@/components/ui/loading-spinner";
 
-import { HlsPlayer } from '../hls-player';
-import { useDefaultQuality } from '../hooks/use-default-quality';
-import { useFullscreen } from '../hooks/use-fullscreen';
-import { usePictureInPicture } from '../hooks/use-picture-in-picture';
-import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
-import { useResumePlayback } from '../hooks/use-resume-playback';
-import { useVolume } from '../hooks/use-volume';
-import { QualityLevel, PlayerError, Platform } from '../types';
+import { HlsPlayer } from "../hls-player";
+import { useDefaultQuality } from "../hooks/use-default-quality";
+import { useFullscreen } from "../hooks/use-fullscreen";
+import { usePictureInPicture } from "../hooks/use-picture-in-picture";
+import { usePlayerKeyboard } from "../hooks/use-player-keyboard";
+import { useResumePlayback } from "../hooks/use-resume-playback";
+import { useVolume } from "../hooks/use-volume";
+import type { Platform, PlayerError, QualityLevel } from "../types";
 
-import { TwitchVodPlayerControls } from './twitch-vod-player-controls';
-
-
+import { TwitchVodPlayerControls } from "./twitch-vod-player-controls";
 
 export interface TwitchVodPlayerProps {
-    streamUrl: string;
-    poster?: string;
-    autoPlay?: boolean;
-    muted?: boolean;
-    quality?: QualityLevel;
-    onReady?: () => void;
-    onError?: (error: PlayerError) => void;
-    onQualityChange?: (quality: QualityLevel) => void;
-    className?: string;
-    isTheater?: boolean;
-    onToggleTheater?: () => void;
-    // VOD specific
-    videoId?: string;
-    title?: string;
-    thumbnail?: string;
-    qualities?: { quality: string, url: string }[];
+  streamUrl: string;
+  poster?: string;
+  autoPlay?: boolean;
+  muted?: boolean;
+  quality?: QualityLevel;
+  onReady?: () => void;
+  onError?: (error: PlayerError) => void;
+  onQualityChange?: (quality: QualityLevel) => void;
+  className?: string;
+  isTheater?: boolean;
+  onToggleTheater?: () => void;
+  // VOD specific
+  videoId?: string;
+  title?: string;
+  thumbnail?: string;
+  qualities?: { quality: string; url: string }[];
 }
 
 export function TwitchVodPlayer(props: TwitchVodPlayerProps) {
-    const {
-        streamUrl,
-        poster,
-        autoPlay = false,
-        muted: initialMuted = false,
-        quality,
-        onReady,
-        onError,
-        onQualityChange,
-        className,
-        isTheater,
-        onToggleTheater,
-        videoId,
-        title,
-        thumbnail
-    } = props;
+  const {
+    streamUrl,
+    poster,
+    autoPlay = false,
+    muted: initialMuted = false,
+    quality,
+    onReady,
+    onError,
+    onQualityChange,
+    className,
+    isTheater,
+    onToggleTheater,
+    videoId,
+    title,
+    thumbnail,
+  } = props;
 
-    const containerRef = useRef<HTMLDivElement>(null);
-    const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-    // Persistent volume
-    const { volume, isMuted, handleVolumeChange, handleToggleMute, syncFromVideoElement } = useVolume({
-        videoRef: videoRef as React.RefObject<HTMLVideoElement>,
-        initialMuted
-    });
+  // Persistent volume
+  const { volume, isMuted, handleVolumeChange, handleToggleMute, syncFromVideoElement } = useVolume(
+    {
+      videoRef: videoRef as React.RefObject<HTMLVideoElement>,
+      initialMuted,
+    }
+  );
 
-    // Hooks
-    const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
-    const { isPip, togglePip } = usePictureInPicture(videoRef);
+  // Hooks
+  const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
+  const { isPip, togglePip } = usePictureInPicture(videoRef);
 
-    // Resume playback hook (for VODs with videoId)
-    useResumePlayback({
-        platform: 'twitch' as Platform,
-        videoId: videoId || '',
-        videoRef: videoRef as React.RefObject<HTMLVideoElement>,
-        title,
-        thumbnail,
-        enabled: !!videoId
-    });
+  // Resume playback hook (for VODs with videoId)
+  useResumePlayback({
+    platform: "twitch" as Platform,
+    videoId: videoId || "",
+    videoRef: videoRef as React.RefObject<HTMLVideoElement>,
+    title,
+    thumbnail,
+    enabled: !!videoId,
+  });
 
-    // State
-    const [isReady, setIsReady] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(autoPlay);
-    const [availableQualities, setAvailableQualities] = useState<QualityLevel[]>([]);
-    const [currentQualityId, setCurrentQualityId] = useState<string>('auto');
-    const [isLoading, setIsLoading] = useState(true);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [buffered, setBuffered] = useState<TimeRanges | undefined>(undefined);
-    const [playbackRate, setPlaybackRate] = useState(1);
+  // State
+  const [isReady, setIsReady] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(autoPlay);
+  const [availableQualities, setAvailableQualities] = useState<QualityLevel[]>([]);
+  const [currentQualityId, setCurrentQualityId] = useState<string>("auto");
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [buffered, setBuffered] = useState<TimeRanges | undefined>(undefined);
+  const [playbackRate, setPlaybackRate] = useState(1);
 
-    const [hasError, setHasError] = useState(false);
+  const [hasError, setHasError] = useState(false);
 
-    // Seek Preview Hook
-    const { previewImage, handleSeekHover } = useSeekPreview({
-        streamUrl,
-        thumbnail: thumbnail || poster
-    });
+  // Seek Preview Hook
+  const { previewImage, handleSeekHover } = useSeekPreview({
+    streamUrl,
+    thumbnail: thumbnail || poster,
+  });
 
-    // Apply user's default quality preference
-    useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
+  // Apply user's default quality preference
+  useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
 
-    // Reset error state when streamUrl changes
-    useEffect(() => {
-        setHasError(false);
-    }, [streamUrl]);
+  // Reset error state when streamUrl changes
+  useEffect(() => {
+    setHasError(false);
+  }, []);
 
-    // Setup event listeners
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
+  // Setup event listeners
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
 
-        const handlePlay = () => setIsPlaying(true);
-        const handlePause = () => setIsPlaying(false);
-        const handleVideoVolumeChange = () => {
-            syncFromVideoElement();
-        };
-        const handleWaiting = () => setIsLoading(true);
-        const handlePlaying = () => setIsLoading(false);
-        const handleTimeUpdate = () => setCurrentTime(video.currentTime);
-        const handleDurationChange = () => setDuration(video.duration);
-        const handleProgress = () => setBuffered(video.buffered);
-        const handleRateChange = () => setPlaybackRate(video.playbackRate);
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleVideoVolumeChange = () => {
+      syncFromVideoElement();
+    };
+    const handleWaiting = () => setIsLoading(true);
+    const handlePlaying = () => setIsLoading(false);
+    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
+    const handleDurationChange = () => setDuration(video.duration);
+    const handleProgress = () => setBuffered(video.buffered);
+    const handleRateChange = () => setPlaybackRate(video.playbackRate);
 
-        video.addEventListener('play', handlePlay);
-        video.addEventListener('pause', handlePause);
-        video.addEventListener('volumechange', handleVideoVolumeChange);
-        video.addEventListener('waiting', handleWaiting);
-        video.addEventListener('playing', handlePlaying);
-        video.addEventListener('timeupdate', handleTimeUpdate);
-        video.addEventListener('durationchange', handleDurationChange);
-        video.addEventListener('progress', handleProgress);
-        video.addEventListener('ratechange', handleRateChange);
+    video.addEventListener("play", handlePlay);
+    video.addEventListener("pause", handlePause);
+    video.addEventListener("volumechange", handleVideoVolumeChange);
+    video.addEventListener("waiting", handleWaiting);
+    video.addEventListener("playing", handlePlaying);
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("durationchange", handleDurationChange);
+    video.addEventListener("progress", handleProgress);
+    video.addEventListener("ratechange", handleRateChange);
 
-        return () => {
-            video.removeEventListener('play', handlePlay);
-            video.removeEventListener('pause', handlePause);
-            video.removeEventListener('volumechange', handleVideoVolumeChange);
-            video.removeEventListener('waiting', handleWaiting);
-            video.removeEventListener('playing', handlePlaying);
-            video.removeEventListener('timeupdate', handleTimeUpdate);
-            video.removeEventListener('durationchange', handleDurationChange);
-            video.removeEventListener('progress', handleProgress);
-            video.removeEventListener('ratechange', handleRateChange);
-        };
-    }, [isReady, syncFromVideoElement]);
+    return () => {
+      video.removeEventListener("play", handlePlay);
+      video.removeEventListener("pause", handlePause);
+      video.removeEventListener("volumechange", handleVideoVolumeChange);
+      video.removeEventListener("waiting", handleWaiting);
+      video.removeEventListener("playing", handlePlaying);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("durationchange", handleDurationChange);
+      video.removeEventListener("progress", handleProgress);
+      video.removeEventListener("ratechange", handleRateChange);
+    };
+  }, [syncFromVideoElement]);
 
-    // Volume initialization is handled by useVolume hook
+  // Volume initialization is handled by useVolume hook
 
-    // Handlers
-    const togglePlay = useCallback(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        if (video.paused) {
-            video.play().catch(console.error);
-        } else {
-            video.pause();
-        }
-    }, []);
+  // Handlers
+  const togglePlay = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      video.play().catch(console.error);
+    } else {
+      video.pause();
+    }
+  }, []);
 
-    const toggleMute = handleToggleMute;
+  const toggleMute = handleToggleMute;
 
-    const togglePipHandler = useCallback(async () => {
-        await togglePip();
-    }, [togglePip]);
+  const togglePipHandler = useCallback(async () => {
+    await togglePip();
+  }, [togglePip]);
 
-    const handleSeek = useCallback((time: number) => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.currentTime = time;
-    }, []);
+  const handleSeek = useCallback((time: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.currentTime = time;
+  }, []);
 
-    const handlePlaybackRateChange = useCallback((rate: number) => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.playbackRate = rate;
-    }, []);
+  const handlePlaybackRateChange = useCallback((rate: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.playbackRate = rate;
+  }, []);
 
-    const handleQualityLevels = useCallback((levels: QualityLevel[]) => {
-        setAvailableQualities(levels);
-        if (!isReady) {
-            setIsReady(true);
-            setIsLoading(false);
-            onReady?.();
-        }
-    }, [isReady, onReady]);
+  const handleQualityLevels = useCallback(
+    (levels: QualityLevel[]) => {
+      setAvailableQualities(levels);
+      if (!isReady) {
+        setIsReady(true);
+        setIsLoading(false);
+        onReady?.();
+      }
+    },
+    [isReady, onReady]
+  );
 
-    const handleQualitySet = useCallback((id: string) => {
-        setCurrentQualityId(id);
-        if (onQualityChange) {
-            const level = availableQualities.find(q => q.id === id);
-            if (level) onQualityChange(level);
-        }
-    }, [availableQualities, onQualityChange]);
+  const handleQualitySet = useCallback(
+    (id: string) => {
+      setCurrentQualityId(id);
+      if (onQualityChange) {
+        const level = availableQualities.find((q) => q.id === id);
+        if (level) onQualityChange(level);
+      }
+    },
+    [availableQualities, onQualityChange]
+  );
 
-    // Keyboard shortcuts
-    usePlayerKeyboard({
-        onTogglePlay: togglePlay,
-        onToggleMute: toggleMute,
-        onVolumeUp: () => handleVolumeChange((v) => v + 10),
-        onVolumeDown: () => handleVolumeChange((v) => v - 10),
-        onToggleFullscreen: toggleFullscreen,
-        disabled: !isReady
-    });
+  // Keyboard shortcuts
+  usePlayerKeyboard({
+    onTogglePlay: togglePlay,
+    onToggleMute: toggleMute,
+    onVolumeUp: () => handleVolumeChange((v) => v + 10),
+    onVolumeDown: () => handleVolumeChange((v) => v - 10),
+    onToggleFullscreen: toggleFullscreen,
+    disabled: !isReady,
+  });
 
-    return (
-        <div
-            ref={containerRef}
-            className={`relative w-full h-full bg-black overflow-hidden group ${className || ''}`}
-        >
-            {streamUrl ? (
-                <HlsPlayer
-                    ref={videoRef}
-                    src={streamUrl}
-                    poster={poster}
-                    muted={isMuted}
-                    autoPlay={autoPlay}
-                    currentLevel={currentQualityId}
-                    sources={props.qualities}
-                    onQualityLevels={handleQualityLevels}
-                    onError={(error) => {
-                        setHasError(true);
-                        onError?.(error);
-                    }}
-                    className="size-full object-contain cursor-pointer"
-                    controls={false}
-                    onDoubleClick={toggleFullscreen}
-                />
-            ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-white z-0">
-                    <p>No Stream Source</p>
-                </div>
-            )}
-
-            {/* Centered Loading Spinner - Twitch Purple */}
-            {isLoading && streamUrl && (
-                <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
-                    <TwitchLoadingSpinner />
-                </div>
-            )}
-
-            {/* Controls Overlay - VOD with progress bar */}
-            {streamUrl && !hasError && duration > 0 && (
-                <TwitchVodPlayerControls
-                    isPlaying={isPlaying}
-                    isLoading={isLoading}
-                    volume={volume}
-                    muted={isMuted}
-                    qualities={availableQualities}
-                    currentQualityId={currentQualityId}
-                    isFullscreen={isFullscreen}
-                    onTogglePlay={togglePlay}
-                    onToggleMute={toggleMute}
-                    onVolumeChange={handleVolumeChange}
-                    onQualityChange={handleQualitySet}
-                    onToggleFullscreen={toggleFullscreen}
-                    onToggleTheater={onToggleTheater}
-                    isTheater={isTheater}
-                    onTogglePip={togglePipHandler}
-                    currentTime={currentTime}
-                    duration={duration}
-                    onSeek={handleSeek}
-                    buffered={buffered}
-                    playbackRate={playbackRate}
-                    onPlaybackRateChange={handlePlaybackRateChange}
-                    onSeekHover={handleSeekHover}
-                    previewImage={previewImage}
-                />
-            )}
+  return (
+    <div
+      ref={containerRef}
+      className={`relative w-full h-full bg-black overflow-hidden group ${className || ""}`}
+    >
+      {streamUrl ? (
+        <HlsPlayer
+          ref={videoRef}
+          src={streamUrl}
+          poster={poster}
+          muted={isMuted}
+          autoPlay={autoPlay}
+          currentLevel={currentQualityId}
+          sources={props.qualities}
+          onQualityLevels={handleQualityLevels}
+          onError={(error) => {
+            setHasError(true);
+            onError?.(error);
+          }}
+          className="size-full object-contain cursor-pointer"
+          controls={false}
+          onDoubleClick={toggleFullscreen}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center text-white z-0">
+          <p>No Stream Source</p>
         </div>
-    );
+      )}
+
+      {/* Centered Loading Spinner - Twitch Purple */}
+      {isLoading && streamUrl && (
+        <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+          <TwitchLoadingSpinner />
+        </div>
+      )}
+
+      {/* Controls Overlay - VOD with progress bar */}
+      {streamUrl && !hasError && duration > 0 && (
+        <TwitchVodPlayerControls
+          isPlaying={isPlaying}
+          isLoading={isLoading}
+          volume={volume}
+          muted={isMuted}
+          qualities={availableQualities}
+          currentQualityId={currentQualityId}
+          isFullscreen={isFullscreen}
+          onTogglePlay={togglePlay}
+          onToggleMute={toggleMute}
+          onVolumeChange={handleVolumeChange}
+          onQualityChange={handleQualitySet}
+          onToggleFullscreen={toggleFullscreen}
+          onToggleTheater={onToggleTheater}
+          isTheater={isTheater}
+          onTogglePip={togglePipHandler}
+          currentTime={currentTime}
+          duration={duration}
+          onSeek={handleSeek}
+          buffered={buffered}
+          playbackRate={playbackRate}
+          onPlaybackRateChange={handlePlaybackRateChange}
+          onSeekHover={handleSeekHover}
+          previewImage={previewImage}
+        />
+      )}
+    </div>
+  );
 }

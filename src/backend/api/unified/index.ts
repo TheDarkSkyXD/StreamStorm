@@ -4,29 +4,28 @@
  * Exports all unified types and interfaces for platform-agnostic API access.
  */
 
-// Platform types
-export type {
-    UnifiedStream,
-    UnifiedChannel,
-    UnifiedCategory,
-    UnifiedUser,
-    UnifiedFollow,
-    UnifiedChatMessage,
-    ParsedMessagePart,
-    ChatBadge,
-    UnifiedVideo,
-    UnifiedClip,
-    SocialLink,
-    SearchResults,
-    PaginationParams,
-    ApiResponse,
-    ApiError,
-} from './platform-types';
-
 // Platform client interface
 export type {
-    IPlatformClient,
-    StreamPlaybackInfo,
-    StreamQuality,
-    PlatformClientFactory,
-} from './platform-client';
+  IPlatformClient,
+  PlatformClientFactory,
+  StreamPlaybackInfo,
+  StreamQuality,
+} from "./platform-client";
+// Platform types
+export type {
+  ApiError,
+  ApiResponse,
+  ChatBadge,
+  PaginationParams,
+  ParsedMessagePart,
+  SearchResults,
+  SocialLink,
+  UnifiedCategory,
+  UnifiedChannel,
+  UnifiedChatMessage,
+  UnifiedClip,
+  UnifiedFollow,
+  UnifiedStream,
+  UnifiedUser,
+  UnifiedVideo,
+} from "./platform-types";

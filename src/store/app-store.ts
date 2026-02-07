@@ -1,12 +1,10 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 /**
  * Application-wide UI state
  */
 interface AppState {
-
-
   // Sidebar
   sidebarOpen: boolean;
   sidebarCollapsed: boolean;
@@ -34,19 +32,18 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   persist(
     (set) => ({
-
-
       // Sidebar
       sidebarOpen: true,
       sidebarCollapsed: false,
       userPrefersSidebarCollapsed: false,
       isTheaterModeActive: false,
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
-      setSidebarCollapsed: (collapsed, isUserAction = false) => set((state) => ({
-        sidebarCollapsed: collapsed,
-        // Only update user preference if this is a manual user action
-        userPrefersSidebarCollapsed: isUserAction ? collapsed : state.userPrefersSidebarCollapsed,
-      })),
+      setSidebarCollapsed: (collapsed, isUserAction = false) =>
+        set((state) => ({
+          sidebarCollapsed: collapsed,
+          // Only update user preference if this is a manual user action
+          userPrefersSidebarCollapsed: isUserAction ? collapsed : state.userPrefersSidebarCollapsed,
+        })),
       setTheaterModeActive: (active) =>
         set((state) => ({
           isTheaterModeActive: active,
@@ -71,9 +68,8 @@ export const useAppStore = create<AppState>()(
       clearStreams: () => set({ activeStreams: [] }),
     }),
     {
-      name: 'streamstorm-app-store',
+      name: "streamstorm-app-store",
       partialize: (state) => ({
-
         sidebarCollapsed: state.sidebarCollapsed,
         userPrefersSidebarCollapsed: state.userPrefersSidebarCollapsed,
         showDebugOverlay: state.showDebugOverlay,

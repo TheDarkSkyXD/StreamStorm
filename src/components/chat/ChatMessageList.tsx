@@ -1,12 +1,13 @@
-import React, { useRef, useState, useCallback, memo, useMemo, useEffect } from 'react';
-import { Virtuoso, VirtuosoHandle } from 'react-virtuoso';
-import { useChatStore } from '../../store/chat-store';
-import { ChatMessage } from './ChatMessage';
-import type { ChatMessage as ChatMessageType } from '../../shared/chat-types';
+import type React from "react";
+import { memo, useCallback, useRef, useState } from "react";
+import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
+import type { ChatMessage as ChatMessageType } from "../../shared/chat-types";
+import { useChatStore } from "../../store/chat-store";
+import { ChatMessage } from "./ChatMessage";
 
 /**
  * Performance-optimized ChatMessageList
- * 
+ *
  * Optimizations (based on KickTalk-main analysis):
  * 1. Uses react-virtuoso instead of @tanstack/react-virtual (better defaults)
  * 2. Memoized component wrapper with React.memo
@@ -21,108 +22,110 @@ import type { ChatMessage as ChatMessageType } from '../../shared/chat-types';
 const MemoizedChatMessage = memo(ChatMessage);
 
 export const ChatMessageList: React.FC = memo(() => {
-    const messages = useChatStore(state => state.messages);
-    const isPaused = useChatStore(state => state.isPaused);
-    const setPaused = useChatStore(state => state.setPaused);
+  const messages = useChatStore((state) => state.messages);
+  const isPaused = useChatStore((state) => state.isPaused);
+  const setPaused = useChatStore((state) => state.setPaused);
 
-    const virtuosoRef = useRef<VirtuosoHandle>(null);
-    const [atBottom, setAtBottom] = useState(true);
+  const virtuosoRef = useRef<VirtuosoHandle>(null);
+  const [atBottom, setAtBottom] = useState(true);
 
-    // Memoized item renderer - critical for performance
-    const itemContent = useCallback((index: number, message: ChatMessageType) => {
-        return <MemoizedChatMessage key={message.id} message={message} />;
-    }, []);
+  // Memoized item renderer - critical for performance
+  const itemContent = useCallback((_index: number, message: ChatMessageType) => {
+    return <MemoizedChatMessage key={message.id} message={message} />;
+  }, []);
 
-    // Stable key computation 
-    const computeItemKey = useCallback((index: number, message: ChatMessageType) => {
-        return message.id;
-    }, []);
+  // Stable key computation
+  const computeItemKey = useCallback((_index: number, message: ChatMessageType) => {
+    return message.id;
+  }, []);
 
-    // Virtuoso's built-in atBottomStateChange handler
-    const handleAtBottomStateChange = useCallback((isAtBottom: boolean) => {
-        setAtBottom(isAtBottom);
+  // Virtuoso's built-in atBottomStateChange handler
+  const handleAtBottomStateChange = useCallback(
+    (isAtBottom: boolean) => {
+      setAtBottom(isAtBottom);
 
-        // Sync pause state with atBottom state
-        // When user scrolls up, pause auto-scroll
-        // When user scrolls back to bottom, resume auto-scroll
-        if (isAtBottom && isPaused) {
-            setPaused(false);
-        } else if (!isAtBottom && !isPaused) {
-            setPaused(true);
-        }
-    }, [isPaused, setPaused]);
-
-    // Scroll to bottom handler
-    const scrollToBottom = useCallback(() => {
+      // Sync pause state with atBottom state
+      // When user scrolls up, pause auto-scroll
+      // When user scrolls back to bottom, resume auto-scroll
+      if (isAtBottom && isPaused) {
         setPaused(false);
-        setAtBottom(true);
-        virtuosoRef.current?.scrollToIndex({
-            index: 'LAST',
-            align: 'end',
-            behavior: 'auto',
-        });
-    }, [setPaused]);
+      } else if (!isAtBottom && !isPaused) {
+        setPaused(true);
+      }
+    },
+    [isPaused, setPaused]
+  );
 
-    // followOutput controls auto-scroll behavior
-    // Returns 'auto' when not paused (fast scroll to bottom on new messages)
-    // Returns false when paused to stop auto-scrolling
-    const followOutput = useCallback((isAtBottom: boolean) => {
-        // If paused (user scrolled up), don't follow
-        if (isPaused) return false;
-        // If at bottom, auto-scroll with new messages
-        return isAtBottom ? 'auto' : false;
-    }, [isPaused]);
+  // Scroll to bottom handler
+  const scrollToBottom = useCallback(() => {
+    setPaused(false);
+    setAtBottom(true);
+    virtuosoRef.current?.scrollToIndex({
+      index: "LAST",
+      align: "end",
+      behavior: "auto",
+    });
+  }, [setPaused]);
 
-    return (
-        <div className="relative flex-1 h-full min-h-0">
-            <Virtuoso
-                ref={virtuosoRef}
-                data={messages}
-                itemContent={itemContent}
-                computeItemKey={computeItemKey}
+  // followOutput controls auto-scroll behavior
+  // Returns 'auto' when not paused (fast scroll to bottom on new messages)
+  // Returns false when paused to stop auto-scrolling
+  const followOutput = useCallback(
+    (isAtBottom: boolean) => {
+      // If paused (user scrolled up), don't follow
+      if (isPaused) return false;
+      // If at bottom, auto-scroll with new messages
+      return isAtBottom ? "auto" : false;
+    },
+    [isPaused]
+  );
 
-                // Auto-scroll configuration
-                followOutput={followOutput}
-                initialTopMostItemIndex={0}
+  return (
+    <div className="relative flex-1 h-full min-h-0">
+      <Virtuoso
+        ref={virtuosoRef}
+        data={messages}
+        itemContent={itemContent}
+        computeItemKey={computeItemKey}
+        // Auto-scroll configuration
+        followOutput={followOutput}
+        initialTopMostItemIndex={0}
+        // Performance tuning
+        // Low threshold for instant pause when scrolling up
+        atBottomThreshold={20}
+        overscan={50} // Increased from 10 - renders more items outside viewport
+        increaseViewportBy={400} // Buffer around viewport
+        defaultItemHeight={32} // Estimated row height
+        // State handlers
+        atBottomStateChange={handleAtBottomStateChange}
+        // Styling
+        style={{
+          height: "100%",
+          width: "100%",
+          flex: 1,
+        }}
+        className="no-scrollbar"
+      />
 
-                // Performance tuning
-                // Low threshold for instant pause when scrolling up
-                atBottomThreshold={20}
-                overscan={50}  // Increased from 10 - renders more items outside viewport
-                increaseViewportBy={400}  // Buffer around viewport
-                defaultItemHeight={32}  // Estimated row height
-
-                // State handlers
-                atBottomStateChange={handleAtBottomStateChange}
-
-                // Styling
-                style={{
-                    height: '100%',
-                    width: '100%',
-                    flex: 1,
-                }}
-                className="no-scrollbar"
-            />
-
-            {/* Scroll to Bottom Button - only show when NOT at bottom */}
-            {!atBottom && (
-                <div
-                    onClick={scrollToBottom}
-                    className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded text-xs font-bold border border-white/20 hover:bg-black transition-colors z-10 shadow-lg cursor-pointer flex items-center gap-2"
-                >
-                    <span>Scroll To Bottom</span>
-                    <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        className="w-4 h-4"
-                    >
-                        <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z" />
-                    </svg>
-                </div>
-            )}
+      {/* Scroll to Bottom Button - only show when NOT at bottom */}
+      {!atBottom && (
+        <div
+          onClick={scrollToBottom}
+          className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/80 text-white px-4 py-2 rounded text-xs font-bold border border-white/20 hover:bg-black transition-colors z-10 shadow-lg cursor-pointer flex items-center gap-2"
+        >
+          <span>Scroll To Bottom</span>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="w-4 h-4"
+          >
+            <path d="M11.9999 13.1714L16.9497 8.22168L18.3639 9.63589L11.9999 15.9999L5.63599 9.63589L7.0502 8.22168L11.9999 13.1714Z" />
+          </svg>
         </div>
-    );
+      )}
+    </div>
+  );
 });
 
-ChatMessageList.displayName = 'ChatMessageList';
+ChatMessageList.displayName = "ChatMessageList";

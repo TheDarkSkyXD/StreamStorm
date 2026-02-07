@@ -7,17 +7,17 @@
  * Security: Only expose necessary functions, never expose ipcRenderer directly.
  */
 
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer } from "electron";
 
 import type {
-  Platform,
   AuthToken,
-  LocalFollow,
-  UserPreferences,
-  TwitchUser,
   KickUser,
-} from '../shared/auth-types';
-import { IPC_CHANNELS, AuthStatus, type VersionInfo } from '../shared/ipc-channels';
+  LocalFollow,
+  Platform,
+  TwitchUser,
+  UserPreferences,
+} from "../shared/auth-types";
+import { type AuthStatus, IPC_CHANNELS, type VersionInfo } from "../shared/ipc-channels";
 
 // Define the API exposed to the renderer
 const electronAPI = {
@@ -32,18 +32,21 @@ const electronAPI = {
   closeWindow: (): void => ipcRenderer.send(IPC_CHANNELS.WINDOW_CLOSE),
   isMaximized: (): Promise<boolean> => ipcRenderer.invoke(IPC_CHANNELS.WINDOW_IS_MAXIMIZED),
   onMaximizeChange: (callback: (isMaximized: boolean) => void): (() => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, isMaximized: boolean) => callback(isMaximized);
+    const handler = (_event: Electron.IpcRendererEvent, isMaximized: boolean) =>
+      callback(isMaximized);
     ipcRenderer.on(IPC_CHANNELS.WINDOW_ON_MAXIMIZE_CHANGE, handler);
     return () => ipcRenderer.removeListener(IPC_CHANNELS.WINDOW_ON_MAXIMIZE_CHANGE, handler);
   },
 
   // ========== Theme ==========
-  getSystemTheme: (): Promise<'light' | 'dark'> => ipcRenderer.invoke(IPC_CHANNELS.THEME_GET_SYSTEM),
+  getSystemTheme: (): Promise<"light" | "dark"> =>
+    ipcRenderer.invoke(IPC_CHANNELS.THEME_GET_SYSTEM),
 
   // ========== Generic Storage (deprecated) ==========
   store: {
     get: <T>(key: string): Promise<T | null> => ipcRenderer.invoke(IPC_CHANNELS.STORE_GET, { key }),
-    set: (key: string, value: unknown): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.STORE_SET, { key, value }),
+    set: (key: string, value: unknown): Promise<void> =>
+      ipcRenderer.invoke(IPC_CHANNELS.STORE_SET, { key, value }),
     delete: (key: string): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.STORE_DELETE, { key }),
   },
 
@@ -51,15 +54,21 @@ const electronAPI = {
   auth: {
     // Open OAuth login windows - throws if OAuth fails or is not configured
     openTwitchLogin: async (): Promise<void> => {
-      const result = await ipcRenderer.invoke(IPC_CHANNELS.AUTH_OPEN_TWITCH) as { success: boolean; error?: string };
+      const result = (await ipcRenderer.invoke(IPC_CHANNELS.AUTH_OPEN_TWITCH)) as {
+        success: boolean;
+        error?: string;
+      };
       if (!result.success) {
-        throw new Error(result.error || 'Twitch login failed');
+        throw new Error(result.error || "Twitch login failed");
       }
     },
     openKickLogin: async (): Promise<void> => {
-      const result = await ipcRenderer.invoke(IPC_CHANNELS.AUTH_OPEN_KICK) as { success: boolean; error?: string };
+      const result = (await ipcRenderer.invoke(IPC_CHANNELS.AUTH_OPEN_KICK)) as {
+        success: boolean;
+        error?: string;
+      };
       if (!result.success) {
-        throw new Error(result.error || 'Kick login failed');
+        throw new Error(result.error || "Kick login failed");
       }
     },
 
@@ -71,7 +80,7 @@ const electronAPI = {
       expiresIn: number;
       interval: number;
     }> => {
-      const result = await ipcRenderer.invoke(IPC_CHANNELS.AUTH_DCF_START) as {
+      const result = (await ipcRenderer.invoke(IPC_CHANNELS.AUTH_DCF_START)) as {
         success: boolean;
         error?: string;
         userCode?: string;
@@ -81,7 +90,7 @@ const electronAPI = {
         interval?: number;
       };
       if (!result.success) {
-        throw new Error(result.error || 'Failed to start device code flow');
+        throw new Error(result.error || "Failed to start device code flow");
       }
       return {
         userCode: result.userCode!,
@@ -91,28 +100,43 @@ const electronAPI = {
         interval: result.interval!,
       };
     },
-    pollDeviceCode: async (deviceCode: string, interval: number, expiresIn: number): Promise<void> => {
-      const result = await ipcRenderer.invoke(IPC_CHANNELS.AUTH_DCF_POLL, { deviceCode, interval, expiresIn }) as { success: boolean; error?: string };
+    pollDeviceCode: async (
+      deviceCode: string,
+      interval: number,
+      expiresIn: number
+    ): Promise<void> => {
+      const result = (await ipcRenderer.invoke(IPC_CHANNELS.AUTH_DCF_POLL, {
+        deviceCode,
+        interval,
+        expiresIn,
+      })) as { success: boolean; error?: string };
       if (!result.success) {
-        throw new Error(result.error || 'Device code polling failed');
+        throw new Error(result.error || "Device code polling failed");
       }
     },
     cancelDeviceCodeFlow: (): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.AUTH_DCF_CANCEL),
-    onDeviceCodeStatus: (callback: (data: { status: string; message?: string }) => void): (() => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, data: { status: string; message?: string }) =>
-        callback(data);
+    onDeviceCodeStatus: (
+      callback: (data: { status: string; message?: string }) => void
+    ): (() => void) => {
+      const handler = (
+        _event: Electron.IpcRendererEvent,
+        data: { status: string; message?: string }
+      ) => callback(data);
       ipcRenderer.on(IPC_CHANNELS.AUTH_DCF_STATUS, handler);
       return () => ipcRenderer.removeListener(IPC_CHANNELS.AUTH_DCF_STATUS, handler);
     },
 
     // Listen for OAuth callback
-    onCallback: (callback: (data: { platform: string; success: boolean; error?: string }) => void): (() => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, data: { platform: string; success: boolean; error?: string }) =>
-        callback(data);
+    onCallback: (
+      callback: (data: { platform: string; success: boolean; error?: string }) => void
+    ): (() => void) => {
+      const handler = (
+        _event: Electron.IpcRendererEvent,
+        data: { platform: string; success: boolean; error?: string }
+      ) => callback(data);
       ipcRenderer.on(IPC_CHANNELS.AUTH_ON_CALLBACK, handler);
       return () => ipcRenderer.removeListener(IPC_CHANNELS.AUTH_ON_CALLBACK, handler);
     },
-
 
     // Token management
     getToken: (platform: Platform): Promise<AuthToken | null> =>
@@ -135,7 +159,8 @@ const electronAPI = {
     clearTwitchUser: (): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.AUTH_CLEAR_TWITCH_USER),
 
     // User data - Kick
-    getKickUser: (): Promise<KickUser | null> => ipcRenderer.invoke(IPC_CHANNELS.AUTH_GET_KICK_USER),
+    getKickUser: (): Promise<KickUser | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.AUTH_GET_KICK_USER),
     saveKickUser: (user: KickUser): Promise<void> =>
       ipcRenderer.invoke(IPC_CHANNELS.AUTH_SAVE_KICK_USER, { user }),
     clearKickUser: (): Promise<void> => ipcRenderer.invoke(IPC_CHANNELS.AUTH_CLEAR_KICK_USER),
@@ -163,9 +188,10 @@ const electronAPI = {
     getAll: (): Promise<LocalFollow[]> => ipcRenderer.invoke(IPC_CHANNELS.FOLLOWS_GET_ALL),
     getByPlatform: (platform: Platform): Promise<LocalFollow[]> =>
       ipcRenderer.invoke(IPC_CHANNELS.FOLLOWS_GET_BY_PLATFORM, { platform }),
-    add: (follow: Omit<LocalFollow, 'id' | 'followedAt'>): Promise<LocalFollow> =>
+    add: (follow: Omit<LocalFollow, "id" | "followedAt">): Promise<LocalFollow> =>
       ipcRenderer.invoke(IPC_CHANNELS.FOLLOWS_ADD, { follow }),
-    remove: (id: string): Promise<boolean> => ipcRenderer.invoke(IPC_CHANNELS.FOLLOWS_REMOVE, { id }),
+    remove: (id: string): Promise<boolean> =>
+      ipcRenderer.invoke(IPC_CHANNELS.FOLLOWS_REMOVE, { id }),
     update: (id: string, updates: Partial<LocalFollow>): Promise<LocalFollow | null> =>
       ipcRenderer.invoke(IPC_CHANNELS.FOLLOWS_UPDATE, { id, updates }),
     isFollowing: (platform: Platform, channelId: string): Promise<boolean> =>
@@ -271,8 +297,11 @@ const electronAPI = {
       query: string;
       platform?: Platform;
       limit?: number;
-    }): Promise<{ success: boolean; data?: { channels: any[]; categories: any[]; streams: any[] }; error?: string }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.SEARCH_ALL, params),
+    }): Promise<{
+      success: boolean;
+      data?: { channels: any[]; categories: any[]; streams: any[] };
+      error?: string;
+    }> => ipcRenderer.invoke(IPC_CHANNELS.SEARCH_ALL, params),
   },
 
   // ========== Discovery: Channels ==========
@@ -303,8 +332,13 @@ const electronAPI = {
       channelId?: string;
       limit?: number;
       cursor?: string;
-    }): Promise<{ success: boolean; data?: any[]; cursor?: string; debug?: string; error?: string }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.VIDEOS_GET_BY_CHANNEL, params),
+    }): Promise<{
+      success: boolean;
+      data?: any[];
+      cursor?: string;
+      debug?: string;
+      error?: string;
+    }> => ipcRenderer.invoke(IPC_CHANNELS.VIDEOS_GET_BY_CHANNEL, params),
 
     getPlaybackUrl: (params: {
       platform: Platform;
@@ -333,8 +367,7 @@ const electronAPI = {
         platform: string;
       };
       error?: string;
-    }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.VIDEOS_GET_METADATA, params),
+    }> => ipcRenderer.invoke(IPC_CHANNELS.VIDEOS_GET_METADATA, params),
 
     // Look up Kick VOD by livestream ID (for clip-to-VOD navigation)
     getByLivestreamId: (params: {
@@ -355,8 +388,7 @@ const electronAPI = {
         category: string;
       };
       error?: string;
-    }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.VIDEOS_GET_BY_LIVESTREAM_ID, params),
+    }> => ipcRenderer.invoke(IPC_CHANNELS.VIDEOS_GET_BY_LIVESTREAM_ID, params),
   },
 
   clips: {
@@ -366,10 +398,15 @@ const electronAPI = {
       channelId?: string;
       limit?: number;
       cursor?: string;
-      sort?: 'date' | 'views';
-      timeRange?: 'day' | 'week' | 'month' | 'all';
-    }): Promise<{ success: boolean; data?: any[]; cursor?: string; debug?: string; error?: string }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.CLIPS_GET_BY_CHANNEL, params),
+      sort?: "date" | "views";
+      timeRange?: "day" | "week" | "month" | "all";
+    }): Promise<{
+      success: boolean;
+      data?: any[];
+      cursor?: string;
+      debug?: string;
+      error?: string;
+    }> => ipcRenderer.invoke(IPC_CHANNELS.CLIPS_GET_BY_CHANNEL, params),
 
     getPlaybackUrl: (params: {
       platform: Platform;
@@ -382,12 +419,20 @@ const electronAPI = {
 
   // ========== Ad Blocking ==========
   adblock: {
-    getStatus: (): Promise<{ networkBlockingEnabled: boolean; cosmeticFilteringEnabled: boolean }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_GET_STATUS),
-    toggle: (options: { network?: boolean; cosmetic?: boolean }): Promise<{ networkBlockingEnabled: boolean; cosmeticFilteringEnabled: boolean }> =>
+    getStatus: (): Promise<{
+      networkBlockingEnabled: boolean;
+      cosmeticFilteringEnabled: boolean;
+    }> => ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_GET_STATUS),
+    toggle: (options: {
+      network?: boolean;
+      cosmetic?: boolean;
+    }): Promise<{ networkBlockingEnabled: boolean; cosmeticFilteringEnabled: boolean }> =>
       ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_TOGGLE, options),
-    getStats: (): Promise<{ totalBlocked: number; byCategory: Record<string, number>; recentBlocked: string[] }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_GET_STATS),
+    getStats: (): Promise<{
+      totalBlocked: number;
+      byCategory: Record<string, number>;
+      recentBlocked: string[];
+    }> => ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_GET_STATS),
     injectCosmetics: (): Promise<{ injected: boolean; error?: string }> =>
       ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_INJECT_COSMETICS),
     // Stream proxy cleanup - prevents memory leaks
@@ -396,12 +441,23 @@ const electronAPI = {
     clearAllProxyStreamInfos: (): Promise<{ success: boolean }> =>
       ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PROXY_CLEAR_ALL),
     // VAFT pattern management
-    getPatterns: (): Promise<{ version: number; adSignifiers: string[]; dateRangePatterns: string[]; backupPlayerTypes: string[]; lastUpdated: string }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_GET),
+    getPatterns: (): Promise<{
+      version: number;
+      adSignifiers: string[];
+      dateRangePatterns: string[];
+      backupPlayerTypes: string[];
+      lastUpdated: string;
+    }> => ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_GET),
     refreshPatterns: (): Promise<{ success: boolean; patterns: unknown }> =>
       ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_REFRESH),
-    getPatternStats: (): Promise<{ version: number; dateRangePatternCount: number; signifierCount: number; backupPlayerTypeCount: number; lastChecked: string; autoUpdateEnabled: boolean }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_GET_STATS),
+    getPatternStats: (): Promise<{
+      version: number;
+      dateRangePatternCount: number;
+      signifierCount: number;
+      backupPlayerTypeCount: number;
+      lastChecked: string;
+      autoUpdateEnabled: boolean;
+    }> => ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_GET_STATS),
     setPatternAutoUpdate: (enabled: boolean): Promise<{ autoUpdateEnabled: boolean }> =>
       ipcRenderer.invoke(IPC_CHANNELS.ADBLOCK_PATTERNS_SET_AUTO_UPDATE, { enabled }),
   },
@@ -410,30 +466,56 @@ const electronAPI = {
   updater: {
     check: (): Promise<{
       status: string;
-      updateInfo: { version: string; releaseDate: string; releaseNotes: string | null; releaseName: string | null } | null;
+      updateInfo: {
+        version: string;
+        releaseDate: string;
+        releaseNotes: string | null;
+        releaseName: string | null;
+      } | null;
       error: string | null;
       allowPrerelease: boolean;
     }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_CHECK),
 
     download: (): Promise<{
       status: string;
-      updateInfo: { version: string; releaseDate: string; releaseNotes: string | null; releaseName: string | null } | null;
-      progress: { bytesPerSecond: number; percent: number; transferred: number; total: number } | null;
+      updateInfo: {
+        version: string;
+        releaseDate: string;
+        releaseNotes: string | null;
+        releaseName: string | null;
+      } | null;
+      progress: {
+        bytesPerSecond: number;
+        percent: number;
+        transferred: number;
+        total: number;
+      } | null;
       error: string | null;
     }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_DOWNLOAD),
 
-    install: (): Promise<{ success: boolean }> =>
-      ipcRenderer.invoke(IPC_CHANNELS.UPDATE_INSTALL),
+    install: (): Promise<{ success: boolean }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_INSTALL),
 
     getStatus: (): Promise<{
       status: string;
-      updateInfo: { version: string; releaseDate: string; releaseNotes: string | null; releaseName: string | null } | null;
-      progress: { bytesPerSecond: number; percent: number; transferred: number; total: number } | null;
+      updateInfo: {
+        version: string;
+        releaseDate: string;
+        releaseNotes: string | null;
+        releaseName: string | null;
+      } | null;
+      progress: {
+        bytesPerSecond: number;
+        percent: number;
+        transferred: number;
+        total: number;
+      } | null;
       error: string | null;
       allowPrerelease: boolean;
     }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_GET_STATUS),
 
-    setAllowPrerelease: (allow: boolean): Promise<{
+    setAllowPrerelease: (
+      allow: boolean
+    ): Promise<{
       status: string;
       allowPrerelease: boolean;
     }> => ipcRenderer.invoke(IPC_CHANNELS.UPDATE_SET_ALLOW_PRERELEASE, { allow }),
@@ -441,25 +523,41 @@ const electronAPI = {
     getSettings: (): Promise<{ allowPrerelease: boolean }> =>
       ipcRenderer.invoke(IPC_CHANNELS.UPDATE_GET_SETTINGS),
 
-    onStatusChange: (callback: (state: {
-      status: string;
-      updateInfo: { version: string; releaseDate: string; releaseNotes: string | null; releaseName: string | null } | null;
-      progress: { bytesPerSecond: number; percent: number; transferred: number; total: number } | null;
-      error: string | null;
-      allowPrerelease: boolean;
-    }) => void): (() => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, state: unknown) => callback(state as Parameters<typeof callback>[0]);
+    onStatusChange: (
+      callback: (state: {
+        status: string;
+        updateInfo: {
+          version: string;
+          releaseDate: string;
+          releaseNotes: string | null;
+          releaseName: string | null;
+        } | null;
+        progress: {
+          bytesPerSecond: number;
+          percent: number;
+          transferred: number;
+          total: number;
+        } | null;
+        error: string | null;
+        allowPrerelease: boolean;
+      }) => void
+    ): (() => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, state: unknown) =>
+        callback(state as Parameters<typeof callback>[0]);
       ipcRenderer.on(IPC_CHANNELS.UPDATE_ON_STATUS_CHANGE, handler);
       return () => ipcRenderer.removeListener(IPC_CHANNELS.UPDATE_ON_STATUS_CHANGE, handler);
     },
 
-    onProgress: (callback: (progress: {
-      bytesPerSecond: number;
-      percent: number;
-      transferred: number;
-      total: number;
-    }) => void): (() => void) => {
-      const handler = (_event: Electron.IpcRendererEvent, progress: unknown) => callback(progress as Parameters<typeof callback>[0]);
+    onProgress: (
+      callback: (progress: {
+        bytesPerSecond: number;
+        percent: number;
+        transferred: number;
+        total: number;
+      }) => void
+    ): (() => void) => {
+      const handler = (_event: Electron.IpcRendererEvent, progress: unknown) =>
+        callback(progress as Parameters<typeof callback>[0]);
       ipcRenderer.on(IPC_CHANNELS.UPDATE_ON_PROGRESS, handler);
       return () => ipcRenderer.removeListener(IPC_CHANNELS.UPDATE_ON_PROGRESS, handler);
     },
@@ -467,7 +565,7 @@ const electronAPI = {
 };
 
 // Expose the API to the renderer
-contextBridge.exposeInMainWorld('electronAPI', electronAPI);
+contextBridge.exposeInMainWorld("electronAPI", electronAPI);
 
 // Type declaration for the exposed API
 export type ElectronAPI = typeof electronAPI;

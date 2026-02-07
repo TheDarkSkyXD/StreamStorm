@@ -1,36 +1,43 @@
-import { Link, useLocation } from '@tanstack/react-router';
-import React from 'react';
-import { IoMdSettings } from 'react-icons/io';
-import { LuHouse, LuHeart, LuGrid3X3, LuLayoutDashboard, LuHistory, LuDownload } from 'react-icons/lu';
+import { Link, useLocation } from "@tanstack/react-router";
+import type React from "react";
+import { IoMdSettings } from "react-icons/io";
+import {
+  LuDownload,
+  LuGrid3X3,
+  LuHeart,
+  LuHistory,
+  LuHouse,
+  LuLayoutDashboard,
+} from "react-icons/lu";
 
-import { MiniPlayer } from '@/components/player/mini-player';
-import { useAuthInitialize } from '@/hooks/useAuth';
-import { cn } from '@/lib/utils';
-import { useAppStore } from '@/store/app-store';
+import { MiniPlayer } from "@/components/player/mini-player";
+import { useAuthInitialize } from "@/hooks/useAuth";
+import { cn } from "@/lib/utils";
+import { useAppStore } from "@/store/app-store";
 
-import { TopNavBar } from '../TopNavBar';
+import { TopNavBar } from "../TopNavBar";
 
-import { SidebarFollows } from './SidebarFollows';
-import { TitleBar } from './TitleBar';
+import { SidebarFollows } from "./SidebarFollows";
+import { TitleBar } from "./TitleBar";
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
 const navItems = [
-  { path: '/', label: 'Home', icon: LuHouse },
-  { path: '/following', label: 'Following', icon: LuHeart },
-  { path: '/categories', label: 'Categories', icon: LuGrid3X3 },
-  { path: '/multistream', label: 'MultiView', icon: LuLayoutDashboard },
-  { path: '/history', label: 'History', icon: LuHistory },
-  { path: '/downloads', label: 'Downloads', icon: LuDownload },
-  { path: '/settings', label: 'Settings', icon: IoMdSettings },
+  { path: "/", label: "Home", icon: LuHouse },
+  { path: "/following", label: "Following", icon: LuHeart },
+  { path: "/categories", label: "Categories", icon: LuGrid3X3 },
+  { path: "/multistream", label: "MultiView", icon: LuLayoutDashboard },
+  { path: "/history", label: "History", icon: LuHistory },
+  { path: "/downloads", label: "Downloads", icon: LuDownload },
+  { path: "/settings", label: "Settings", icon: IoMdSettings },
 ] as const;
 
 export function AppLayout({ children }: AppLayoutProps) {
   // Use individual selectors to prevent re-renders when unrelated state changes
   const sidebarCollapsed = useAppStore((state) => state.sidebarCollapsed);
-  const setSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed);
+  const _setSidebarCollapsed = useAppStore((state) => state.setSidebarCollapsed);
   const isTheaterModeActive = useAppStore((state) => state.isTheaterModeActive);
   const location = useLocation();
 
@@ -50,9 +57,9 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* Sidebar */}
         <aside
           className={cn(
-            'flex flex-col border-r border-[var(--color-border)] bg-[var(--color-background-secondary)] transition-[width] duration-300 ease-out',
-            sidebarCollapsed ? 'w-16' : 'w-56',
-            isTheaterModeActive && 'hidden'
+            "flex flex-col border-r border-[var(--color-border)] bg-[var(--color-background-secondary)] transition-[width] duration-300 ease-out",
+            sidebarCollapsed ? "w-16" : "w-56",
+            isTheaterModeActive && "hidden"
           )}
         >
           {/* Navigation */}
@@ -67,11 +74,11 @@ export function AppLayout({ children }: AppLayoutProps) {
                     <Link
                       to={item.path}
                       className={cn(
-                        'flex items-center gap-3 px-3 py-2 rounded-md transition-colors',
+                        "flex items-center gap-3 px-3 py-2 rounded-md transition-colors",
                         isActive
-                          ? 'bg-zinc-700 text-white'
-                          : 'text-white hover:bg-[var(--color-background-tertiary)] hover:text-white',
-                        sidebarCollapsed && 'justify-center px-2'
+                          ? "bg-zinc-700 text-white"
+                          : "text-white hover:bg-[var(--color-background-tertiary)] hover:text-white",
+                        sidebarCollapsed && "justify-center px-2"
                       )}
                     >
                       <Icon size={20} />
@@ -100,4 +107,3 @@ export function AppLayout({ children }: AppLayoutProps) {
     </div>
   );
 }
-

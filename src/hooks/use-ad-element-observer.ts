@@ -1,11 +1,11 @@
 /**
  * Ad Element Observer Hook
- * 
+ *
  * Uses MutationObserver to detect and hide dynamically-added ad elements.
  * Inspired by Ghostery's MutationObserver pattern.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef } from "react";
 
 /**
  * Selectors for Twitch ad elements to hide
@@ -14,8 +14,8 @@ import { useEffect, useRef } from 'react';
 const AD_SELECTORS = [
   '[data-test-selector="ad-banner-default-text"]',
   '[data-test-selector="sad-overlay"]',
-  '.player-ad-overlay',
-  '.stream-display-ad',
+  ".player-ad-overlay",
+  ".stream-display-ad",
 ];
 
 /**
@@ -34,19 +34,19 @@ export function useAdElementObserver(enabled: boolean = true) {
 
     const hideElement = (element: Element) => {
       if (element instanceof HTMLElement) {
-        element.style.display = 'none';
-        element.style.visibility = 'hidden';
-        element.style.opacity = '0';
-        element.style.pointerEvents = 'none';
+        element.style.display = "none";
+        element.style.visibility = "hidden";
+        element.style.opacity = "0";
+        element.style.pointerEvents = "none";
         hiddenCount.current++;
-        console.debug('[AdElementObserver] Hidden element:', element.className || element.tagName);
+        console.debug("[AdElementObserver] Hidden element:", element.className || element.tagName);
       }
     };
 
     const checkAndHide = (node: Node) => {
       if (node.nodeType !== Node.ELEMENT_NODE) return;
       const element = node as Element;
-      
+
       // Check if this element matches any ad selector
       for (const selector of AD_SELECTORS) {
         if (element.matches(selector)) {
@@ -59,7 +59,7 @@ export function useAdElementObserver(enabled: boolean = true) {
     };
 
     // Hide any existing ad elements
-    AD_SELECTORS.forEach(selector => {
+    AD_SELECTORS.forEach((selector) => {
       document.querySelectorAll(selector).forEach(hideElement);
     });
 
@@ -77,7 +77,7 @@ export function useAdElementObserver(enabled: boolean = true) {
       subtree: true,
     });
 
-    console.debug('[AdElementObserver] Started watching for ad elements');
+    console.debug("[AdElementObserver] Started watching for ad elements");
 
     return () => {
       observerRef.current?.disconnect();

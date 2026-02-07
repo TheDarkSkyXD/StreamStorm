@@ -1,401 +1,411 @@
-import Hls from 'hls.js';
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import type Hls from "hls.js";
+import type React from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import { KickLoadingSpinner } from '@/components/ui/loading-spinner';
+import { KickLoadingSpinner } from "@/components/ui/loading-spinner";
 
-import { HlsPlayer } from '../hls-player';
-import { useDefaultQuality } from '../hooks/use-default-quality';
-import { useFullscreen } from '../hooks/use-fullscreen';
-import { usePictureInPicture } from '../hooks/use-picture-in-picture';
-import { usePlayerKeyboard } from '../hooks/use-player-keyboard';
-import { useResumePlayback } from '../hooks/use-resume-playback';
-import { useVolume } from '../hooks/use-volume';
-import { QualityLevel, PlayerError, Platform } from '../types';
+import { HlsPlayer } from "../hls-player";
+import { useDefaultQuality } from "../hooks/use-default-quality";
+import { useFullscreen } from "../hooks/use-fullscreen";
+import { usePictureInPicture } from "../hooks/use-picture-in-picture";
+import { usePlayerKeyboard } from "../hooks/use-player-keyboard";
+import { useResumePlayback } from "../hooks/use-resume-playback";
+import { useVolume } from "../hooks/use-volume";
+import type { Platform, PlayerError, QualityLevel } from "../types";
 
-import { KickLivePlayerControls } from './kick-live-player-controls';
-
-
+import { KickLivePlayerControls } from "./kick-live-player-controls";
 
 export interface KickLivePlayerProps {
-    streamUrl: string;
-    poster?: string;
-    autoPlay?: boolean;
-    muted?: boolean;
-    quality?: QualityLevel;
-    onReady?: () => void;
-    onError?: (error: PlayerError) => void;
-    onQualityChange?: (quality: QualityLevel) => void;
-    className?: string;
-    isTheater?: boolean;
-    onToggleTheater?: () => void;
-    // Stream identification for resume playback
-    channelName?: string;
-    title?: string;
-    thumbnail?: string;
-    startedAt?: string | null; // Stream start time for uptime calculation, or null if unknown
+  streamUrl: string;
+  poster?: string;
+  autoPlay?: boolean;
+  muted?: boolean;
+  quality?: QualityLevel;
+  onReady?: () => void;
+  onError?: (error: PlayerError) => void;
+  onQualityChange?: (quality: QualityLevel) => void;
+  className?: string;
+  isTheater?: boolean;
+  onToggleTheater?: () => void;
+  // Stream identification for resume playback
+  channelName?: string;
+  title?: string;
+  thumbnail?: string;
+  startedAt?: string | null; // Stream start time for uptime calculation, or null if unknown
 }
 
 export function KickLivePlayer(props: KickLivePlayerProps) {
-    const {
-        streamUrl,
-        poster,
-        autoPlay = false,
-        muted: initialMuted = false,
-        quality,
-        onReady,
-        onError,
-        onQualityChange,
-        className,
-        isTheater,
-        onToggleTheater,
-        channelName,
-        title,
-        thumbnail,
-        startedAt
-    } = props;
+  const {
+    streamUrl,
+    poster,
+    autoPlay = false,
+    muted: initialMuted = false,
+    quality,
+    onReady,
+    onError,
+    onQualityChange,
+    className,
+    isTheater,
+    onToggleTheater,
+    channelName,
+    title,
+    thumbnail,
+    startedAt,
+  } = props;
 
-    const containerRef = useRef<HTMLDivElement>(null);
-    const videoRef = useRef<HTMLVideoElement>(null);
-    const hlsRef = useRef<Hls | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<Hls | null>(null);
 
-    // Persistent volume
-    const { volume, isMuted, handleVolumeChange, handleToggleMute, syncFromVideoElement } = useVolume({
-        videoRef: videoRef as React.RefObject<HTMLVideoElement>,
-        initialMuted,
-        watch: `${streamUrl}-${initialMuted}`, // Reset when either changes
-        forcedMuted: initialMuted
-    });
+  // Persistent volume
+  const { volume, isMuted, handleVolumeChange, handleToggleMute, syncFromVideoElement } = useVolume(
+    {
+      videoRef: videoRef as React.RefObject<HTMLVideoElement>,
+      initialMuted,
+      watch: `${streamUrl}-${initialMuted}`, // Reset when either changes
+      forcedMuted: initialMuted,
+    }
+  );
 
-    // Hooks
-    const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
-    const { isPip, togglePip } = usePictureInPicture(videoRef);
+  // Hooks
+  const { isFullscreen, toggleFullscreen } = useFullscreen(containerRef);
+  const { isPip, togglePip } = usePictureInPicture(videoRef);
 
-    // Resume playback hook (for live streams with DVR)
-    useResumePlayback({
-        platform: 'kick' as Platform,
-        videoId: channelName ? `live-${channelName}` : '',
-        videoRef: videoRef as React.RefObject<HTMLVideoElement>,
-        title: title || channelName,
-        thumbnail,
-        enabled: false // Disabled: Always start at live edge (no DVR support)
-    });
+  // Resume playback hook (for live streams with DVR)
+  useResumePlayback({
+    platform: "kick" as Platform,
+    videoId: channelName ? `live-${channelName}` : "",
+    videoRef: videoRef as React.RefObject<HTMLVideoElement>,
+    title: title || channelName,
+    thumbnail,
+    enabled: false, // Disabled: Always start at live edge (no DVR support)
+  });
 
-    // State
-    const [isReady, setIsReady] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(autoPlay);
-    const [availableQualities, setAvailableQualities] = useState<QualityLevel[]>([]);
-    const [currentQualityId, setCurrentQualityId] = useState<string>('auto');
-    const [isLoading, setIsLoading] = useState(true);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [buffered, setBuffered] = useState<TimeRanges | undefined>(undefined);
-    const [seekableRange, setSeekableRange] = useState<{ start: number; end: number } | null>(null);
-    const [playbackRate, setPlaybackRate] = useState(1);
-    const [hasError, setHasError] = useState(false);
+  // State
+  const [isReady, setIsReady] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(autoPlay);
+  const [availableQualities, setAvailableQualities] = useState<QualityLevel[]>([]);
+  const [currentQualityId, setCurrentQualityId] = useState<string>("auto");
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [buffered, setBuffered] = useState<TimeRanges | undefined>(undefined);
+  const [seekableRange, setSeekableRange] = useState<{ start: number; end: number } | null>(null);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [hasError, setHasError] = useState(false);
 
-    // Apply user's default quality preference
-    useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
+  // Apply user's default quality preference
+  useDefaultQuality(availableQualities, currentQualityId, setCurrentQualityId);
 
-    // Reset state when streamUrl changes (new stream)
-    useEffect(() => {
-        setHasError(false);
-        setIsReady(false); // Reset ready state so initialization runs for new stream
-    }, [streamUrl]);
+  // Reset state when streamUrl changes (new stream)
+  useEffect(() => {
+    setHasError(false);
+    setIsReady(false); // Reset ready state so initialization runs for new stream
+  }, []);
 
-    // Uptime Calculation Effect
-    useEffect(() => {
-        if (!startedAt || !isPlaying) return;
+  // Uptime Calculation Effect
+  useEffect(() => {
+    if (!startedAt || !isPlaying) return;
 
-        const updateUptime = () => {
-            const now = Date.now();
-            const start = new Date(startedAt).getTime();
-            const uptime = (now - start) / 1000;
-            const video = videoRef.current;
+    const updateUptime = () => {
+      const now = Date.now();
+      const start = new Date(startedAt).getTime();
+      const uptime = (now - start) / 1000;
+      const video = videoRef.current;
 
-            // Set duration to uptime (growing constantly)
-            setDuration(uptime);
+      // Set duration to uptime (growing constantly)
+      setDuration(uptime);
 
-            if (hlsRef.current && hlsRef.current.playingDate) {
-                // Precise absolute time from HLS Program Date Time
-                const current = (hlsRef.current.playingDate.getTime() - start) / 1000;
-                setCurrentTime(current);
+      if (hlsRef.current?.playingDate) {
+        // Precise absolute time from HLS Program Date Time
+        const current = (hlsRef.current.playingDate.getTime() - start) / 1000;
+        setCurrentTime(current);
 
-                // Calculate seekable range in uptime coordinates
-                if (video && video.seekable.length > 0) {
-                    const seekableStartVideo = video.seekable.start(0);
-                    const seekableEndVideo = video.seekable.end(video.seekable.length - 1);
-                    const currentVideo = video.currentTime;
+        // Calculate seekable range in uptime coordinates
+        if (video && video.seekable.length > 0) {
+          const seekableStartVideo = video.seekable.start(0);
+          const seekableEndVideo = video.seekable.end(video.seekable.length - 1);
+          const currentVideo = video.currentTime;
 
-                    // Offset: currentUptime - currentVideoTime
-                    const offset = current - currentVideo;
+          // Offset: currentUptime - currentVideoTime
+          const offset = current - currentVideo;
 
-                    const calculatedStart = seekableStartVideo + offset;
-                    const calculatedEnd = seekableEndVideo + offset;
+          const calculatedStart = seekableStartVideo + offset;
+          const calculatedEnd = seekableEndVideo + offset;
 
-                    setSeekableRange({
-                        start: calculatedStart,
-                        end: calculatedEnd
-                    });
-                }
-            } else if (video && video.seekable.length > 0) {
-                // Fallback: Estimate time based on "Live Edge" assumption
-                // We assume video.seekable.end() is "Now" (uptime)
-                const seekableEnd = video.seekable.end(video.seekable.length - 1);
-                const secondsFromLive = seekableEnd - video.currentTime;
-                const current = Math.max(0, uptime - secondsFromLive);
-                setCurrentTime(current);
-
-                // In this fallback model, seekable.end maps to uptime
-                // So seekable.start maps to uptime - (seekable.end - seekable.start)
-                const windowDuration = seekableEnd - video.seekable.start(0);
-                const calculatedStart = Math.max(0, uptime - windowDuration);
-
-                setSeekableRange({
-                    start: calculatedStart,
-                    end: uptime
-                });
-            }
-        };
-
-        const interval = setInterval(updateUptime, 250); // Higher frequency for smoother UI
-        return () => clearInterval(interval);
-    }, [startedAt, isPlaying]);
-
-    // Setup event listeners
-    useEffect(() => {
-        const video = videoRef.current;
-        if (!video) return;
-
-        const handlePlay = () => setIsPlaying(true);
-        const handlePause = () => setIsPlaying(false);
-        const handleVideoVolumeChange = () => {
-            syncFromVideoElement();
-        };
-        const handleWait = () => setIsLoading(true);
-        const handlePlaying = () => setIsLoading(false);
-        // We use the interval above for time updates when startedAt is present
-        const handleTimeUpdate = () => {
-            if (!startedAt) {
-                setCurrentTime(video.currentTime);
-            }
-        };
-        const handleDurationChange = () => {
-            // For live streams, duration might be Infinity or a large number
-            const dur = video.duration;
-            if (!startedAt && isFinite(dur) && dur > 0) {
-                setDuration(dur);
-            }
-        };
-        const handleProgress = () => setBuffered(video.buffered);
-        const handleRateChange = () => setPlaybackRate(video.playbackRate);
-
-        video.addEventListener('play', handlePlay);
-        video.addEventListener('pause', handlePause);
-        video.addEventListener('volumechange', handleVideoVolumeChange);
-        video.addEventListener('waiting', handleWait);
-        video.addEventListener('playing', handlePlaying);
-        video.addEventListener('timeupdate', handleTimeUpdate);
-        video.addEventListener('durationchange', handleDurationChange);
-        video.addEventListener('progress', handleProgress);
-        video.addEventListener('ratechange', handleRateChange);
-
-        return () => {
-            video.removeEventListener('play', handlePlay);
-            video.removeEventListener('pause', handlePause);
-            video.removeEventListener('volumechange', handleVideoVolumeChange);
-            video.removeEventListener('waiting', handleWait);
-            video.removeEventListener('playing', handlePlaying);
-            video.removeEventListener('timeupdate', handleTimeUpdate);
-            video.removeEventListener('durationchange', handleDurationChange);
-            video.removeEventListener('progress', handleProgress);
-            video.removeEventListener('ratechange', handleRateChange);
-        };
-    }, [isReady, startedAt, syncFromVideoElement]);
-
-    // Volume initialization is handled by useVolume hook
-
-    // Handlers
-    const togglePlay = useCallback(() => {
-        const video = videoRef.current;
-        if (!video) return;
-        if (video.paused) {
-            // For live streams: seek to live edge before playing
-            // This ensures we're watching "live" when resuming playback
-            if (video.seekable.length > 0) {
-                const liveEdge = video.seekable.end(video.seekable.length - 1);
-                video.currentTime = liveEdge;
-            }
-            video.play().catch((e) => {
-                // Ignore AbortError (interrupted by load) and NotAllowedError (autoplay policy)
-                if (e.name !== 'AbortError' && e.name !== 'NotAllowedError') {
-                    console.error('Play error:', e);
-                }
-            });
-        } else {
-            video.pause();
+          setSeekableRange({
+            start: calculatedStart,
+            end: calculatedEnd,
+          });
         }
-    }, []);
+      } else if (video && video.seekable.length > 0) {
+        // Fallback: Estimate time based on "Live Edge" assumption
+        // We assume video.seekable.end() is "Now" (uptime)
+        const seekableEnd = video.seekable.end(video.seekable.length - 1);
+        const secondsFromLive = seekableEnd - video.currentTime;
+        const current = Math.max(0, uptime - secondsFromLive);
+        setCurrentTime(current);
 
-    const toggleMute = handleToggleMute;
+        // In this fallback model, seekable.end maps to uptime
+        // So seekable.start maps to uptime - (seekable.end - seekable.start)
+        const windowDuration = seekableEnd - video.seekable.start(0);
+        const calculatedStart = Math.max(0, uptime - windowDuration);
 
-    const togglePipHandler = useCallback(async () => {
-        await togglePip();
-    }, [togglePip]);
+        setSeekableRange({
+          start: calculatedStart,
+          end: uptime,
+        });
+      }
+    };
 
-    const handleSeek = useCallback((targetTime: number) => {
-        const video = videoRef.current;
-        if (!video) return;
+    const interval = setInterval(updateUptime, 250); // Higher frequency for smoother UI
+    return () => clearInterval(interval);
+  }, [startedAt, isPlaying]);
 
-        if (startedAt) {
-            // Delta Seeking: Calculate difference from current UI time
-            // usage: targetTime is "seconds since stream start"
-            // currentTime is "seconds since stream start" (state)
+  // Setup event listeners
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
 
-            // We recalculate precise currentTime here just in case state is stale
-            let currentStreamTime = currentTime;
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleVideoVolumeChange = () => {
+      syncFromVideoElement();
+    };
+    const handleWait = () => setIsLoading(true);
+    const handlePlaying = () => setIsLoading(false);
+    // We use the interval above for time updates when startedAt is present
+    const handleTimeUpdate = () => {
+      if (!startedAt) {
+        setCurrentTime(video.currentTime);
+      }
+    };
+    const handleDurationChange = () => {
+      // For live streams, duration might be Infinity or a large number
+      const dur = video.duration;
+      if (!startedAt && Number.isFinite(dur) && dur > 0) {
+        setDuration(dur);
+      }
+    };
+    const handleProgress = () => setBuffered(video.buffered);
+    const handleRateChange = () => setPlaybackRate(video.playbackRate);
 
-            // If we have HLS playingDate, use it for base truth
-            if (hlsRef.current && hlsRef.current.playingDate) {
-                const start = new Date(startedAt).getTime();
-                currentStreamTime = (hlsRef.current.playingDate.getTime() - start) / 1000;
-            } else if (video.seekable.length > 0) {
-                // Fallback calculations
-                const now = Date.now();
-                const start = new Date(startedAt).getTime();
-                const uptime = (now - start) / 1000;
-                const seekableEnd = video.seekable.end(video.seekable.length - 1);
-                const secondsFromLive = seekableEnd - video.currentTime;
-                currentStreamTime = uptime - secondsFromLive;
-            }
+    video.addEventListener("play", handlePlay);
+    video.addEventListener("pause", handlePause);
+    video.addEventListener("volumechange", handleVideoVolumeChange);
+    video.addEventListener("waiting", handleWait);
+    video.addEventListener("playing", handlePlaying);
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("durationchange", handleDurationChange);
+    video.addEventListener("progress", handleProgress);
+    video.addEventListener("ratechange", handleRateChange);
 
-            const diff = targetTime - currentStreamTime;
-            let newTime = video.currentTime + diff;
+    return () => {
+      video.removeEventListener("play", handlePlay);
+      video.removeEventListener("pause", handlePause);
+      video.removeEventListener("volumechange", handleVideoVolumeChange);
+      video.removeEventListener("waiting", handleWait);
+      video.removeEventListener("playing", handlePlaying);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("durationchange", handleDurationChange);
+      video.removeEventListener("progress", handleProgress);
+      video.removeEventListener("ratechange", handleRateChange);
+    };
+  }, [startedAt, syncFromVideoElement]);
 
-            // Clamp to seekable, but allow a bit of buffer
-            if (video.seekable.length > 0) {
-                const start = video.seekable.start(0);
-                const end = video.seekable.end(video.seekable.length - 1);
+  // Volume initialization is handled by useVolume hook
 
-                if (newTime < start) {
-                    newTime = start;
-                }
-                if (newTime > end) {
-                    newTime = end;
-                }
-            }
-
-            video.currentTime = newTime;
-        } else {
-            video.currentTime = targetTime;
+  // Handlers
+  const togglePlay = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      // For live streams: seek to live edge before playing
+      // This ensures we're watching "live" when resuming playback
+      if (video.seekable.length > 0) {
+        const liveEdge = video.seekable.end(video.seekable.length - 1);
+        video.currentTime = liveEdge;
+      }
+      video.play().catch((e) => {
+        // Ignore AbortError (interrupted by load) and NotAllowedError (autoplay policy)
+        if (e.name !== "AbortError" && e.name !== "NotAllowedError") {
+          console.error("Play error:", e);
         }
-    }, [startedAt, currentTime]);
+      });
+    } else {
+      video.pause();
+    }
+  }, []);
 
-    const handlePlaybackRateChange = useCallback((rate: number) => {
-        const video = videoRef.current;
-        if (!video) return;
-        video.playbackRate = rate;
-    }, []);
+  const toggleMute = handleToggleMute;
 
-    const handleQualityLevels = useCallback((levels: QualityLevel[]) => {
-        setAvailableQualities(levels);
-        if (!isReady) {
-            setIsReady(true);
-            // Only stop loading immediately if we are NOT auto-playing
-            // If auto-playing, wait for the actual 'playing' event to clear the spinner
-            if (!autoPlay) {
-                setIsLoading(false);
-            }
-            onReady?.();
+  const togglePipHandler = useCallback(async () => {
+    await togglePip();
+  }, [togglePip]);
+
+  const handleSeek = useCallback(
+    (targetTime: number) => {
+      const video = videoRef.current;
+      if (!video) return;
+
+      if (startedAt) {
+        // Delta Seeking: Calculate difference from current UI time
+        // usage: targetTime is "seconds since stream start"
+        // currentTime is "seconds since stream start" (state)
+
+        // We recalculate precise currentTime here just in case state is stale
+        let currentStreamTime = currentTime;
+
+        // If we have HLS playingDate, use it for base truth
+        if (hlsRef.current?.playingDate) {
+          const start = new Date(startedAt).getTime();
+          currentStreamTime = (hlsRef.current.playingDate.getTime() - start) / 1000;
+        } else if (video.seekable.length > 0) {
+          // Fallback calculations
+          const now = Date.now();
+          const start = new Date(startedAt).getTime();
+          const uptime = (now - start) / 1000;
+          const seekableEnd = video.seekable.end(video.seekable.length - 1);
+          const secondsFromLive = seekableEnd - video.currentTime;
+          currentStreamTime = uptime - secondsFromLive;
         }
-    }, [isReady, onReady, autoPlay]);
 
-    const handleQualitySet = useCallback((id: string) => {
-        setCurrentQualityId(id);
-        if (onQualityChange) {
-            const level = availableQualities.find(q => q.id === id);
-            if (level) onQualityChange(level);
+        const diff = targetTime - currentStreamTime;
+        let newTime = video.currentTime + diff;
+
+        // Clamp to seekable, but allow a bit of buffer
+        if (video.seekable.length > 0) {
+          const start = video.seekable.start(0);
+          const end = video.seekable.end(video.seekable.length - 1);
+
+          if (newTime < start) {
+            newTime = start;
+          }
+          if (newTime > end) {
+            newTime = end;
+          }
         }
-    }, [availableQualities, onQualityChange]);
 
-    const handleHlsInstance = useCallback((hls: Hls) => {
-        hlsRef.current = hls;
-    }, []);
+        video.currentTime = newTime;
+      } else {
+        video.currentTime = targetTime;
+      }
+    },
+    [startedAt, currentTime]
+  );
 
-    // Keyboard shortcuts
-    usePlayerKeyboard({
-        onTogglePlay: togglePlay,
-        onToggleMute: toggleMute,
-        onVolumeUp: () => handleVolumeChange((v) => v + 10),
-        onVolumeDown: () => handleVolumeChange((v) => v - 10),
-        onToggleFullscreen: toggleFullscreen,
-        disabled: !isReady
-    });
+  const handlePlaybackRateChange = useCallback((rate: number) => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.playbackRate = rate;
+  }, []);
 
-    return (
-        <div
-            ref={containerRef}
-            className={`relative w-full h-full bg-black overflow-hidden group flex flex-col justify-center ${className || ''}`}
-        >
-            {streamUrl ? (
-                <HlsPlayer
-                    ref={videoRef}
-                    src={streamUrl}
-                    poster={poster}
-                    muted={isMuted}
-                    autoPlay={autoPlay}
-                    currentLevel={currentQualityId}
-                    onQualityLevels={handleQualityLevels}
-                    onError={(error) => {
-                        console.error('[KickPlayer] Player error:', error);
-                        setHasError(true);
-                        setIsLoading(false);
-                        onError?.(error);
-                    }}
-                    onHlsInstance={handleHlsInstance}
-                    className="size-full object-contain object-center cursor-pointer"
-                    controls={false}
-                    onDoubleClick={toggleFullscreen}
-                />
-            ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-white z-0">
-                    <p>No Stream Source</p>
-                </div>
-            )}
+  const handleQualityLevels = useCallback(
+    (levels: QualityLevel[]) => {
+      setAvailableQualities(levels);
+      if (!isReady) {
+        setIsReady(true);
+        // Only stop loading immediately if we are NOT auto-playing
+        // If auto-playing, wait for the actual 'playing' event to clear the spinner
+        if (!autoPlay) {
+          setIsLoading(false);
+        }
+        onReady?.();
+      }
+    },
+    [isReady, onReady, autoPlay]
+  );
 
-            {/* Centered Loading Spinner - Kick Green */}
-            {isLoading && streamUrl && (
-                <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
-                    <KickLoadingSpinner />
-                </div>
-            )}
+  const handleQualitySet = useCallback(
+    (id: string) => {
+      setCurrentQualityId(id);
+      if (onQualityChange) {
+        const level = availableQualities.find((q) => q.id === id);
+        if (level) onQualityChange(level);
+      }
+    },
+    [availableQualities, onQualityChange]
+  );
 
-            {/* Controls Overlay - Live stream with DVR progress bar */}
-            {streamUrl && !hasError && (
-                <KickLivePlayerControls
-                    isPlaying={isPlaying}
-                    isLoading={isLoading}
-                    volume={volume}
-                    muted={isMuted}
-                    qualities={availableQualities}
-                    currentQualityId={currentQualityId}
-                    isFullscreen={isFullscreen}
-                    onTogglePlay={togglePlay}
-                    onToggleMute={toggleMute}
-                    onVolumeChange={handleVolumeChange}
-                    onQualityChange={handleQualitySet}
-                    onToggleFullscreen={toggleFullscreen}
-                    onToggleTheater={onToggleTheater}
-                    isTheater={isTheater}
-                    onTogglePip={togglePipHandler}
-                    currentTime={currentTime}
-                    duration={duration}
-                    seekableRange={seekableRange}
-                    onSeek={handleSeek}
-                    buffered={buffered}
-                    playbackRate={playbackRate}
-                    onPlaybackRateChange={handlePlaybackRateChange}
-                />
-            )}
+  const handleHlsInstance = useCallback((hls: Hls) => {
+    hlsRef.current = hls;
+  }, []);
+
+  // Keyboard shortcuts
+  usePlayerKeyboard({
+    onTogglePlay: togglePlay,
+    onToggleMute: toggleMute,
+    onVolumeUp: () => handleVolumeChange((v) => v + 10),
+    onVolumeDown: () => handleVolumeChange((v) => v - 10),
+    onToggleFullscreen: toggleFullscreen,
+    disabled: !isReady,
+  });
+
+  return (
+    <div
+      ref={containerRef}
+      className={`relative w-full h-full bg-black overflow-hidden group flex flex-col justify-center ${className || ""}`}
+    >
+      {streamUrl ? (
+        <HlsPlayer
+          ref={videoRef}
+          src={streamUrl}
+          poster={poster}
+          muted={isMuted}
+          autoPlay={autoPlay}
+          currentLevel={currentQualityId}
+          onQualityLevels={handleQualityLevels}
+          onError={(error) => {
+            console.error("[KickPlayer] Player error:", error);
+            setHasError(true);
+            setIsLoading(false);
+            onError?.(error);
+          }}
+          onHlsInstance={handleHlsInstance}
+          className="size-full object-contain object-center cursor-pointer"
+          controls={false}
+          onDoubleClick={toggleFullscreen}
+        />
+      ) : (
+        <div className="absolute inset-0 flex items-center justify-center text-white z-0">
+          <p>No Stream Source</p>
         </div>
-    );
+      )}
+
+      {/* Centered Loading Spinner - Kick Green */}
+      {isLoading && streamUrl && (
+        <div className="absolute inset-0 flex items-center justify-center z-30 pointer-events-none">
+          <KickLoadingSpinner />
+        </div>
+      )}
+
+      {/* Controls Overlay - Live stream with DVR progress bar */}
+      {streamUrl && !hasError && (
+        <KickLivePlayerControls
+          isPlaying={isPlaying}
+          isLoading={isLoading}
+          volume={volume}
+          muted={isMuted}
+          qualities={availableQualities}
+          currentQualityId={currentQualityId}
+          isFullscreen={isFullscreen}
+          onTogglePlay={togglePlay}
+          onToggleMute={toggleMute}
+          onVolumeChange={handleVolumeChange}
+          onQualityChange={handleQualitySet}
+          onToggleFullscreen={toggleFullscreen}
+          onToggleTheater={onToggleTheater}
+          isTheater={isTheater}
+          onTogglePip={togglePipHandler}
+          currentTime={currentTime}
+          duration={duration}
+          seekableRange={seekableRange}
+          onSeek={handleSeek}
+          buffered={buffered}
+          playbackRate={playbackRate}
+          onPlaybackRateChange={handlePlaybackRateChange}
+        />
+      )}
+    </div>
+  );
 }

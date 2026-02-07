@@ -2,11 +2,11 @@
 /// <reference types="vite-plugin-svgr/client" />
 
 interface ImportMetaEnv {
-    readonly VITE_TWITCH_CLIENT_ID: string;
-    readonly VITE_KICK_CLIENT_ID: string;
-    // more env variables...
+  readonly VITE_TWITCH_CLIENT_ID: string;
+  readonly VITE_KICK_CLIENT_ID: string;
+  // more env variables...
 }
 
 interface ImportMeta {
-    readonly env: ImportMetaEnv;
+  readonly env: ImportMetaEnv;
 }

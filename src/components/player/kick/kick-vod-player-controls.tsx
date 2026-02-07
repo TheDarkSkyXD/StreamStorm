@@ -1,210 +1,205 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { LuMaximize, LuMinimize, LuMonitor } from 'react-icons/lu';
+import { useEffect, useRef, useState } from "react";
+import { LuMaximize, LuMinimize, LuMonitor } from "react-icons/lu";
 
-import { formatDuration } from '@/lib/utils';
+import { formatDuration } from "@/lib/utils";
 
-import { Button } from '../../ui/button';
-import { Tooltip, TooltipTrigger, TooltipContent } from '../../ui/tooltip';
-import { PlayPauseButton } from '../play-pause-button';
-import { SettingsMenu } from '../settings-menu';
-import { QualityLevel } from '../types';
-import { VolumeControl } from '../volume-control';
+import { Button } from "../../ui/button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
+import { PlayPauseButton } from "../play-pause-button";
+import { SettingsMenu } from "../settings-menu";
+import type { QualityLevel } from "../types";
+import { VolumeControl } from "../volume-control";
 
-import { KickProgressBar } from './kick-progress-bar';
-
+import { KickProgressBar } from "./kick-progress-bar";
 
 interface KickVodPlayerControlsProps {
-    // Playback state
-    isPlaying: boolean;
-    isLoading?: boolean;
+  // Playback state
+  isPlaying: boolean;
+  isLoading?: boolean;
 
-    // Volume state
-    volume: number;
-    muted: boolean;
+  // Volume state
+  volume: number;
+  muted: boolean;
 
-    // Quality state
-    qualities: QualityLevel[];
-    currentQualityId: string;
+  // Quality state
+  qualities: QualityLevel[];
+  currentQualityId: string;
 
-    // View states
-    isFullscreen: boolean;
-    isTheater?: boolean;
+  // View states
+  isFullscreen: boolean;
+  isTheater?: boolean;
 
-    // Handlers
-    onTogglePlay: () => void;
-    onVolumeChange: (volume: number) => void;
-    onToggleMute: () => void;
-    onQualityChange: (qualityId: string) => void;
-    onToggleFullscreen: () => void;
-    onToggleTheater?: () => void;
-    onTogglePip?: () => void;
+  // Handlers
+  onTogglePlay: () => void;
+  onVolumeChange: (volume: number) => void;
+  onToggleMute: () => void;
+  onQualityChange: (qualityId: string) => void;
+  onToggleFullscreen: () => void;
+  onToggleTheater?: () => void;
+  onTogglePip?: () => void;
 
-    // VOD specific
-    currentTime: number;
-    duration: number;
-    onSeek: (time: number) => void;
-    buffered?: TimeRanges;
+  // VOD specific
+  currentTime: number;
+  duration: number;
+  onSeek: (time: number) => void;
+  buffered?: TimeRanges;
 
-    // Playback Speed
-    playbackRate?: number;
-    onPlaybackRateChange?: (rate: number) => void;
+  // Playback Speed
+  playbackRate?: number;
+  onPlaybackRateChange?: (rate: number) => void;
 
-    // Seek Preview
-    onSeekHover?: (time: number | null) => void;
-    previewImage?: string;
+  // Seek Preview
+  onSeekHover?: (time: number | null) => void;
+  previewImage?: string;
 }
 
 export function KickVodPlayerControls(props: KickVodPlayerControlsProps) {
-    const {
-        isPlaying,
-        isLoading,
-        volume,
-        muted,
-        qualities,
-        currentQualityId,
-        isFullscreen,
-        isTheater,
-        onTogglePlay,
-        onVolumeChange,
-        onToggleMute,
-        onQualityChange,
-        onToggleFullscreen,
-        onToggleTheater,
-        onTogglePip,
-        currentTime,
-        duration,
-        onSeek,
-        buffered,
-        playbackRate,
-        onPlaybackRateChange,
-        onSeekHover,
-        previewImage
-    } = props;
+  const {
+    isPlaying,
+    isLoading,
+    volume,
+    muted,
+    qualities,
+    currentQualityId,
+    isFullscreen,
+    isTheater,
+    onTogglePlay,
+    onVolumeChange,
+    onToggleMute,
+    onQualityChange,
+    onToggleFullscreen,
+    onToggleTheater,
+    onTogglePip,
+    currentTime,
+    duration,
+    onSeek,
+    buffered,
+    playbackRate,
+    onPlaybackRateChange,
+    onSeekHover,
+    previewImage,
+  } = props;
 
-    const [isVisible, setIsVisible] = useState(true);
-    const hideTimeoutRef = useRef<NodeJS.Timeout>(null);
+  const [isVisible, setIsVisible] = useState(true);
+  const hideTimeoutRef = useRef<NodeJS.Timeout>(null);
 
-    // Kick brand green color
-    const kickGreen = '#53fc18';
+  // Kick brand green color
+  const kickGreen = "#53fc18";
 
-    // Auto-hide controls logic
-    useEffect(() => {
-        const showControls = () => {
-            setIsVisible(true);
-            if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+  // Auto-hide controls logic
+  useEffect(() => {
+    const showControls = () => {
+      setIsVisible(true);
+      if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
 
-            if (isPlaying) {
-                hideTimeoutRef.current = setTimeout(() => {
-                    setIsVisible(false);
-                }, 3000);
-            }
-        };
+      if (isPlaying) {
+        hideTimeoutRef.current = setTimeout(() => {
+          setIsVisible(false);
+        }, 3000);
+      }
+    };
 
-        showControls();
-    }, [isPlaying]);
+    showControls();
+  }, [isPlaying]);
 
-    return (
-        <div
-            className={`
+  return (
+    <div
+      className={`
             absolute inset-x-0 bottom-0 z-40 bg-gradient-to-t from-black/90 to-transparent pt-20 pb-4 px-4
             transition-opacity duration-300 ease-in-out
-            ${isVisible || !isPlaying ? 'opacity-100' : 'opacity-0'}
+            ${isVisible || !isPlaying ? "opacity-100" : "opacity-0"}
         `}
-            onMouseEnter={() => {
-                if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
-                setIsVisible(true);
-            }}
-            onMouseLeave={() => {
-                if (isPlaying) {
-                    hideTimeoutRef.current = setTimeout(() => setIsVisible(false), 2000);
-                }
-            }}
-        >
-            {/* VOD Progress Bar - Kick Green */}
-            <div className="w-full mb-2">
-                <KickProgressBar
-                    currentTime={currentTime}
-                    duration={duration}
-                    onSeek={onSeek}
-                    buffered={buffered}
-                    onSeekHover={onSeekHover}
-                    previewImage={previewImage}
-                />
-            </div>
+      onMouseEnter={() => {
+        if (hideTimeoutRef.current) clearTimeout(hideTimeoutRef.current);
+        setIsVisible(true);
+      }}
+      onMouseLeave={() => {
+        if (isPlaying) {
+          hideTimeoutRef.current = setTimeout(() => setIsVisible(false), 2000);
+        }
+      }}
+    >
+      {/* VOD Progress Bar - Kick Green */}
+      <div className="w-full mb-2">
+        <KickProgressBar
+          currentTime={currentTime}
+          duration={duration}
+          onSeek={onSeek}
+          buffered={buffered}
+          onSeekHover={onSeekHover}
+          previewImage={previewImage}
+        />
+      </div>
 
-            <div className="flex items-center justify-between w-full">
-                <div className="flex items-center gap-2">
-                    <PlayPauseButton
-                        isPlaying={isPlaying}
-                        isLoading={isLoading}
-                        onToggle={onTogglePlay}
-                    />
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center gap-2">
+          <PlayPauseButton isPlaying={isPlaying} isLoading={isLoading} onToggle={onTogglePlay} />
 
-                    <VolumeControl
-                        volume={volume}
-                        muted={muted}
-                        onVolumeChange={onVolumeChange}
-                        onMuteToggle={onToggleMute}
-                    />
+          <VolumeControl
+            volume={volume}
+            muted={muted}
+            onVolumeChange={onVolumeChange}
+            onMuteToggle={onToggleMute}
+          />
 
-                    {/* Timestamp */}
-                    <div className="text-white text-2xl font-bold ml-2 select-none">
-                        {formatDuration(currentTime)} / {formatDuration(duration)}
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                    <SettingsMenu
-                        qualities={qualities}
-                        currentQualityId={currentQualityId}
-                        onQualityChange={onQualityChange}
-                        onTogglePip={onTogglePip}
-                        onToggleTheater={onToggleTheater}
-                        isTheater={isTheater}
-                        playbackRate={playbackRate}
-                        onPlaybackRateChange={onPlaybackRateChange}
-                    />
-
-                    {onToggleTheater && (
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className={`text-white hover:bg-white/20 ${isTheater ? 'text-primary' : ''}`}
-                                    onClick={onToggleTheater}
-                                    style={isTheater ? { color: kickGreen } : undefined}
-                                >
-                                    <LuMonitor className="w-6 h-6" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <p>Theater Mode (t)</p>
-                            </TooltipContent>
-                        </Tooltip>
-                    )}
-
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-white hover:bg-white/20"
-                                onClick={onToggleFullscreen}
-                            >
-                                {isFullscreen ? (
-                                    <LuMinimize className="w-6 h-6" />
-                                ) : (
-                                    <LuMaximize className="w-6 h-6" />
-                                )}
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>{isFullscreen ? 'Exit Fullscreen (f)' : 'Fullscreen (f)'}</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </div>
-            </div>
+          {/* Timestamp */}
+          <div className="text-white text-2xl font-bold ml-2 select-none">
+            {formatDuration(currentTime)} / {formatDuration(duration)}
+          </div>
         </div>
-    );
+
+        <div className="flex items-center gap-2">
+          <SettingsMenu
+            qualities={qualities}
+            currentQualityId={currentQualityId}
+            onQualityChange={onQualityChange}
+            onTogglePip={onTogglePip}
+            onToggleTheater={onToggleTheater}
+            isTheater={isTheater}
+            playbackRate={playbackRate}
+            onPlaybackRateChange={onPlaybackRateChange}
+          />
+
+          {onToggleTheater && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className={`text-white hover:bg-white/20 ${isTheater ? "text-primary" : ""}`}
+                  onClick={onToggleTheater}
+                  style={isTheater ? { color: kickGreen } : undefined}
+                >
+                  <LuMonitor className="w-6 h-6" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Theater Mode (t)</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-white hover:bg-white/20"
+                onClick={onToggleFullscreen}
+              >
+                {isFullscreen ? (
+                  <LuMinimize className="w-6 h-6" />
+                ) : (
+                  <LuMaximize className="w-6 h-6" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>{isFullscreen ? "Exit Fullscreen (f)" : "Fullscreen (f)"}</p>
+            </TooltipContent>
+          </Tooltip>
+        </div>
+      </div>
+    </div>
+  );
 }

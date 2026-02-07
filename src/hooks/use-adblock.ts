@@ -1,10 +1,10 @@
 /**
  * Ad Block Hook
- * 
+ *
  * React hook for managing ad blocking settings from the renderer.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
 interface AdBlockState {
   networkBlockingEnabled: boolean;
@@ -37,7 +37,7 @@ export function useAdBlock() {
         isLoading: false,
       });
     } catch (error) {
-      console.error('[useAdBlock] Failed to refresh adblock status:', error);
+      console.error("[useAdBlock] Failed to refresh adblock status:", error);
       setState((prev) => ({
         ...prev,
         isLoading: false,
@@ -49,22 +49,25 @@ export function useAdBlock() {
     refresh();
   }, [refresh]);
 
-  const toggle = useCallback(async (options: { network?: boolean; cosmetic?: boolean }) => {
-    try {
-      const result = await window.electronAPI.adblock.toggle(options);
-      setState(prev => ({
-        ...prev,
-        networkBlockingEnabled: result.networkBlockingEnabled,
-        cosmeticFilteringEnabled: result.cosmeticFilteringEnabled,
-      }));
-      return result;
-    } catch (error) {
-      console.error('[useAdBlock] Failed to toggle adblock:', error);
-      // Refresh state from main process to ensure UI stays consistent
-      await refresh();
-      throw error;
-    }
-  }, [refresh]);
+  const toggle = useCallback(
+    async (options: { network?: boolean; cosmetic?: boolean }) => {
+      try {
+        const result = await window.electronAPI.adblock.toggle(options);
+        setState((prev) => ({
+          ...prev,
+          networkBlockingEnabled: result.networkBlockingEnabled,
+          cosmeticFilteringEnabled: result.cosmeticFilteringEnabled,
+        }));
+        return result;
+      } catch (error) {
+        console.error("[useAdBlock] Failed to toggle adblock:", error);
+        // Refresh state from main process to ensure UI stays consistent
+        await refresh();
+        throw error;
+      }
+    },
+    [refresh]
+  );
 
   return { ...state, toggle, refresh };
 }

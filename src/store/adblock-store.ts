@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 /**
  * Ad-blocking settings state for Twitch streams
@@ -21,7 +21,7 @@ export const useAdBlockStore = create<AdBlockState>()(
       toggleAdBlock: () => set((state) => ({ enableAdBlock: !state.enableAdBlock })),
     }),
     {
-      name: 'streamstorm-adblock',
+      name: "streamstorm-adblock",
     }
   )
 );

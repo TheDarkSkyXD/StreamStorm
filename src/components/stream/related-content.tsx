@@ -1,6 +1,6 @@
 /**
  * Re-export from the new modular location for backward compatibility
- * 
+ *
  * The RelatedContent component has been split into smaller, more maintainable files:
  * - related-content/index.tsx - Main component
  * - related-content/types.ts - TypeScript interfaces
@@ -12,5 +12,5 @@
  * - related-content/ClipDialog.tsx - Modal dialog for viewing clips
  */
 
-export { RelatedContent } from './related-content/index';
-export type { VideoOrClip, RelatedContentProps } from './related-content/types';
+export { RelatedContent } from "./related-content/index";
+export type { RelatedContentProps, VideoOrClip } from "./related-content/types";

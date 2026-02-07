@@ -1,17 +1,17 @@
 /**
  * React hooks for Electron API integration
- * 
+ *
  * These hooks provide a React-friendly way to interact with
  * the Electron main process via the preload bridge.
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
 /**
  * Check if running in Electron environment
  */
 export function useIsElectron(): boolean {
-  return typeof window !== 'undefined' && !!window.electronAPI;
+  return typeof window !== "undefined" && !!window.electronAPI;
 }
 
 /**
@@ -35,7 +35,7 @@ export function useAppVersion(): string | null {
 export interface VersionInfo {
   version: string;
   isPrerelease: boolean;
-  channel: 'stable' | 'beta' | 'alpha' | 'rc';
+  channel: "stable" | "beta" | "alpha" | "rc";
   displayVersion: string;
 }
 
@@ -57,8 +57,8 @@ export function useAppVersionInfo(): VersionInfo | null {
 /**
  * Get the system theme preference
  */
-export function useSystemTheme(): 'light' | 'dark' | null {
-  const [theme, setTheme] = useState<'light' | 'dark' | null>(null);
+export function useSystemTheme(): "light" | "dark" | null {
+  const [theme, setTheme] = useState<"light" | "dark" | null>(null);
 
   useEffect(() => {
     if (window.electronAPI) {

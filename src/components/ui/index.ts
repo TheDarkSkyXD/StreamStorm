@@ -1,15 +1,15 @@
-export { Button, buttonVariants } from './button';
-export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent } from './card';
+export { Button, buttonVariants } from "./button";
+export { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "./card";
+export { ScrollArea, ScrollBar } from "./scroll-area";
 export {
-    Select,
-    SelectGroup,
-    SelectValue,
-    SelectTrigger,
-    SelectContent,
-    SelectLabel,
-    SelectItem,
-    SelectSeparator,
-    SelectScrollDownButton,
-} from './select';
-export { ScrollArea, ScrollBar } from './scroll-area';
-export { Switch } from './switch';
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectScrollDownButton,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from "./select";
+export { Switch } from "./switch";

@@ -1,1 +1,1 @@
-export * from './PlatformIcons';
+export * from "./PlatformIcons";

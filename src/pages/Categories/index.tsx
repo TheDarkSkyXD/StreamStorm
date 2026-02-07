@@ -1,19 +1,20 @@
-import React, { useState, useMemo, useCallback, useEffect } from 'react';
-import { LuSearch } from 'react-icons/lu';
+import type React from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { LuSearch } from "react-icons/lu";
 
-import { VirtualizedCategoryGrid } from '@/components/discovery/virtualized-category-grid';
-import { useTopCategories } from '@/hooks/queries/useCategories';
+import { VirtualizedCategoryGrid } from "@/components/discovery/virtualized-category-grid";
+import { useTopCategories } from "@/hooks/queries/useCategories";
 
 // Initial categories to display, then load more on scroll
 const INITIAL_DISPLAY_COUNT = 30;
 const LOAD_MORE_COUNT = 10;
-const DISPLAY_COUNT_KEY = 'categories-display-count';
+const DISPLAY_COUNT_KEY = "categories-display-count";
 
 export function CategoriesPage() {
   // Fetch ALL categories (cached, deduped with Twitch priority)
   const { data: categories, isLoading } = useTopCategories();
-  const [searchQuery, setSearchQuery] = useState('');
-  
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Restore displayCount from sessionStorage for scroll position persistence
   const [displayCount, setDisplayCount] = useState(() => {
     const saved = sessionStorage.getItem(DISPLAY_COUNT_KEY);
@@ -29,9 +30,7 @@ export function CategoriesPage() {
   const filteredCategories = useMemo(() => {
     if (!searchQuery.trim()) return categories || [];
     const query = searchQuery.toLowerCase();
-    return categories?.filter(category =>
-      category.name.toLowerCase().includes(query)
-    ) || [];
+    return categories?.filter((category) => category.name.toLowerCase().includes(query)) || [];
   }, [categories, searchQuery]);
 
   // Progressive display: show only displayCount categories
@@ -44,7 +43,7 @@ export function CategoriesPage() {
 
   // Load more handler
   const handleLoadMore = useCallback(() => {
-    setDisplayCount(prev => Math.min(prev + LOAD_MORE_COUNT, filteredCategories.length));
+    setDisplayCount((prev) => Math.min(prev + LOAD_MORE_COUNT, filteredCategories.length));
   }, [filteredCategories.length]);
 
   // Reset display count when search query changes
@@ -61,12 +60,15 @@ export function CategoriesPage() {
           <p className="text-[var(--color-foreground-secondary)]">
             {categories?.length
               ? `${categories.length} categories from Twitch & Kick`
-              : 'Browse streams by game or category'}
+              : "Browse streams by game or category"}
           </p>
         </div>
 
         <div className="relative w-full max-w-sm">
-          <LuSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-foreground-muted)]" size={16} />
+          <LuSearch
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-foreground-muted)]"
+            size={16}
+          />
           <input
             type="text"
             placeholder="Filter categories..."
@@ -85,9 +87,9 @@ export function CategoriesPage() {
           onLoadMore={handleLoadMore}
           skeletonCount={7}
           scrollKey="categories-page"
-          emptyMessage={searchQuery
-            ? `No categories matching "${searchQuery}"`
-            : "No categories found"}
+          emptyMessage={
+            searchQuery ? `No categories matching "${searchQuery}"` : "No categories found"
+          }
         />
       </div>
     </div>

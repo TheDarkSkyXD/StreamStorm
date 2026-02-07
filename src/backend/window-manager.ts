@@ -1,13 +1,13 @@
 /**
  * Window Manager
- * 
+ *
  * Manages the main window.
  * Handles window state persistence, bounds, and lifecycle.
  */
 
-import path from 'node:path';
+import path from "node:path";
 
-import { BrowserWindow, globalShortcut, screen } from 'electron';
+import { BrowserWindow, globalShortcut, screen } from "electron";
 
 // Vite globals (provided by Electron Forge's Vite plugin)
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string | undefined;
@@ -61,7 +61,7 @@ function ensureWindowIsVisible(bounds: WindowBounds): WindowBounds {
 
 class WindowManager {
   private mainWindow: BrowserWindow | null = null;
-  private isDev = process.env.NODE_ENV !== 'production';
+  private isDev = process.env.NODE_ENV !== "production";
 
   /**
    * Register DevTools keyboard shortcuts (development only)
@@ -70,20 +70,20 @@ class WindowManager {
     if (!this.isDev || !this.mainWindow) return;
 
     // Register F12 to toggle DevTools
-    globalShortcut.register('F12', () => {
+    globalShortcut.register("F12", () => {
       if (this.mainWindow?.webContents) {
         this.mainWindow.webContents.toggleDevTools();
       }
     });
 
     // Register Ctrl+Shift+I (Windows/Linux) / Cmd+Shift+I (macOS)
-    globalShortcut.register('CommandOrControl+Shift+I', () => {
+    globalShortcut.register("CommandOrControl+Shift+I", () => {
       if (this.mainWindow?.webContents) {
         this.mainWindow.webContents.toggleDevTools();
       }
     });
 
-    console.debug('🔧 DevTools shortcuts registered (F12, Ctrl+Shift+I)');
+    console.debug("🔧 DevTools shortcuts registered (F12, Ctrl+Shift+I)");
   }
 
   /**
@@ -91,10 +91,9 @@ class WindowManager {
    */
   private unregisterDevToolsShortcuts(): void {
     if (!this.isDev) return;
-    globalShortcut.unregister('F12');
-    globalShortcut.unregister('CommandOrControl+Shift+I');
+    globalShortcut.unregister("F12");
+    globalShortcut.unregister("CommandOrControl+Shift+I");
   }
-
 
   /**
    * Create the main application window
@@ -109,14 +108,14 @@ class WindowManager {
       ...bounds,
       minWidth: 1024,
       minHeight: 768,
-      backgroundColor: '#0f0f0f',
+      backgroundColor: "#0f0f0f",
       show: false,
       frame: false, // Custom title bar
-      titleBarStyle: 'hidden',
+      titleBarStyle: "hidden",
       trafficLightPosition: { x: 12, y: 12 }, // macOS traffic lights position
       webPreferences: {
         // Preload script is compiled to index.js in the same directory as main.js
-        preload: path.join(__dirname, 'index.js'),
+        preload: path.join(__dirname, "index.js"),
         contextIsolation: true,
         nodeIntegration: false,
         sandbox: false, // Disabled to allow preload IPC
@@ -130,12 +129,12 @@ class WindowManager {
     }
 
     // Show when ready
-    this.mainWindow.once('ready-to-show', () => {
+    this.mainWindow.once("ready-to-show", () => {
       this.mainWindow?.show();
     });
 
     // Save window state on close
-    this.mainWindow.on('close', () => {
+    this.mainWindow.on("close", () => {
       if (this.mainWindow) {
         savedWindowState = {
           bounds: this.mainWindow.getBounds(),
@@ -145,7 +144,7 @@ class WindowManager {
     });
 
     // Handle window closed
-    this.mainWindow.on('closed', () => {
+    this.mainWindow.on("closed", () => {
       this.unregisterDevToolsShortcuts();
       this.mainWindow = null;
     });
@@ -174,8 +173,6 @@ class WindowManager {
   getMainWindow(): BrowserWindow | null {
     return this.mainWindow;
   }
-
-
 }
 
 // Singleton instance

@@ -1,27 +1,27 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 /**
  * Update status types
  */
 export type UpdateStatus =
-  | 'idle'
-  | 'checking'
-  | 'available'
-  | 'not-available'
-  | 'downloading'
-  | 'downloaded'
-  | 'error';
+  | "idle"
+  | "checking"
+  | "available"
+  | "not-available"
+  | "downloading"
+  | "downloaded"
+  | "error";
 
 // Valid status values for runtime validation
 const UPDATE_STATUSES: UpdateStatus[] = [
-  'idle',
-  'checking',
-  'available',
-  'not-available',
-  'downloading',
-  'downloaded',
-  'error',
+  "idle",
+  "checking",
+  "available",
+  "not-available",
+  "downloading",
+  "downloaded",
+  "error",
 ];
 
 // Type guard for UpdateStatus validation
@@ -76,7 +76,7 @@ interface UpdateState {
 }
 
 const initialState = {
-  status: 'idle' as UpdateStatus,
+  status: "idle" as UpdateStatus,
   updateInfo: null,
   progress: null,
   error: null,
@@ -99,7 +99,7 @@ export const useUpdateStore = create<UpdateState>()(
       updateFromBackend: (state) =>
         set({
           // Validate status and fall back to 'error' if invalid
-          status: isUpdateStatus(state.status) ? state.status : 'error',
+          status: isUpdateStatus(state.status) ? state.status : "error",
           updateInfo: state.updateInfo,
           progress: state.progress,
           error: state.error,
@@ -109,7 +109,7 @@ export const useUpdateStore = create<UpdateState>()(
       reset: () => set(initialState),
     }),
     {
-      name: 'update-store',
+      name: "update-store",
       // Only persist allowPrerelease preference - other state is ephemeral
       partialize: (state) => ({ allowPrerelease: state.allowPrerelease }),
     }

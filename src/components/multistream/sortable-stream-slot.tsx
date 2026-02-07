@@ -1,64 +1,52 @@
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import React from 'react';
+import type { Platform } from "@/shared/auth-types";
 
-import { Platform } from '@/shared/auth-types';
-
-import { StreamSlot } from './stream-slot';
-
+import { StreamSlot } from "./stream-slot";
 
 interface SortableStreamSlotProps {
-    id: string; // The stream ID which will be the drag ID
-    platform: Platform;
-    channelName: string;
-    isMuted: boolean;
-    onRemove: () => void;
-    onFocus: () => void;
-    isFocused: boolean;
+  id: string; // The stream ID which will be the drag ID
+  platform: Platform;
+  channelName: string;
+  isMuted: boolean;
+  onRemove: () => void;
+  onFocus: () => void;
+  isFocused: boolean;
 }
 
 export function SortableStreamSlot({
-    id,
-    platform,
-    channelName,
-    isMuted,
-    onRemove,
-    onFocus,
-    isFocused
+  id,
+  platform,
+  channelName,
+  isMuted,
+  onRemove,
+  onFocus,
+  isFocused,
 }: SortableStreamSlotProps) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging
-    } = useSortable({ id });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id,
+  });
 
-    const style = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        zIndex: isDragging ? 50 : undefined,
-        opacity: isDragging ? 0.8 : 1,
-    };
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 50 : undefined,
+    opacity: isDragging ? 0.8 : 1,
+  };
 
-    return (
-        <div
-            ref={setNodeRef}
-            style={style}
-            className="h-full w-full"
-        >
-            <StreamSlot
-                streamId={id}
-                platform={platform}
-                channelName={channelName}
-                isMuted={isMuted}
-                onRemove={onRemove}
-                onFocus={onFocus}
-                isFocused={isFocused}
-                dragHandleProps={{ ...attributes, ...listeners }}
-            />
-        </div>
-    );
+  return (
+    <div ref={setNodeRef} style={style} className="h-full w-full">
+      <StreamSlot
+        streamId={id}
+        platform={platform}
+        channelName={channelName}
+        isMuted={isMuted}
+        onRemove={onRemove}
+        onFocus={onFocus}
+        isFocused={isFocused}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
+  );
 }

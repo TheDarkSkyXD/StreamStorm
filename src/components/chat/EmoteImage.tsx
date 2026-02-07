@@ -3,51 +3,46 @@
  *
  * Renders emotes with proper sizing, lazy loading, and error handling.
  * Supports animated emotes and zero-width overlays.
- * 
+ *
  * Performance optimizations:
  * - React.memo to prevent re-renders when props haven't changed
  * - useMemo for URL calculation
  * - useCallback for event handlers
  */
 
-import React, { useState, useRef, memo, useMemo, useCallback } from 'react';
-import type { Emote, EmoteProvider } from '../../backend/services/emotes/emote-types';
-import { EmoteTooltip } from './tooltips/EmoteTooltip';
+import type React from "react";
+import { memo, useCallback, useMemo, useRef, useState } from "react";
+import type { Emote } from "../../backend/services/emotes/emote-types";
+import { EmoteTooltip } from "./tooltips/EmoteTooltip";
 
 /** Size presets for emotes */
-type EmoteSize = 'small' | 'medium' | 'large' | 'xlarge';
+type EmoteSize = "small" | "medium" | "large" | "xlarge";
 
 interface EmoteImageProps {
-    /** Emote data object */
-    emote: Emote;
-    /** Size preset */
-    size?: EmoteSize;
-    /** Custom class name */
-    className?: string;
-    /** Whether to show tooltip on hover */
-    showTooltip?: boolean;
-    /** Callback when emote is clicked */
-    onClick?: (emote: Emote) => void;
-    /** Whether to lazy load the image */
-    lazyLoad?: boolean;
+  /** Emote data object */
+  emote: Emote;
+  /** Size preset */
+  size?: EmoteSize;
+  /** Custom class name */
+  className?: string;
+  /** Whether to show tooltip on hover */
+  showTooltip?: boolean;
+  /** Callback when emote is clicked */
+  onClick?: (emote: Emote) => void;
+  /** Whether to lazy load the image */
+  lazyLoad?: boolean;
 }
 
 /** Size configurations in pixels */
-const SIZE_CONFIG: Record<EmoteSize, { height: number; urlSize: '1x' | '2x' | '4x' }> = {
-    small: { height: 20, urlSize: '1x' },
-    medium: { height: 28, urlSize: '2x' },
-    large: { height: 48, urlSize: '2x' },
-    xlarge: { height: 64, urlSize: '4x' },
+const SIZE_CONFIG: Record<EmoteSize, { height: number; urlSize: "1x" | "2x" | "4x" }> = {
+  small: { height: 20, urlSize: "1x" },
+  medium: { height: 28, urlSize: "2x" },
+  large: { height: 48, urlSize: "2x" },
+  xlarge: { height: 64, urlSize: "4x" },
 };
 
-export const EmoteImage: React.FC<EmoteImageProps> = memo(({
-    emote,
-    size = 'medium',
-    className = '',
-    showTooltip = true,
-    onClick,
-    lazyLoad = true,
-}) => {
+export const EmoteImage: React.FC<EmoteImageProps> = memo(
+  ({ emote, size = "medium", className = "", showTooltip = true, onClick, lazyLoad = true }) => {
     const [isLoaded, setIsLoaded] = useState(false);
     const [hasError, setHasError] = useState(false);
 
@@ -61,116 +56,117 @@ export const EmoteImage: React.FC<EmoteImageProps> = memo(({
 
     // Memoize URL calculation
     const url = useMemo(() => {
-        switch (config.urlSize) {
-            case '1x':
-                return emote.urls.url1x;
-            case '2x':
-                return emote.urls.url2x;
-            case '4x':
-                return emote.urls.url4x || emote.urls.url2x;
-            default:
-                return emote.urls.url2x;
-        }
+      switch (config.urlSize) {
+        case "1x":
+          return emote.urls.url1x;
+        case "2x":
+          return emote.urls.url2x;
+        case "4x":
+          return emote.urls.url4x || emote.urls.url2x;
+        default:
+          return emote.urls.url2x;
+      }
     }, [config.urlSize, emote.urls.url1x, emote.urls.url2x, emote.urls.url4x]);
 
     const handleLoad = useCallback(() => {
-        setIsLoaded(true);
-        setHasError(false);
+      setIsLoaded(true);
+      setHasError(false);
     }, []);
 
     const handleError = useCallback(() => {
-        setHasError(true);
-        setIsLoaded(true);
+      setHasError(true);
+      setIsLoaded(true);
     }, []);
 
     const handleClick = useCallback(() => {
-        if (onClick) {
-            onClick(emote);
-        }
+      if (onClick) {
+        onClick(emote);
+      }
     }, [onClick, emote]);
 
-    const handleMouseEnter = useCallback((e: React.MouseEvent) => {
+    const handleMouseEnter = useCallback(
+      (e: React.MouseEvent) => {
         if (showTooltip) {
-            setMousePos({ x: e.clientX, y: e.clientY });
-            setShowTooltipState(true);
+          setMousePos({ x: e.clientX, y: e.clientY });
+          setShowTooltipState(true);
         }
-    }, [showTooltip]);
+      },
+      [showTooltip]
+    );
 
     const handleMouseMove = useCallback((e: React.MouseEvent) => {
-        setMousePos({ x: e.clientX, y: e.clientY });
+      setMousePos({ x: e.clientX, y: e.clientY });
     }, []);
 
     const handleMouseLeave = useCallback(() => {
-        setShowTooltipState(false);
+      setShowTooltipState(false);
     }, []);
 
     // Zero-width emotes need special positioning
     const zeroWidthStyles: React.CSSProperties = emote.isZeroWidth
-        ? {
-            position: 'absolute',
-            marginLeft: `-${config.height}px`,
+      ? {
+          position: "absolute",
+          marginLeft: `-${config.height}px`,
         }
-        : {};
+      : {};
 
     if (hasError) {
-        // Fallback for broken images - show emote code
-        return (
-            <span
-                className={`inline-flex items-center justify-center bg-gray-700 rounded px-1 text-xs ${className}`}
-                style={{ height: config.height }}
-                title={`${emote.name} (${emote.provider})`}
-            >
-                {emote.name}
-            </span>
-        );
+      // Fallback for broken images - show emote code
+      return (
+        <span
+          className={`inline-flex items-center justify-center bg-gray-700 rounded px-1 text-xs ${className}`}
+          style={{ height: config.height }}
+          title={`${emote.name} (${emote.provider})`}
+        >
+          {emote.name}
+        </span>
+      );
     }
 
     return (
-        <>
+      <>
+        <span
+          className={`relative inline-flex items-center ${onClick ? "cursor-pointer" : ""} ${className}`}
+          style={zeroWidthStyles}
+          onMouseEnter={handleMouseEnter}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          onClick={handleClick}
+        >
+          {/* Loading skeleton */}
+          {!isLoaded && (
             <span
-                className={`relative inline-flex items-center ${onClick ? 'cursor-pointer' : ''} ${className}`}
-                style={zeroWidthStyles}
-                onMouseEnter={handleMouseEnter}
-                onMouseMove={handleMouseMove}
-                onMouseLeave={handleMouseLeave}
-                onClick={handleClick}
-            >
-                {/* Loading skeleton */}
-                {!isLoaded && (
-                    <span
-                        className="inline-block bg-gray-700 rounded animate-pulse"
-                        style={{ width: config.height, height: config.height }}
-                    />
-                )}
-
-                {/* Actual emote image */}
-                <img
-                    ref={imgRef}
-                    src={url}
-                    alt={emote.name}
-                    loading={lazyLoad ? 'lazy' : 'eager'}
-                    onLoad={handleLoad}
-                    onError={handleError}
-                    className={`inline-block align-middle transition-opacity duration-200 ${isLoaded ? 'opacity-100' : 'opacity-0'
-                        }`}
-                    style={{
-                        height: config.height,
-                        width: 'auto',
-                        position: isLoaded ? 'relative' : 'absolute',
-                    }}
-                    draggable={false}
-                />
-            </span>
-
-            <EmoteTooltip
-                show={showTooltipState}
-                mousePos={mousePos}
-                emote={emote}
+              className="inline-block bg-gray-700 rounded animate-pulse"
+              style={{ width: config.height, height: config.height }}
             />
-        </>
-    );
-});
+          )}
 
-EmoteImage.displayName = 'EmoteImage';
+          {/* Actual emote image */}
+          <img
+            ref={imgRef}
+            src={url}
+            alt={emote.name}
+            loading={lazyLoad ? "lazy" : "eager"}
+            onLoad={handleLoad}
+            onError={handleError}
+            className={`inline-block align-middle transition-opacity duration-200 ${
+              isLoaded ? "opacity-100" : "opacity-0"
+            }`}
+            style={{
+              height: config.height,
+              width: "auto",
+              position: isLoaded ? "relative" : "absolute",
+            }}
+            draggable={false}
+          />
+        </span>
+
+        <EmoteTooltip show={showTooltipState} mousePos={mousePos} emote={emote} />
+      </>
+    );
+  }
+);
+
+EmoteImage.displayName = "EmoteImage";
 
 export default EmoteImage;
