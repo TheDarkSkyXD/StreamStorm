@@ -98,8 +98,8 @@ const searchRoute = createRoute({
 const streamRoute = createRoute({
   getParentRoute: () => appLayoutRoute,
   path: '/stream/$platform/$channel',
-  validateSearch: (search: Record<string, unknown>): { tab: 'videos' | 'clips' } => ({
-    tab: (search.tab as 'videos' | 'clips') || 'videos',
+  validateSearch: (search: Record<string, unknown>): { tab: 'home' | 'videos' | 'clips' } => ({
+    tab: (search.tab as 'home' | 'videos' | 'clips') || 'home',
   }),
   component: withSuspense(StreamPage),
 });

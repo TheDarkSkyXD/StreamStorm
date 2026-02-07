@@ -1,4 +1,4 @@
-import { useSearch } from '@tanstack/react-router';
+import { useSearch, Link } from '@tanstack/react-router';
 import React, { useState, useEffect, useCallback } from 'react';
 
 import { Button } from '@/components/ui/button';
@@ -115,9 +115,41 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                 const api = (window as any).electronAPI;
                 if (!api) return;
 
-                const targetTab = activeTab || 'videos';
+                const targetTab = activeTab || 'home';
 
-                if (targetTab === 'videos') {
+                if (targetTab === 'home') {
+                    // Fetch both recent videos and popular clips for the home dashboard
+                    const [videosResult, clipsResult] = await Promise.all([
+                        api.videos.getByChannel({
+                            platform,
+                            channelName,
+                            channelId: channelData?.id,
+                            limit: 5,
+                            sort: 'date' // Recent videos
+                        }),
+                        api.clips.getByChannel({
+                            platform,
+                            channelName,
+                            channelId: channelData?.id,
+                            limit: 5,
+                            sort: 'views', // Popular clips
+                            timeRange: 'all'
+                        })
+                    ]);
+
+                    if (videosResult.success) {
+                        setVideos(videosResult.data || []);
+                        // No cursor needed for home view
+                    }
+
+                    if (clipsResult.success) {
+                        setClips(clipsResult.data || []);
+                    }
+
+                    if (!videosResult.success && !clipsResult.success) {
+                        setError("Failed to load home content");
+                    }
+                } else if (targetTab === 'videos') {
                     const result = await api.videos.getByChannel({
                         platform,
                         channelName,
@@ -167,7 +199,9 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
     const loadMore = useCallback(async () => {
         if (isFetchingMore || isLoading) return;
 
-        const targetTab = activeTab || 'videos';
+        const targetTab = activeTab || 'home';
+        // Home tab doesn't use infinite scroll
+        if (targetTab === 'home') return;
         if (targetTab === 'videos' && !hasMoreVideos) return;
         if (targetTab === 'clips' && !hasMoreClips) return;
 
@@ -190,19 +224,43 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                 });
                 if (result.success) {
                     const newVideos = result.data || [];
+
+                    // Stop if no videos returned
                     if (newVideos.length === 0) {
+                        console.debug('[RelatedContent] No more videos to fetch');
                         setHasMoreVideos(false);
-                    } else {
-                        setVideos(prev => {
-                            // Filter out duplicates
-                            const existingIds = new Set(prev.map(v => v.id));
-                            const uniqueNewVideos = newVideos.filter((v: VideoOrClip) => !existingIds.has(v.id));
-                            return [...prev, ...uniqueNewVideos];
-                        });
-                        setVideoCursor(result.cursor);
-                        // If we got fewer than requested, we might be done, but rely on cursor if present
-                        if (!result.cursor) setHasMoreVideos(false);
+                        return;
                     }
+
+                    // Filter duplicates
+                    const existingIds = new Set(videos.map(v => v.id));
+                    const uniqueNewVideos = newVideos.filter((v: VideoOrClip) => !existingIds.has(v.id));
+
+                    // Stop if all returned videos are duplicates (we've looped back)
+                    if (uniqueNewVideos.length === 0) {
+                        console.debug('[RelatedContent] All videos are duplicates, stopping');
+                        setHasMoreVideos(false);
+                        return;
+                    }
+
+                    // Stop if cursor hasn't changed (stuck in a loop)
+                    if (result.cursor && result.cursor === videoCursor) {
+                        console.debug('[RelatedContent] Cursor unchanged, stopping');
+                        setHasMoreVideos(false);
+                        return;
+                    }
+
+                    setVideos(prev => [...prev, ...uniqueNewVideos]);
+                    setVideoCursor(result.cursor);
+
+                    // Stop if no cursor returned or got fewer than requested
+                    if (!result.cursor || newVideos.length < 5) {
+                        console.debug('[RelatedContent] No cursor or partial page, stopping');
+                        setHasMoreVideos(false);
+                    }
+                } else {
+                    // API error - stop trying
+                    setHasMoreVideos(false);
                 }
             } else if (targetTab === 'clips') {
                 const result = await api.clips.getByChannel({
@@ -216,18 +274,43 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                 });
                 if (result.success) {
                     const newClips = result.data || [];
+
+                    // Stop if no clips returned
                     if (newClips.length === 0) {
+                        console.debug('[RelatedContent] No more clips to fetch');
                         setHasMoreClips(false);
-                    } else {
-                        setClips(prev => {
-                            // Filter out duplicates
-                            const existingIds = new Set(prev.map(c => c.id));
-                            const uniqueNewClips = newClips.filter((c: VideoOrClip) => !existingIds.has(c.id));
-                            return [...prev, ...uniqueNewClips];
-                        });
-                        setClipCursor(result.cursor);
-                        if (!result.cursor) setHasMoreClips(false);
+                        return;
                     }
+
+                    // Filter duplicates
+                    const existingIds = new Set(clips.map(c => c.id));
+                    const uniqueNewClips = newClips.filter((c: VideoOrClip) => !existingIds.has(c.id));
+
+                    // Stop if all returned clips are duplicates
+                    if (uniqueNewClips.length === 0) {
+                        console.debug('[RelatedContent] All clips are duplicates, stopping');
+                        setHasMoreClips(false);
+                        return;
+                    }
+
+                    // Stop if cursor hasn't changed
+                    if (result.cursor && result.cursor === clipCursor) {
+                        console.debug('[RelatedContent] Clip cursor unchanged, stopping');
+                        setHasMoreClips(false);
+                        return;
+                    }
+
+                    setClips(prev => [...prev, ...uniqueNewClips]);
+                    setClipCursor(result.cursor);
+
+                    // Stop if no cursor returned or got fewer than requested
+                    if (!result.cursor || newClips.length < 5) {
+                        console.debug('[RelatedContent] No cursor or partial page, stopping clips');
+                        setHasMoreClips(false);
+                    }
+                } else {
+                    // API error - stop trying
+                    setHasMoreClips(false);
                 }
             }
         } catch (err) {
@@ -244,7 +327,7 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
         } finally {
             setIsFetchingMore(false);
         }
-    }, [isFetchingMore, isLoading, activeTab, hasMoreVideos, hasMoreClips, platform, channelName, channelData?.id, sortBy, timeRange, videoCursor, clipCursor]);
+    }, [isFetchingMore, isLoading, activeTab, hasMoreVideos, hasMoreClips, platform, channelName, channelData?.id, sortBy, timeRange, videoCursor, clipCursor, videos, clips]);
 
     // Intersection Observer Effect
     useEffect(() => {
@@ -336,99 +419,187 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
             <div className="space-y-4">
                 <div className="flex items-center justify-start gap-4">
                     {/* Sort Dropdown - Relocated here */}
-                    <div className="flex items-center gap-2 text-sm">
-                        {activeTab === 'clips' && (
-                            <div className="flex items-center gap-2 mr-4">
-                                <span className="text-[var(--color-foreground)] font-bold">Filter by:</span>
-                                <Select value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)}>
-                                    <SelectTrigger className="w-auto min-w-[100px] h-10 bg-[var(--color-background-secondary)] border-none font-bold px-4 text-base">
-                                        <SelectValue placeholder="Time" />
-                                    </SelectTrigger>
-                                    <SelectContent align="end">
-                                        <SelectItem value="day" className="font-bold">Last Day</SelectItem>
-                                        <SelectItem value="week" className="font-bold">Last Week</SelectItem>
-                                        <SelectItem value="month" className="font-bold">Last Month</SelectItem>
-                                        <SelectItem value="all" className="font-bold">All Time</SelectItem>
-                                    </SelectContent>
-                                </Select>
+                    {(!activeTab || activeTab === 'home') ? null : (
+                        <div className="flex items-center gap-2 text-sm">
+                            {activeTab === 'clips' && (
+                                <div className="flex items-center gap-2 mr-4">
+                                    <span className="text-[var(--color-foreground)] font-bold">Filter by:</span>
+                                    <Select value={timeRange} onValueChange={(value) => setTimeRange(value as TimeRange)}>
+                                        <SelectTrigger className="w-auto min-w-[100px] h-10 bg-[var(--color-background-secondary)] border-none font-bold px-4 text-base">
+                                            <SelectValue placeholder="Time" />
+                                        </SelectTrigger>
+                                        <SelectContent align="end">
+                                            <SelectItem value="day" className="font-bold">Last Day</SelectItem>
+                                            <SelectItem value="week" className="font-bold">Last Week</SelectItem>
+                                            <SelectItem value="month" className="font-bold">Last Month</SelectItem>
+                                            <SelectItem value="all" className="font-bold">All Time</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
+                            <span className="text-[var(--color-foreground)] font-bold">Sort by:</span>
+                            <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
+                                <SelectTrigger className="w-auto min-w-[90px] h-10 bg-[var(--color-background-secondary)] border-none font-bold px-4 text-base">
+                                    <SelectValue placeholder="Sort" />
+                                </SelectTrigger>
+                                <SelectContent align="end">
+                                    <SelectItem value="recent" className="font-bold">Most Recent</SelectItem>
+                                    <SelectItem value="views" className="font-bold">Views</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
+                </div>
+
+
+
+                {(!activeTab || activeTab === 'home') ? (
+                    <div className="space-y-10 animate-in fade-in duration-300">
+                        {/* Videos Section */}
+                        <section>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-xl font-bold">Stream Videos</h3>
+                                <Link
+                                    from="/stream/$platform/$channel"
+                                    search={{ tab: 'videos' }}
+                                    className="text-sm font-medium text-[var(--color-primary)] hover:underline"
+                                >
+                                    View all
+                                </Link>
+                            </div>
+                            {isLoading ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {[...Array(3)].map((_, i) => (
+                                        <div key={i} className="space-y-3">
+                                            <Skeleton className="aspect-video rounded-xl" />
+                                            <Skeleton className="h-4 w-3/4" />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : videos.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                    {videos.slice(0, 4).map((video) => (
+                                        <VideoCard
+                                            key={video.id}
+                                            video={video}
+                                            platform={platform}
+                                            channelName={channelName}
+                                            channelData={channelData}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-[var(--color-foreground-muted)]">No recent videos found.</p>
+                            )}
+                        </section>
+
+                        {/* Clips Section */}
+                        <section>
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-xl font-bold">Popular Clips</h3>
+                                <Link
+                                    from="/stream/$platform/$channel"
+                                    search={{ tab: 'clips' }}
+                                    className="text-sm font-medium text-[var(--color-primary)] hover:underline"
+                                >
+                                    View all
+                                </Link>
+                            </div>
+                            {isLoading ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                    {[...Array(3)].map((_, i) => (
+                                        <div key={i} className="space-y-3">
+                                            <Skeleton className="aspect-video rounded-xl" />
+                                            <Skeleton className="h-4 w-3/4" />
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : clips.length > 0 ? (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                    {clips.slice(0, 4).map((clip) => (
+                                        <ClipCard
+                                            key={clip.id}
+                                            clip={clip}
+                                            onClick={() => setSelectedClip(clip)}
+                                            platform={platform}
+                                            channelName={channelName}
+                                            channelData={channelData}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-[var(--color-foreground-muted)]">No popular clips found.</p>
+                            )}
+                        </section>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {isLoading ? (
+                            [...Array(6)].map((_, i) => (
+                                <div key={i} className="space-y-3">
+                                    <Skeleton className="aspect-video rounded-xl" />
+                                    <div className="space-y-2">
+                                        <Skeleton className="h-4 w-3/4" />
+                                        <Skeleton className="h-3 w-1/2" />
+                                    </div>
+                                </div>
+                            ))
+                        ) : error ? (
+                            <div className="col-span-full py-12 text-center text-red-400">
+                                <p>{error}</p>
+                                <Button variant="ghost" size="sm" onClick={() => window.location.reload()} className="mt-2">Retry</Button>
+                            </div>
+                        ) : (
+                            (activeTab === 'videos') ? (
+                                videos.length > 0 ? (
+                                    videos.map((video) => (
+                                        <VideoCard
+                                            key={video.id}
+                                            video={video}
+                                            platform={platform}
+                                            channelName={channelName}
+                                            channelData={channelData}
+                                        />
+                                    ))
+                                ) : (
+                                    <div className="col-span-full py-12 text-center text-[var(--color-foreground-muted)]">
+                                        No videos found
+                                        {debugInfo && <p className="text-xs mt-2 opacity-50 font-mono">{debugInfo}</p>}
+                                    </div>
+                                )
+                            ) : (
+                                clips.length > 0 ? (
+                                    clips.map((clip) => (
+                                        <ClipCard
+                                            key={clip.id}
+                                            clip={clip}
+                                            onClick={() => setSelectedClip(clip)}
+                                            platform={platform}
+                                            channelName={channelName}
+                                            channelData={channelData}
+                                        />
+                                    ))
+                                ) : (
+                                    <div className="col-span-full py-12 text-center text-[var(--color-foreground-muted)]">
+                                        No clips found
+                                    </div>
+                                )
+                            )
+                        )}
+
+                        {/* Sentinel for infinite scroll - only render when there's more data */}
+                        {((activeTab === 'videos' && hasMoreVideos && videos.length > 0) ||
+                            (activeTab === 'clips' && hasMoreClips && clips.length > 0)) && (
+                                <div ref={loadMoreRef} className="col-span-full h-4 w-full" />
+                            )}
+
+                        {isFetchingMore && (
+                            <div className="col-span-full py-4 flex justify-center">
+                                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
                             </div>
                         )}
-                        <span className="text-[var(--color-foreground)] font-bold">Sort by:</span>
-                        <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-                            <SelectTrigger className="w-auto min-w-[90px] h-10 bg-[var(--color-background-secondary)] border-none font-bold px-4 text-base">
-                                <SelectValue placeholder="Sort" />
-                            </SelectTrigger>
-                            <SelectContent align="end">
-                                <SelectItem value="recent" className="font-bold">Most Recent</SelectItem>
-                                <SelectItem value="views" className="font-bold">Views</SelectItem>
-                            </SelectContent>
-                        </Select>
                     </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {isLoading ? (
-                        [...Array(6)].map((_, i) => (
-                            <div key={i} className="space-y-3">
-                                <Skeleton className="aspect-video rounded-xl" />
-                                <div className="space-y-2">
-                                    <Skeleton className="h-4 w-3/4" />
-                                    <Skeleton className="h-3 w-1/2" />
-                                </div>
-                            </div>
-                        ))
-                    ) : error ? (
-                        <div className="col-span-full py-12 text-center text-red-400">
-                            <p>{error}</p>
-                            <Button variant="ghost" size="sm" onClick={() => window.location.reload()} className="mt-2">Retry</Button>
-                        </div>
-                    ) : (
-                        (activeTab === 'videos' || !activeTab) ? (
-                            videos.length > 0 ? (
-                                videos.map((video) => (
-                                    <VideoCard
-                                        key={video.id}
-                                        video={video}
-                                        platform={platform}
-                                        channelName={channelName}
-                                        channelData={channelData}
-                                    />
-                                ))
-                            ) : (
-                                <div className="col-span-full py-12 text-center text-[var(--color-foreground-muted)]">
-                                    No videos found
-                                    {debugInfo && <p className="text-xs mt-2 opacity-50 font-mono">{debugInfo}</p>}
-                                </div>
-                            )
-                        ) : (
-                            clips.length > 0 ? (
-                                clips.map((clip) => (
-                                    <ClipCard
-                                        key={clip.id}
-                                        clip={clip}
-                                        onClick={() => setSelectedClip(clip)}
-                                        platform={platform}
-                                        channelName={channelName}
-                                        channelData={channelData}
-                                    />
-                                ))
-                            ) : (
-                                <div className="col-span-full py-12 text-center text-[var(--color-foreground-muted)]">
-                                    No clips found
-                                </div>
-                            )
-                        )
-                    )}
-
-                    {/* Sentinel for infinite scroll */}
-                    <div ref={loadMoreRef} className="col-span-full h-4 w-full" />
-
-                    {isFetchingMore && (
-                        <div className="col-span-full py-4 flex justify-center">
-                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-                        </div>
-                    )}
-                </div>
+                )}
             </div>
 
             <ClipDialog
@@ -443,7 +614,7 @@ export function RelatedContent({ platform, channelName, channelData, onClipSelec
                 channelData={channelData}
                 onPlaybackError={handleClipPlaybackError}
             />
-        </div>
+        </div >
     );
 }
 

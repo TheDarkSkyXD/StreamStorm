@@ -1,11 +1,18 @@
+import { useEffect } from 'react';
 import { RouterProvider } from '@tanstack/react-router';
 
 import { AuthProvider } from '@/components/auth/AuthProvider';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { QueryProvider } from '@/providers/query-provider';
 import { router } from '@/routes/router';
+import { initializeEmoteProviders } from '@/backend/services/emotes';
 
 function App() {
+  useEffect(() => {
+    // Initialize emote providers (register them with manager)
+    initializeEmoteProviders();
+  }, []);
+
   return (
     <QueryProvider>
       <TooltipProvider>

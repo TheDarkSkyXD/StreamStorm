@@ -17,17 +17,12 @@ const mockElectronAPI = {
   },
 };
 
-// Extend Window interface for TypeScript
-declare global {
-  interface Window {
-    electronAPI: typeof mockElectronAPI;
-  }
-}
-
 // Set up global mock before importing hook
+// Using 'as any' to bypass strict type checking for test mocks
 (global as any).window = {
   electronAPI: mockElectronAPI,
 };
+
 
 // We can't easily test React hooks without @testing-library/react-hooks
 // So we'll test the underlying logic patterns instead
@@ -124,9 +119,9 @@ describe('useAdBlock hook logic', () => {
         cosmeticFilteringEnabled: false,
       });
 
-      const result = await window.electronAPI.adblock.toggle({ 
-        network: false, 
-        cosmetic: false 
+      const result = await window.electronAPI.adblock.toggle({
+        network: false,
+        cosmetic: false
       });
 
       expect(mockElectronAPI.adblock.toggle).toHaveBeenCalledWith({

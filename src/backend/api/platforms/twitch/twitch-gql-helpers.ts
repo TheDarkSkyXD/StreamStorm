@@ -1,128 +1,9 @@
 
 import { TwitchGqlResponse } from './twitch-types';
+import { httpClient } from '../../../services/http-client';
 
 const GQL_ENDPOINT = 'https://gql.twitch.tv/gql';
 const GQL_CLIENT_ID = 'kimne78kx3ncx6brgo4mv6wki5h1ko';
-
-/**
- * Extract error code from Error or its cause.
- * Node.js fetch wraps the real error in cause property.
- */
-function getErrorCode(error: unknown): string | undefined {
-    if (error instanceof Error) {
-        // Check cause first (Node.js fetch wraps the real error in cause)
-        const cause = (error as Error & { cause?: { code?: string } }).cause;
-        if (cause?.code) {
-            return cause.code;
-        }
-        // Fall back to direct code property
-        const directCode = (error as Error & { code?: string }).code;
-        if (directCode) {
-            return directCode;
-        }
-    }
-    return undefined;
-}
-
-/**
- * Check if an error is retryable (transient network issues).
- * Handles ECONNRESET, ETIMEDOUT, and other socket-level failures.
- */
-function isRetryableError(error: unknown): boolean {
-    if (error instanceof Error) {
-        const code = getErrorCode(error);
-
-        // Network-level errors that are typically transient
-        const retryableCodes = [
-            'ECONNRESET',    // Connection reset (TLS handshake failure)
-            'ETIMEDOUT',     // Connection timed out
-            'ENOTFOUND',     // DNS lookup failed (transient)
-            'ECONNREFUSED',  // Connection refused
-            'ENETUNREACH',   // Network unreachable
-            'EHOSTUNREACH',  // Host unreachable
-            'EPIPE',         // Broken pipe
-            'EAI_AGAIN'      // DNS temporary failure
-        ];
-
-        if (code && retryableCodes.includes(code)) {
-            return true;
-        }
-
-        // AbortError means our timeout triggered - retry
-        if (error.name === 'AbortError') {
-            return true;
-        }
-
-        // Check error message for fetch failures
-        const message = error.message.toLowerCase();
-        if (message.includes('fetch failed') ||
-            message.includes('network') ||
-            message.includes('socket') ||
-            message.includes('disconnected')) {
-            return true;
-        }
-    }
-    return false;
-}
-
-/**
- * Fetch with automatic retry for transient network errors.
- * Handles ECONNRESET, ETIMEDOUT, and other socket-level failures
- * that occur during TLS handshake with gql.twitch.tv.
- */
-async function fetchWithRetry(
-    url: string,
-    options: RequestInit,
-    maxRetries: number = 3,
-    baseDelay: number = 1000,
-    timeout: number = 15000
-): Promise<Response> {
-    let lastError: Error | null = null;
-
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        // Move controller and timeoutId outside try block to ensure cleanup in finally
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
-
-        try {
-            const response = await fetch(url, {
-                ...options,
-                signal: controller.signal
-            });
-
-            // Retry on transient server errors
-            if (response.status >= 502 && response.status <= 504) {
-                if (attempt < maxRetries) {
-                    const delay = baseDelay * Math.pow(2, attempt);
-                    console.warn(`⚠️ Twitch GQL server error ${response.status} (attempt ${attempt + 1}/${maxRetries + 1}). Retrying in ${delay}ms...`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    continue;
-                }
-                throw new Error(`GQL server error: ${response.status} after ${maxRetries + 1} attempts`);
-            }
-
-            return response;
-        } catch (error) {
-            lastError = error as Error;
-            const isRetryable = isRetryableError(error);
-
-            if (!isRetryable || attempt === maxRetries) {
-                throw error;
-            }
-
-            const delay = baseDelay * Math.pow(2, attempt);
-            const errorMsg = (error as Error).message || 'Unknown error';
-            const errorCode = getErrorCode(error);
-            console.warn(`⚠️ Twitch GQL request failed [${errorCode || 'NETWORK'}] (attempt ${attempt + 1}/${maxRetries + 1}). Retrying in ${delay}ms... Error: ${errorMsg}`);
-            await new Promise(resolve => setTimeout(resolve, delay));
-        } finally {
-            // Always clear the timeout to prevent stray timers
-            clearTimeout(timeoutId);
-        }
-    }
-
-    throw lastError || new Error('Request failed after retries');
-}
 
 export interface GqlVideoGameData {
     id: string;
@@ -159,7 +40,7 @@ export async function fetchGamesForVideos(videoIds: string[]): Promise<Record<st
     `;
 
     try {
-        const response = await fetchWithRetry(GQL_ENDPOINT, {
+        const response = await httpClient.fetch(GQL_ENDPOINT, {
             method: 'POST',
             headers: {
                 'Client-Id': GQL_CLIENT_ID,

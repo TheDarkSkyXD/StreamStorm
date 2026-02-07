@@ -1,6 +1,6 @@
 ---
 name: electron-skills
-description: Electron patterns for LlamaFarm Desktop. Covers main/renderer processes, IPC, security, and packaging.
+description: Electron patterns. Covers main/renderer processes, IPC, security, and packaging.
 allowed-tools: Read, Grep, Glob
 user-invocable: false
 ---

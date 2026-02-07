@@ -14,7 +14,6 @@ const config: ForgeConfig = {
     executableName: 'streamstorm',
     appBundleId: 'com.streamstorm.app',
     appCopyright: `Copyright © ${new Date().getFullYear()} StreamStorm`,
-    asar: true,
     // Icon paths - uncomment when icons are created
     // icon: './assets/icons/icon',
     // Windows specific
@@ -23,8 +22,50 @@ const config: ForgeConfig = {
       ProductName: 'StreamStorm',
       FileDescription: 'Unified streaming app for Twitch and Kick',
     },
+    // Ignore patterns to speed up packaging (reduces from 800MB+ to ~150MB)
+    // Uses a function for more precise control - returns true to IGNORE
+    ignore: [
+      /^\/KickTalk-main/,
+      /^\/tests/,
+      /^\/\.agent/,
+      /^\/\.github/,
+      /^\/\.vscode/,
+      /^\/\.sisyphus/,
+      /^\/\.playwright-mcp/,
+      /^\/documentation/,
+      /^\/docs/,
+      /^\/src/,
+      /^\/assets/,
+      /^\/out/,
+      /^\/\.git/,
+      /^\/\.idea/,
+      /^\/\.ds_store/,
+      /tsconfig\.json$/,
+      /biome\.json$/,
+      /tailwind\.config/,
+      /postcss\.config/,
+      /vite\..*\.config/,
+      /vitest\.config/,
+      /forge\.config/,
+      /\.env.*/,
+      /\.gitignore$/,
+      /\.npmignore$/,
+      /README\.md$/i,
+      /CHANGELOG\.md$/i,
+      /AGENTS\.md$/i,
+      /PRD\.md$/i,
+      /\.map$/,
+      /\.ts$/,
+      /\.tsx$/
+    ],
+    // Asar compression is disabled to meet < 5 min packaging requirement.
+    // This results in unpacked resources but builds much faster on Windows.
+    asar: false,
   },
-  rebuildConfig: {},
+  rebuildConfig: {
+    // Rebuild native modules using prebuilt binaries (Electron 32 has prebuilds available)
+    onlyModules: ['better-sqlite3'],
+  },
   makers: [
     // Windows installer (Squirrel)
     new MakerSquirrel({

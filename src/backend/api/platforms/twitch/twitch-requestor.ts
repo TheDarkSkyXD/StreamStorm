@@ -21,6 +21,30 @@ export class TwitchRequestor {
      */
     private isRetryableError(error: unknown): boolean {
         if (error instanceof Error) {
+            // Check for error code property (Node.js / undici errors)
+            const errorWithCause = error as Error & { cause?: { code?: string }; code?: string };
+            const code = errorWithCause.cause?.code || errorWithCause.code;
+
+            // Network-level error codes that are typically transient
+            const retryableCodes = [
+                'ECONNRESET',               // Connection reset (TLS handshake failure)
+                'ETIMEDOUT',                // Connection timed out
+                'ENOTFOUND',                // DNS lookup failed
+                'ECONNREFUSED',             // Connection refused
+                'ENETUNREACH',              // Network unreachable
+                'EHOSTUNREACH',             // Host unreachable
+                'EPIPE',                    // Broken pipe
+                'EAI_AGAIN',                // DNS temporary failure
+                'UND_ERR_CONNECT_TIMEOUT',  // Undici connect timeout
+                'UND_ERR_SOCKET',           // Undici socket error
+                'UND_ERR_HEADERS_TIMEOUT',  // Undici headers timeout
+                'UND_ERR_BODY_TIMEOUT',     // Undici body timeout
+            ];
+
+            if (code && retryableCodes.includes(code)) {
+                return true;
+            }
+
             const message = error.message.toLowerCase();
 
             // Network-level errors that are typically transient
@@ -32,7 +56,12 @@ export class TwitchRequestor {
                 message.includes('enetunreach') ||
                 message.includes('ehostunreach') ||
                 message.includes('aborted') ||
-                message.includes('disconnected')) {
+                message.includes('disconnected') ||
+                message.includes('connect timeout') ||
+                message.includes('ssl') ||
+                message.includes('tls') ||
+                message.includes('handshake') ||
+                message.includes('fetch failed')) {
                 return true;
             }
         }

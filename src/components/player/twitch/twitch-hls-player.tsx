@@ -171,6 +171,7 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
         let handleLoadedMetadata: (() => void) | null = null;
         let handleError: ((e: Event) => void) | null = null;
         let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+        let memoryCleanupInterval: ReturnType<typeof setInterval> | null = null;
 
         const safePlay = () => {
             if (!isEffectActive || !video) return;
@@ -216,11 +217,15 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
                 enableWorker: true,
                 lowLatencyMode: true,
                 startFragPrefetch: true,
-                backBufferLength: 90,
-                liveSyncDurationCount: 3,
-                liveMaxLatencyDurationCount: 8,
-                maxBufferLength: 30,
-                maxMaxBufferLength: 60,
+
+                // === AGGRESSIVE MEMORY MANAGEMENT FOR LONG-RUNNING STREAMS ===
+                // These settings prevent memory creep during 4-12+ hour Twitch sessions
+                backBufferLength: 30,      // Reduced from 90: Only keep 30s behind
+                maxBufferLength: 15,       // Reduced from 30: 15s forward buffer for live
+                maxMaxBufferLength: 30,    // Reduced from 60: Hard cap at 30s
+                maxBufferSize: 20 * 1000 * 1000, // 20MB max buffer size
+                liveSyncDurationCount: 2,  // Stay closer to live edge
+                liveMaxLatencyDurationCount: 6, // Reduced from 8
 
                 // Buffer hole handling - tuned for live streaming resilience
                 maxBufferHole: 0.5,              // Max gap size before seeking over (seconds)
@@ -461,6 +466,42 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
                         }
                     }
                 }, 10000);
+
+                // === PERIODIC MEMORY CLEANUP FOR LONG-RUNNING STREAMS ===
+                // Every 10 minutes: reset to live edge and trigger browser GC
+                if (memoryCleanupInterval) clearInterval(memoryCleanupInterval);
+                memoryCleanupInterval = setInterval(() => {
+                    if (!isEffectActive || !hls) {
+                        if (memoryCleanupInterval) clearInterval(memoryCleanupInterval);
+                        return;
+                    }
+
+                    try {
+                        console.debug('[TwitchHLS] Periodic cleanup: resetting to live edge and trimming buffers');
+
+                        // Reset to live edge
+                        hls.startLevel = -1;
+
+                        // Force back buffer trim
+                        const originalBackBuffer = hls.config.backBufferLength;
+                        hls.config.backBufferLength = 10;
+
+                        setTimeout(() => {
+                            if (hls && isEffectActive) {
+                                hls.config.backBufferLength = originalBackBuffer;
+                            }
+                        }, 1000);
+
+                        // Trigger garbage collection if available
+                        const globalGc = (globalThis as unknown as { gc?: () => void }).gc;
+                        if (typeof globalGc === 'function') {
+                            globalGc();
+                            console.debug('[TwitchHLS] Forced garbage collection');
+                        }
+                    } catch (e) {
+                        console.debug('[TwitchHLS] Cleanup error (non-fatal):', e);
+                    }
+                }, 10 * 60 * 1000); // Every 10 minutes
             });
 
         } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -524,6 +565,11 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
             if (heartbeatInterval) {
                 clearInterval(heartbeatInterval);
                 heartbeatInterval = null;
+            }
+
+            if (memoryCleanupInterval) {
+                clearInterval(memoryCleanupInterval);
+                memoryCleanupInterval = null;
             }
 
             if (hls) {
