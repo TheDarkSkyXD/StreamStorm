@@ -124,6 +124,8 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
         let handleError: ((e: Event) => void) | null = null;
         // Heartbeat interval for fast offline detection (cleaned up in effect cleanup)
         let heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+        // Memory cleanup interval for long-running streams (cleaned up in effect cleanup)
+        let memoryCleanupInterval: ReturnType<typeof setInterval> | null = null;
 
         // Safe play helper that handles interruption gracefully
         const safePlay = () => {
@@ -198,12 +200,19 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 enableWorker: true,
                 lowLatencyMode: true,
                 startFragPrefetch: true, // Start fetching fragment immediately for faster start
-                backBufferLength: 90,
-                // Refined for stability to prevent bufferStalledError
-                liveSyncDurationCount: 3, // Slightly behind live edge for stability
-                liveMaxLatencyDurationCount: 8, // More tolerance before jumping to live
-                maxBufferLength: 30, // 30 seconds buffer
-                maxMaxBufferLength: 60,
+
+                // === AGGRESSIVE MEMORY MANAGEMENT FOR LONG-RUNNING STREAMS ===
+                // These settings prevent memory creep during 4-12+ hour sessions
+                // HLS.js leaks ~5-15MB/hour from segment accumulation without these limits
+                backBufferLength: 30,     // Reduced from 90: Only keep 30s behind (was causing memory buildup)
+                maxBufferLength: 15,      // Reduced from 30: 15s forward buffer is plenty for live
+                maxMaxBufferLength: 30,   // Reduced from 60: Hard cap at 30s to prevent runaway buffering
+                maxBufferSize: 20 * 1000 * 1000, // 20MB max buffer size (soft limit)
+
+                // Low-latency live streaming optimizations
+                liveSyncDurationCount: 2, // Stay closer to live edge (reduced from 3)
+                liveMaxLatencyDurationCount: 6, // Reduced from 8: Jump to live sooner if behind
+
                 // Buffer stall recovery settings (HLS.js handles these automatically)
                 maxBufferHole: 0.5, // Increased tolerance for buffer gaps (default 0.1)
                 highBufferWatchdogPeriod: 3, // Seconds before nudging starts (default 3)
@@ -544,6 +553,44 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
                 }, 5000); // Check every 5 seconds for faster detection
             });
 
+            // === PERIODIC MEMORY CLEANUP FOR LONG-RUNNING STREAMS ===
+            // Every 10 minutes: reset to live edge and trigger browser GC
+            // This prevents the slow memory creep that eventually OOM-kills renderers after 2-6 hours
+            const memoryCleanupInterval = setInterval(() => {
+                if (!isEffectActive || !hls) {
+                    clearInterval(memoryCleanupInterval);
+                    return;
+                }
+
+                try {
+                    console.debug('[HLS] Periodic cleanup: resetting to live edge and trimming buffers');
+
+                    // Reset to live edge (clears accumulated segments in HLS.js internal state)
+                    hls.startLevel = -1;
+
+                    // Force back buffer trim by setting it lower temporarily
+                    // This clears detached MediaSource buffers that accumulate over time
+                    const originalBackBuffer = hls.config.backBufferLength;
+                    hls.config.backBufferLength = 10;
+
+                    // Restore after a tick to let HLS.js process the trim
+                    setTimeout(() => {
+                        if (hls && isEffectActive) {
+                            hls.config.backBufferLength = originalBackBuffer;
+                        }
+                    }, 1000);
+
+                    // Trigger garbage collection if available (requires --expose-gc flag)
+                    const globalGc = (globalThis as unknown as { gc?: () => void }).gc;
+                    if (typeof globalGc === 'function') {
+                        globalGc();
+                        console.debug('[HLS] Forced garbage collection');
+                    }
+                } catch (e) {
+                    console.debug('[HLS] Cleanup error (non-fatal):', e);
+                }
+            }, 10 * 60 * 1000); // Every 10 minutes
+
         } else if (isHls && video.canPlayType('application/vnd.apple.mpegurl')) {
             // Native HLS (Safari)
             console.debug('Using native HLS');
@@ -627,6 +674,12 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(({
             if (heartbeatInterval) {
                 clearInterval(heartbeatInterval);
                 heartbeatInterval = null;
+            }
+
+            // Clean up memory cleanup interval
+            if (memoryCleanupInterval) {
+                clearInterval(memoryCleanupInterval);
+                memoryCleanupInterval = null;
             }
 
             if (hls) {

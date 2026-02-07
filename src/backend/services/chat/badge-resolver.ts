@@ -6,8 +6,6 @@
  */
 
 import type { ChatBadge, BadgeSet, BadgeVersion } from '../../../shared/chat-types';
-import { getOAuthConfig } from '../../auth/oauth-config';
-import { storageService } from '../storage-service';
 
 // ========== Types ==========
 
@@ -54,7 +52,7 @@ export class BadgeResolver {
     /**
      * Load global Twitch badges
      */
-    async loadGlobalBadges(): Promise<void> {
+    async loadGlobalBadges(token: string, clientId: string): Promise<void> {
         // Check cache validity
         if (
             this.globalBadges.size > 0 &&
@@ -64,7 +62,7 @@ export class BadgeResolver {
         }
 
         try {
-            const badges = await this.fetchBadges('/chat/badges/global');
+            const badges = await this.fetchBadges('/chat/badges/global', token, clientId);
             this.globalBadges = this.transformBadges(badges);
             this.globalBadgesLoadedAt = Date.now();
             console.debug(`✅ Loaded ${this.globalBadges.size} global badge sets`);
@@ -76,7 +74,7 @@ export class BadgeResolver {
     /**
      * Load channel-specific badges
      */
-    async loadChannelBadges(broadcasterId: string): Promise<void> {
+    async loadChannelBadges(broadcasterId: string, token: string, clientId: string): Promise<void> {
         // Check cache validity
         const loadedAt = this.channelBadgesLoadedAt.get(broadcasterId);
         if (
@@ -89,7 +87,9 @@ export class BadgeResolver {
 
         try {
             const badges = await this.fetchBadges(
-                `/chat/badges?broadcaster_id=${broadcasterId}`
+                `/chat/badges?broadcaster_id=${broadcasterId}`,
+                token,
+                clientId
             );
             this.channelBadges.set(broadcasterId, this.transformBadges(badges));
             this.channelBadgesLoadedAt.set(broadcasterId, Date.now());
@@ -181,16 +181,7 @@ export class BadgeResolver {
     /**
      * Fetch badges from Twitch API
      */
-    private async fetchBadges(endpoint: string): Promise<TwitchBadgeSet[]> {
-        const config = getOAuthConfig('twitch');
-
-        // Try user token first, fall back to app token
-        let token = storageService.getToken('twitch')?.accessToken;
-        if (!token) {
-            const appToken = storageService.getAppToken('twitch');
-            token = typeof appToken === 'string' ? appToken : appToken?.accessToken;
-        }
-
+    private async fetchBadges(endpoint: string, token: string, clientId: string): Promise<TwitchBadgeSet[]> {
         if (!token) {
             throw new Error('No Twitch token available for badge fetch');
         }
@@ -198,7 +189,7 @@ export class BadgeResolver {
         const response = await fetch(`${TWITCH_API_BASE}${endpoint}`, {
             headers: {
                 Authorization: `Bearer ${token}`,
-                'Client-Id': config.clientId,
+                'Client-Id': clientId,
             },
         });
 

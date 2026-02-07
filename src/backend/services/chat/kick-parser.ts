@@ -170,23 +170,60 @@ function getDefaultColor(username: string): string {
 
 // ========== Badge Mapping ==========
 
+// Using KickTalk's CDN for badges since Kick's static-assets URLs are unreliable
+const KICK_BADGE_CDN = 'https://cdn.kicktalk.app/Badges';
+
 const KICK_BADGE_IMAGE_MAP: Record<string, string> = {
-    broadcaster: 'https://kick.com/static-assets/images/badges/broadcaster-badge.svg',
-    moderator: 'https://kick.com/static-assets/images/badges/moderator-badge.svg',
-    vip: 'https://kick.com/static-assets/images/badges/vip-badge.svg',
-    verified: 'https://kick.com/static-assets/images/badges/verified-badge.svg',
-    og: 'https://kick.com/static-assets/images/badges/og-badge.svg',
-    founder: 'https://kick.com/static-assets/images/badges/founder-badge.svg',
-    subscriber: 'https://kick.com/static-assets/images/badges/subscriber-badge.svg',
+    broadcaster: `${KICK_BADGE_CDN}/broadcaster.svg`,
+    moderator: `${KICK_BADGE_CDN}/moderator.svg`,
+    vip: `${KICK_BADGE_CDN}/vip.svg`,
+    verified: `${KICK_BADGE_CDN}/verified.svg`,
+    og: `${KICK_BADGE_CDN}/og.svg`,
+    founder: `${KICK_BADGE_CDN}/founder.svg`,
+    subscriber: `${KICK_BADGE_CDN}/subscriber.svg`,
+    bot: `${KICK_BADGE_CDN}/bot.svg`,
+    staff: `${KICK_BADGE_CDN}/staff.svg`,
+    sidekick: `${KICK_BADGE_CDN}/sidekick.svg`,
+    sub_gifter: `${KICK_BADGE_CDN}/subgifter1.svg`,
+    subgifter25: `${KICK_BADGE_CDN}/subgifter25.svg`,
+    subgifter50: `${KICK_BADGE_CDN}/subgifter50.svg`,
+    subgifter100: `${KICK_BADGE_CDN}/subgifter100.svg`,
+    subgifter200: `${KICK_BADGE_CDN}/subgifter200.svg`,
+    trainwreckstv: `${KICK_BADGE_CDN}/trainwreckstv.svg`,
 };
+
+// ========== Subscriber Badge Type ==========
+
+export interface SubscriberBadge {
+    id: number;
+    channel_id: number;
+    months: number;
+    badge_image: {
+        src: string;
+        srcset: string;
+    };
+}
 
 /**
  * Map Kick badges to our unified ChatBadge format
  */
-function parseKickBadges(badges: KickBadge[]): ChatBadge[] {
+function parseKickBadges(badges: KickBadge[], subscriberBadges?: SubscriberBadge[]): ChatBadge[] {
     return badges.map((badge) => {
-        const imageUrl = KICK_BADGE_IMAGE_MAP[badge.type] || '';
+        let imageUrl = KICK_BADGE_IMAGE_MAP[badge.type] || '';
         const title = badge.text || badge.type;
+
+        // Custom Subscriber Badge Logic
+        if (badge.type === 'subscriber' && subscriberBadges?.length) {
+            const months = badge.count || 0;
+            // logic from KickTalk: sort descending by months, find first badge where user months >= badge months
+            const match = subscriberBadges
+                .sort((a, b) => b.months - a.months)
+                .find((b) => months >= b.months);
+
+            if (match) {
+                imageUrl = match.badge_image.src;
+            }
+        }
 
         return {
             setId: badge.type,
@@ -372,7 +409,8 @@ function parseTextFragment(text: string): ContentFragment[] {
  */
 export function parseKickChatMessage(
     event: KickChatMessageEvent,
-    channel: string
+    channel: string,
+    subscriberBadges?: SubscriberBadge[]
 ): ChatMessage {
     const { cleanContent, fragments } = parseKickEmotes(event.content);
 
@@ -402,7 +440,7 @@ export function parseKickChatMessage(
         username: event.sender.slug,
         displayName: event.sender.username,
         color: event.sender.identity.color || getDefaultColor(event.sender.username),
-        badges: parseKickBadges(event.sender.identity.badges),
+        badges: parseKickBadges(event.sender.identity.badges, subscriberBadges),
         content: fragments,
         rawContent: cleanContent,
         timestamp: new Date(event.created_at),

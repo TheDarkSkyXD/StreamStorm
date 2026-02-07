@@ -51,6 +51,10 @@ export interface UnifiedChannel {
     categoryName?: string;
     // Stream title - represents the last set stream title
     lastStreamTitle?: string;
+    // Kick-specific: chatroom ID for Pusher WebSocket subscription
+    chatroomId?: number;
+    // Kick-specific: subscriber badges
+    subscriberBadges?: any[];
 }
 
 export interface SocialLink {

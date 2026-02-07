@@ -1,5 +1,6 @@
 
 import { useParams } from '@tanstack/react-router';
+import { ChatPanel } from '@/components/chat';
 import { useState, useEffect, useCallback, useMemo } from 'react';
 
 import { KickLivePlayer } from '@/components/player/kick';
@@ -145,6 +146,15 @@ export function StreamPage() {
       setChatWidth(340); // Match Twitch's standard chat width
     }
   }, [isTheater]);
+
+  // Memoize subscriber badges to prevent KickChat from re-mounting when channelData refetches
+  // Arrays are compared by reference in React, so we serialize to detect actual changes
+  const memoizedSubscriberBadges = useMemo(() => {
+    const badges = platform === 'kick' ? channelData?.subscriberBadges : undefined;
+    // Only update reference if badges actually changed
+    return badges;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platform, JSON.stringify(channelData?.subscriberBadges)]);
 
   // Memoize stream info to prevent effect from running on every streamData update
   // streamData changes every 30s (viewer count), but we only care about title/category changes
@@ -385,21 +395,15 @@ export function StreamPage() {
       {/* Chat Panel */}
       <div
         style={{ width: chatWidth }}
-        className="bg-[var(--color-background-secondary)] flex flex-col shrink-0 relative"
+        className="bg-[var(--color-background-secondary)] flex flex-col shrink-0 relative border-l border-[var(--color-border)]"
       >
-        <div className="p-3 border-b border-[var(--color-border)]">
-          <h2 className="font-semibold">Chat</h2>
-        </div>
-        <div className="flex-1 p-3">
-          <p className="text-[var(--color-foreground-muted)] text-sm">Chat messages will appear here</p>
-        </div>
-        <div className="p-3 border-t border-[var(--color-border)]">
-          <input
-            type="text"
-            placeholder="Send a message..."
-            className="w-full h-10 px-3 rounded-md border border-[var(--color-border)] bg-[var(--color-background-tertiary)] text-sm focus:outline-none focus:ring-1 focus:ring-white"
-          />
-        </div>
+        <ChatPanel
+          initialPlatform={platform as 'twitch' | 'kick'}
+          initialChannel={channelName}
+          channelId={platform === 'twitch' ? channelData?.id : undefined}
+          chatroomId={platform === 'kick' ? channelData?.chatroomId : undefined}
+          subscriberBadges={memoizedSubscriberBadges}
+        />
       </div>
     </div>
   );

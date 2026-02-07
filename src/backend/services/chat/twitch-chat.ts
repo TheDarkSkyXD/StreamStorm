@@ -17,8 +17,7 @@ import type {
     MessageDeletion,
     ChatServiceEvents,
 } from '../../../shared/chat-types';
-import { getOAuthConfig } from '../../auth/oauth-config';
-import { storageService } from '../storage-service';
+import type { TwitchUser } from '../../../shared/auth-types';
 
 import { badgeResolver } from './badge-resolver';
 import { parseTwitchMessage, type TwitchTags } from './twitch-parser';
@@ -30,6 +29,12 @@ interface TwitchChatOptions {
     anonymous?: boolean;
     /** Enable debug logging */
     debug?: boolean;
+    /** Twitch OAuth Access Token (required if not anonymous) */
+    accessToken?: string;
+    /** Twitch Client ID (required for badges) */
+    clientId?: string;
+    /** Twitch User info (required for identity) */
+    user?: TwitchUser;
 }
 
 type TypedEventEmitter = {
@@ -47,6 +52,7 @@ const RECONNECT_DELAY_MS = 3000;
 const MAX_RECONNECT_ATTEMPTS = 10;
 const MESSAGE_RATE_LIMIT = 20; // Messages per 30 seconds (normal user)
 const MOD_MESSAGE_RATE_LIMIT = 100; // Messages per 30 seconds (mod/broadcaster)
+const CONNECTION_TIMEOUT_MS = 30000; // 30 second timeout for initial connection
 
 // ========== TwitchChatService Class ==========
 
@@ -59,29 +65,94 @@ export class TwitchChatService extends EventEmitter implements TypedEventEmitter
     private debugMode = false;
     private broadcasterId: Map<string, string> = new Map(); // channel -> broadcaster ID
 
+    // Creds
+    private accessToken: string | null = null;
+    private clientId: string | null = null;
+    private user: TwitchUser | null = null;
+
     // Rate limiting
     private messageTimestamps: number[] = [];
     private isModerator: Map<string, boolean> = new Map(); // channel -> isMod
+
+    // Connection tracking for React Strict Mode race condition prevention
+    private isConnecting = false;
+    private currentConnectionId = 0;
+
+    // Platform isolation: prevents zombie reconnections when service should be inactive
+    // When false, ALL connection attempts and reconnections are blocked
+    private isActive = false;
+    private reconnectTimeoutId: NodeJS.Timeout | null = null;
+
+    // Reference counting for multiview support
+    // Tracks how many components are actively using this service
+    // Only performs full shutdown when count reaches 0
+    private activeUsers = 0;
 
     // ========== Public API ==========
 
     /**
      * Connect to Twitch IRC
+     * Uses connection ID tracking to handle React Strict Mode race conditions
      */
     async connect(options: TwitchChatOptions = {}): Promise<void> {
+        // Mark service as active - allows connections and reconnections
+        this.isActive = true;
+
+        // If already connected, just return
         if (this.client && this.connectionState === 'connected') {
             this.log('Already connected');
             return;
         }
 
+        // If already connecting, wait for that connection or abort
+        if (this.isConnecting) {
+            this.log('Connection already in progress, waiting...');
+            // Wait a bit and check if connection completed
+            await new Promise(resolve => setTimeout(resolve, 100));
+            if (this.connectionState === 'connected') {
+                this.log('Connection completed while waiting');
+                return;
+            }
+        }
+
+        // Check if service was deactivated while waiting
+        if (!this.isActive) {
+            this.log('Service deactivated, aborting connection');
+            return;
+        }
+
+        // Generate a unique connection ID for this attempt
+        const connectionId = ++this.currentConnectionId;
+        this.isConnecting = true;
+
         this.debugMode = options.debug ?? false;
         this.isAnonymous = options.anonymous ?? false;
+
+        if (!this.isAnonymous) {
+            this.accessToken = options.accessToken || null;
+            this.clientId = options.clientId || null;
+            this.user = options.user || null;
+        }
 
         this.setConnectionState('connecting');
 
         try {
-            // Load global badges
-            await badgeResolver.loadGlobalBadges();
+            // Check if this connection attempt was aborted
+            if (connectionId !== this.currentConnectionId) {
+                this.log(`Connection ${connectionId} aborted (superseded by ${this.currentConnectionId})`);
+                return;
+            }
+
+            // Load global badges if credentials are present
+            if (this.accessToken && this.clientId) {
+                await badgeResolver.loadGlobalBadges(this.accessToken, this.clientId);
+            }
+
+            // Check again after async operation
+            if (connectionId !== this.currentConnectionId) {
+                this.log(`Connection ${connectionId} aborted after badge load`);
+                return;
+            }
 
             // Create client
             this.client = this.createClient();
@@ -89,23 +160,103 @@ export class TwitchChatService extends EventEmitter implements TypedEventEmitter
             // Set up event handlers
             this.setupEventHandlers();
 
-            // Connect
-            await this.client.connect();
+            // Connect with proper await - wait for 'connected' event
+            await new Promise<void>((resolve, reject) => {
+                const timeout = setTimeout(() => {
+                    reject(new Error('Twitch IRC connection timed out'));
+                }, CONNECTION_TIMEOUT_MS);
+
+                const onConnected = () => {
+                    clearTimeout(timeout);
+                    this.client?.removeListener('disconnected', onDisconnected);
+                    resolve();
+                };
+
+                const onDisconnected = (reason: string) => {
+                    clearTimeout(timeout);
+                    this.client?.removeListener('connected', onConnected);
+                    reject(new Error(`Connection failed: ${reason}`));
+                };
+
+                this.client?.once('connected', onConnected);
+                this.client?.once('disconnected', onDisconnected);
+
+                // Initiate connection
+                this.client?.connect().catch((err) => {
+                    clearTimeout(timeout);
+                    this.client?.removeListener('connected', onConnected);
+                    this.client?.removeListener('disconnected', onDisconnected);
+                    reject(err);
+                });
+            });
+
+            // Check if service was deactivated during connection
+            if (!this.isActive) {
+                this.log(`Connection ${connectionId} aborted - service deactivated`);
+                try {
+                    await this.client?.disconnect();
+                } catch {
+                    // Ignore
+                }
+                this.client = null;
+                return;
+            }
+
+            // Final check before declaring success
+            if (connectionId !== this.currentConnectionId) {
+                this.log(`Connection ${connectionId} aborted after IRC connect`);
+                // Clean up the client we just connected
+                try {
+                    await this.client?.disconnect();
+                } catch {
+                    // Ignore
+                }
+                this.client = null;
+                return;
+            }
 
             this.reconnectAttempts = 0;
             this.setConnectionState('connected');
             this.log('Connected to Twitch IRC');
         } catch (error) {
-            this.handleConnectionError(error);
-            throw error;
+            // Only handle error if this is still the active connection attempt
+            if (connectionId === this.currentConnectionId) {
+                this.handleConnectionError(error);
+                throw error;
+            }
+            // Otherwise, silently ignore - this connection was superseded
+            this.log(`Connection ${connectionId} error ignored (superseded)`);
+        } finally {
+            // Only clear isConnecting if this is the current connection
+            if (connectionId === this.currentConnectionId) {
+                this.isConnecting = false;
+            }
         }
     }
 
     /**
      * Disconnect from Twitch IRC
+     * Increments connection ID to abort any in-progress connections
+     * Note: This is a soft disconnect - service remains active for reconnection
      */
     async disconnect(): Promise<void> {
-        if (!this.client) return;
+        // Increment connection ID to abort any in-progress connection attempts
+        this.currentConnectionId++;
+        this.isConnecting = false;
+
+        // Cancel any pending reconnect
+        if (this.reconnectTimeoutId) {
+            clearTimeout(this.reconnectTimeoutId);
+            this.reconnectTimeoutId = null;
+        }
+
+        if (!this.client) {
+            this.setConnectionState('disconnected');
+            return;
+        }
+
+        // Prevent reconnect logic from triggering during intentional disconnect
+        this.client.removeAllListeners('disconnected');
 
         try {
             await this.client.disconnect();
@@ -117,6 +268,116 @@ export class TwitchChatService extends EventEmitter implements TypedEventEmitter
         this.channels.clear();
         this.setConnectionState('disconnected');
         this.log('Disconnected from Twitch IRC');
+    }
+
+    /**
+     * Acquire a reference to this service (increment user count)
+     * Call this when a component starts using the service
+     * Must be paired with release() when the component unmounts
+     */
+    acquire(): void {
+        this.activeUsers++;
+        this.log(`Service acquired (active users: ${this.activeUsers})`);
+    }
+
+    /**
+     * Release a reference to this service (decrement user count)
+     * Call this when a component stops using the service
+     * When the last user releases, the service will fully shutdown
+     * 
+     * @param channel - Optional channel to leave before releasing
+     * @returns Promise that resolves when cleanup is complete
+     */
+    async release(channel?: string): Promise<void> {
+        // Leave the specific channel if provided
+        if (channel) {
+            await this.leaveChannel(channel);
+        }
+
+        this.activeUsers = Math.max(0, this.activeUsers - 1);
+        this.log(`Service released (active users: ${this.activeUsers})`);
+
+        // If no more users, perform full shutdown
+        if (this.activeUsers === 0) {
+            await this.shutdown();
+        }
+    }
+
+    /**
+     * Get the current number of active users
+     */
+    getActiveUserCount(): number {
+        return this.activeUsers;
+    }
+
+    /**
+     * Completely shutdown the service
+     * This is a HARD shutdown - prevents ALL reconnection attempts
+     * 
+     * In single-view mode: Called directly when switching platforms
+     * In multi-view mode: Called automatically when last user releases
+     * 
+     * You can also call forceShutdown() to bypass reference counting
+     */
+    async shutdown(): Promise<void> {
+        // Check if other users are still active
+        if (this.activeUsers > 0) {
+            this.log(`Shutdown requested but ${this.activeUsers} users still active, skipping`);
+            return;
+        }
+
+        await this.forceShutdown();
+    }
+
+    /**
+     * Force shutdown regardless of active users
+     * Use with caution - this will disconnect ALL users
+     */
+    async forceShutdown(): Promise<void> {
+        this.log('Force shutting down Twitch chat service...');
+
+        // Mark service as inactive FIRST - this blocks all reconnection attempts
+        this.isActive = false;
+        this.activeUsers = 0;
+
+        // Increment connection ID to abort any in-progress connection attempts
+        this.currentConnectionId++;
+        this.isConnecting = false;
+        this.reconnectAttempts = 0;
+
+        // Cancel any pending reconnect timeout
+        if (this.reconnectTimeoutId) {
+            clearTimeout(this.reconnectTimeoutId);
+            this.reconnectTimeoutId = null;
+        }
+
+        if (!this.client) {
+            this.setConnectionState('disconnected');
+            return;
+        }
+
+        // Remove ALL listeners to prevent any callbacks from firing
+        this.client.removeAllListeners();
+
+        try {
+            await this.client.disconnect();
+        } catch {
+            // Ignore disconnect errors
+        }
+
+        this.client = null;
+        this.channels.clear();
+        this.broadcasterId.clear();
+        this.isModerator.clear();
+        this.setConnectionState('disconnected');
+        this.log('Twitch chat service shutdown complete');
+    }
+
+    /**
+     * Check if the service is currently active
+     */
+    isServiceActive(): boolean {
+        return this.isActive;
     }
 
     /**
@@ -141,7 +402,9 @@ export class TwitchChatService extends EventEmitter implements TypedEventEmitter
             // Store broadcaster ID for badge resolution
             if (broadcasterId) {
                 this.broadcasterId.set(normalizedChannel, broadcasterId);
-                await badgeResolver.loadChannelBadges(broadcasterId);
+                if (this.accessToken && this.clientId) {
+                    await badgeResolver.loadChannelBadges(broadcasterId, this.accessToken, this.clientId);
+                }
             }
 
             this.emitConnectionStatus();
@@ -295,27 +558,28 @@ export class TwitchChatService extends EventEmitter implements TypedEventEmitter
     /**
      * Create tmi.js client with appropriate options
      */
+    /**
+     * Create tmi.js client with appropriate options
+     */
     private createClient(): tmi.Client {
-        const config = getOAuthConfig('twitch');
-        const token = storageService.getToken('twitch')?.accessToken;
-        const user = storageService.getTwitchUser();
-
         const options: tmi.Options = {
             options: {
                 debug: this.debugMode,
                 skipUpdatingEmotesets: true,
             },
             connection: {
-                reconnect: true,
+                // IMPORTANT: Disable tmi.js auto-reconnect - we handle reconnection manually
+                // This gives us full control and prevents zombie connections when service is inactive
+                reconnect: false,
                 secure: true,
             },
         };
 
         // Authenticated or anonymous connection
-        if (!this.isAnonymous && token && user) {
+        if (!this.isAnonymous && this.accessToken && this.user) {
             options.identity = {
-                username: user.login,
-                password: `oauth:${token}`,
+                username: this.user.login,
+                password: `oauth:${this.accessToken}`,
             };
         }
 
@@ -431,15 +695,13 @@ export class TwitchChatService extends EventEmitter implements TypedEventEmitter
 
         // Mod status
         this.client.on('mod', (channel, username) => {
-            const user = storageService.getTwitchUser();
-            if (user && username.toLowerCase() === user.login.toLowerCase()) {
+            if (this.user && username.toLowerCase() === this.user.login.toLowerCase()) {
                 this.isModerator.set(this.normalizeChannel(channel), true);
             }
         });
 
         this.client.on('unmod', (channel, username) => {
-            const user = storageService.getTwitchUser();
-            if (user && username.toLowerCase() === user.login.toLowerCase()) {
+            if (this.user && username.toLowerCase() === this.user.login.toLowerCase()) {
                 this.isModerator.set(this.normalizeChannel(channel), false);
             }
         });
@@ -496,27 +758,50 @@ export class TwitchChatService extends EventEmitter implements TypedEventEmitter
 
     /**
      * Handle disconnection and attempt reconnection
+     * Only reconnects if service is still active (not shutdown)
      */
     private handleDisconnect(): void {
         this.setConnectionState('disconnected');
+
+        // CRITICAL: Only attempt reconnection if service is still active
+        // This prevents zombie reconnections when user has switched to a different platform
+        if (!this.isActive) {
+            this.log('Service inactive, skipping reconnection');
+            return;
+        }
 
         if (this.reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
             this.reconnectAttempts++;
             this.setConnectionState('reconnecting');
 
-            setTimeout(async () => {
+            const delay = RECONNECT_DELAY_MS * this.reconnectAttempts;
+            this.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})...`);
+
+            // Store timeout ID so we can cancel it on shutdown
+            this.reconnectTimeoutId = setTimeout(async () => {
+                this.reconnectTimeoutId = null;
+
+                // Double-check service is still active before reconnecting
+                if (!this.isActive) {
+                    this.log('Service deactivated during reconnect delay, aborting');
+                    return;
+                }
+
                 try {
                     await this.connect({ anonymous: this.isAnonymous, debug: this.debugMode });
 
-                    // Rejoin channels
-                    for (const channel of this.channels) {
-                        await this.joinChannel(channel);
+                    // Rejoin channels (only if still active)
+                    if (this.isActive) {
+                        for (const channel of this.channels) {
+                            await this.joinChannel(channel);
+                        }
                     }
                 } catch (error) {
                     console.error('Reconnection failed:', error);
                 }
-            }, RECONNECT_DELAY_MS * this.reconnectAttempts);
+            }, delay);
         } else {
+            this.log('Max reconnection attempts reached');
             this.emit('error', new Error('Max reconnection attempts reached'));
         }
     }

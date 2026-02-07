@@ -3,7 +3,7 @@ import { BrowserWindow } from 'electron';
 import { UnifiedChannel } from '../../../unified/platform-types';
 import { KickRequestor } from '../kick-requestor';
 import { transformKickChannel } from '../kick-transformers';
-import { KickApiResponse, KickApiChannel, KICK_LEGACY_API_V1_BASE } from '../kick-types';
+import { KickApiResponse, KickApiChannel, KICK_LEGACY_API_V1_BASE, KICK_LEGACY_API_V2_BASE } from '../kick-types';
 
 import { getUsersById } from './user-endpoints';
 
@@ -171,7 +171,7 @@ export async function getChannelsBySlugs(client: KickRequestor, slugs: string[])
 export async function getPublicChannel(slug: string): Promise<UnifiedChannel | null> {
     let win: BrowserWindow | null = null;
     try {
-        const url = `${KICK_LEGACY_API_V1_BASE}/channels/${slug}`;
+        const url = `${KICK_LEGACY_API_V2_BASE}/channels/${slug}`;
 
         // Create a hidden window
         win = new BrowserWindow({
@@ -265,6 +265,15 @@ export async function getPublicChannel(slug: string): Promise<UnifiedChannel | n
             return null;
         }
 
+        // Extract chatroom ID for Pusher WebSocket subscription
+        const chatroomId = data.chatroom?.id;
+        console.debug(`[KickChannel] Extracted for ${slug}:`, {
+            userId,
+            chatroomId,
+            hasChatroom: !!data.chatroom,
+            chatroomKeys: data.chatroom ? Object.keys(data.chatroom) : 'N/A',
+        });
+
         return {
             id: userId.toString(),
             platform: 'kick',
@@ -300,6 +309,8 @@ export async function getPublicChannel(slug: string): Promise<UnifiedChannel | n
             categoryId,
             categoryName,
             lastStreamTitle,
+            chatroomId: typeof chatroomId === 'number' ? chatroomId : undefined,
+            subscriberBadges: data.subscriber_badges,
         };
 
     } catch (error) {
