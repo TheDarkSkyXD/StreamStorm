@@ -201,8 +201,7 @@ class RobustHttpClient {
 
     try {
       const queue = this.requestQueues.get(origin)!;
-      const maxConcurrent =
-        CONCURRENCY[origin as keyof typeof CONCURRENCY] || CONCURRENCY.default;
+      const maxConcurrent = CONCURRENCY[origin as keyof typeof CONCURRENCY] || CONCURRENCY.default;
 
       while (queue.length > 0) {
         const activeCount = this.activeRequests.get(origin) || 0;

@@ -5,6 +5,7 @@
  * Handles chat messages, events (subs, gifts, raids), and moderation actions.
  */
 
+import { getBundledBadgeUrl } from "../../../assets/platforms/kick/badges";
 import type {
   ChatBadge,
   ChatMessage,
@@ -14,7 +15,6 @@ import type {
   MessageType,
   UserNotice,
 } from "../../../shared/chat-types";
-import { getBundledBadgeUrl } from "../../../assets/platforms/kick/badges";
 
 // ========== Kick WebSocket Event Types ==========
 
@@ -427,12 +427,12 @@ export function parseKickChatMessage(
   // Parse reply info if present
   const replyTo = event.metadata?.original_message
     ? {
-      parentMessageId: event.metadata.original_message.id,
-      parentUserId: event.metadata.original_sender?.id.toString() ?? "",
-      parentUsername: event.metadata.original_sender?.username ?? "",
-      parentDisplayName: event.metadata.original_sender?.username ?? "",
-      parentMessageBody: event.metadata.original_message.content,
-    }
+        parentMessageId: event.metadata.original_message.id,
+        parentUserId: event.metadata.original_sender?.id.toString() ?? "",
+        parentUsername: event.metadata.original_sender?.username ?? "",
+        parentDisplayName: event.metadata.original_sender?.username ?? "",
+        parentMessageBody: event.metadata.original_message.content,
+      }
     : undefined;
 
   return {

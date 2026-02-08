@@ -92,16 +92,38 @@ export function useStreamPlayback(platform: Platform, identifier: string): UseSt
         }
 
         if (isMounted) {
-          setPlayback({
-            url: result.data.url,
-            format: result.data.format as "hls" | "dash" | "mp4",
-          });
+          const playbackUrl = result.data.url;
+          const playbackFormat = result.data.format as "hls" | "dash" | "mp4";
+
+          // DEBUG: Log exactly what we're receiving and setting
+          console.log(
+            `[useStreamPlayback] 🔍 DEBUG - Raw result.data:`,
+            JSON.stringify(result.data, null, 2).substring(0, 500)
+          );
+          console.log(`[useStreamPlayback] 🔍 DEBUG - URL value:`, playbackUrl);
+          console.log(`[useStreamPlayback] 🔍 DEBUG - URL type:`, typeof playbackUrl);
+          console.log(`[useStreamPlayback] 🔍 DEBUG - Format:`, playbackFormat);
+
+          const newPlayback = {
+            url: playbackUrl,
+            format: playbackFormat,
+          };
+          console.log(
+            `[useStreamPlayback] 🔍 DEBUG - Setting playback:`,
+            JSON.stringify(newPlayback)
+          );
+
+          setPlayback(newPlayback);
+
           // Detect if this is a proxy URL (check for known proxy domains)
-          const url = result.data.url;
           const usingProxy =
-            (url.includes("cdn-perfprod.com") || url.includes("luminous.dev")) && !forceNoProxy;
+            (playbackUrl.includes("cdn-perfprod.com") || playbackUrl.includes("luminous.dev")) &&
+            !forceNoProxy;
           console.debug(`[useStreamPlayback] Loaded URL:`, {
-            url: `${url.substring(0, 80)}...`,
+            url:
+              typeof playbackUrl === "string"
+                ? `${playbackUrl.substring(0, 80)}...`
+                : "NOT A STRING!",
             isProxy: usingProxy,
             forceNoProxy,
           });

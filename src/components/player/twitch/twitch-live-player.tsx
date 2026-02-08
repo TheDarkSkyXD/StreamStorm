@@ -125,6 +125,7 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
 
   // Reset auto-retry state when streamUrl changes (new stream)
   useEffect(() => {
+    void streamUrl; // Used as dependency trigger
     autoRetryCountRef.current = 0;
     isRetryingRef.current = false;
   }, [streamUrl]);
@@ -291,7 +292,10 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
             }
 
             // Either not a refreshable error, or retries exhausted - show error to user
-            console.error(`[TwitchPlayer] Player error (retries: ${autoRetryCountRef.current}):`, error);
+            console.error(
+              `[TwitchPlayer] Player error (retries: ${autoRetryCountRef.current}):`,
+              error
+            );
             setHasError(true);
             setIsLoading(false);
             isRetryingRef.current = false;
@@ -361,7 +365,7 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
           showVideoStats={showVideoStats}
           onToggleVideoStats={() => setShowVideoStats(!showVideoStats)}
           adBlockStatus={adBlockStatus}
-          onSeek={() => { }} // Dummy seek handler for visual progress bar
+          onSeek={() => {}} // Dummy seek handler for visual progress bar
         />
       )}
     </div>

@@ -446,7 +446,7 @@ class TwitchManifestProxyService {
     let hasProgramDateTime = false;
 
     for (let i = 0; i < lines.length; i++) {
-      let line = lines[i];
+      const line = lines[i];
 
       // Track program date time for live segment detection
       if (line.startsWith("#EXT-X-DISCONTINUITY")) {

@@ -117,6 +117,7 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
 
   // Reset auto-retry state when streamUrl changes (new stream)
   useEffect(() => {
+    void streamUrl; // Used as dependency trigger
     autoRetryCountRef.current = 0;
     isRetryingRef.current = false;
   }, [streamUrl]);
@@ -415,7 +416,10 @@ export function KickLivePlayer(props: KickLivePlayerProps) {
             }
 
             // Either not a refreshable error, or retries exhausted - show error to user
-            console.error(`[KickPlayer] Player error (retries: ${autoRetryCountRef.current}):`, error);
+            console.error(
+              `[KickPlayer] Player error (retries: ${autoRetryCountRef.current}):`,
+              error
+            );
             setHasError(true);
             setIsLoading(false);
             isRetryingRef.current = false;

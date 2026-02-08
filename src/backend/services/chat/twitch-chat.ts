@@ -5,9 +5,9 @@
  * Handles message receiving, sending, and connection lifecycle.
  */
 
-import { EventEmitter } from "../../../shared/browser-event-emitter";
 import tmi from "tmi.js";
 import type { TwitchUser } from "../../../shared/auth-types";
+import { EventEmitter } from "../../../shared/browser-event-emitter";
 import type {
   ChatConnectionState,
   ChatConnectionStatus,

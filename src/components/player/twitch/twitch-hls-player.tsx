@@ -77,12 +77,16 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
     const onQualityLevelsRef = useRef(onQualityLevels);
     const onErrorRef = useRef(onError);
     const onAdBlockStatusChangeRef = useRef(onAdBlockStatusChange);
+    const onHlsInstanceRef = useRef(onHlsInstance);
+    const currentLevelRef = useRef(currentLevel);
 
     useEffect(() => {
       onQualityLevelsRef.current = onQualityLevels;
       onErrorRef.current = onError;
       onAdBlockStatusChangeRef.current = onAdBlockStatusChange;
-    }, [onQualityLevels, onError, onAdBlockStatusChange]);
+      onHlsInstanceRef.current = onHlsInstance;
+      currentLevelRef.current = currentLevel;
+    }, [onQualityLevels, onError, onAdBlockStatusChange, onHlsInstance, currentLevel]);
 
     // Initialize ad-block service
     useEffect(() => {
@@ -155,7 +159,7 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
       if (!video.paused) {
         video.pause();
         setTimeout(() => {
-          video.play().catch(() => { });
+          video.play().catch(() => {});
         }, 100);
       }
     }, []);
@@ -167,10 +171,32 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
       }
     }, [enableAdBlock, handlePlayerReload, handlePauseResume]);
 
+    // Handle quality level changes without re-initializing HLS
+    useEffect(() => {
+      const hls = hlsRef.current;
+      if (!hls || currentLevel === undefined) return;
+
+      if (currentLevel === "auto") {
+        hls.currentLevel = -1;
+      } else {
+        const levelIndex = parseInt(currentLevel, 10);
+        // Verify level index is valid before setting
+        if (!Number.isNaN(levelIndex) && levelIndex >= 0 && levelIndex < hls.levels.length) {
+          hls.currentLevel = levelIndex;
+        } else {
+          // If levels aren't loaded yet, this might fail, but MANIFEST_PARSED handles initial set
+          console.warn(`[TwitchHlsPlayer] Invalid level index: ${levelIndex}`);
+        }
+      }
+    }, [currentLevel]);
+
     // Main HLS initialization effect
     useEffect(() => {
       const video = videoRef.current;
-      if (!video || !src) return;
+
+      if (!video || !src) {
+        return;
+      }
 
       let isEffectActive = true;
       isMountedRef.current = true;
@@ -203,10 +229,16 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
                 pendingPlayRef.current = null;
               }
               if (!isEffectActive || currentRequestId !== playRequestIdRef.current) return;
+
               if (e.name === "AbortError") {
                 console.debug("[TwitchHLS] Play request interrupted");
               } else if (e.name === "NotAllowedError") {
                 console.warn("[TwitchHLS] Autoplay blocked by browser policy");
+                // Try muting and playing again
+                if (!video.muted) {
+                  video.muted = true;
+                  safePlay();
+                }
               } else {
                 console.error("[TwitchHLS] Playback failed:", e);
               }
@@ -269,11 +301,14 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
         });
 
         hlsRef.current = hls;
-        if (onHlsInstance) onHlsInstance(hls);
+        if (onHlsInstanceRef.current) onHlsInstanceRef.current(hls);
 
-        // console.debug("[TwitchHLS] Initializing for:", channelName, "adBlock:", enableAdBlock);
-        hls.loadSource(src);
-        hls.attachMedia(video);
+        try {
+          hls.loadSource(src);
+          hls.attachMedia(video);
+        } catch (e) {
+          console.error("Error setting up HLS:", e);
+        }
 
         hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
           // console.debug("[TwitchHLS] Manifest parsed, levels:", data.levels.length);
@@ -282,11 +317,11 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
             safePlay();
           }
 
-          if (currentLevel !== undefined) {
-            if (currentLevel === "auto") {
+          if (currentLevelRef.current !== undefined) {
+            if (currentLevelRef.current === "auto") {
               hls!.currentLevel = -1;
             } else {
-              const levelIndex = parseInt(currentLevel, 10);
+              const levelIndex = parseInt(currentLevelRef.current, 10);
               if (!Number.isNaN(levelIndex) && levelIndex >= 0 && levelIndex < data.levels.length) {
                 hls!.currentLevel = levelIndex;
               }
@@ -610,7 +645,7 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
           clearStreamInfo(channelName);
         }
       };
-    }, [src, autoPlay, channelName, enableAdBlock, currentLevel, onHlsInstance]);
+    }, [src, autoPlay, channelName, enableAdBlock]);
 
     return <video ref={videoRef} playsInline className="size-full object-contain" {...props} />;
   }

@@ -62,11 +62,9 @@ const SUB_GIFTER_200_SVG = `<svg width="32" height="32" viewBox="0 0 32 32" fill
  * Convert SVG string to data URI
  */
 function svgToDataUri(svg: string): string {
-    // Encode SVG for use as data URI
-    const encoded = encodeURIComponent(svg)
-        .replace(/'/g, "%27")
-        .replace(/"/g, "%22");
-    return `data:image/svg+xml,${encoded}`;
+  // Encode SVG for use as data URI
+  const encoded = encodeURIComponent(svg).replace(/'/g, "%27").replace(/"/g, "%22");
+  return `data:image/svg+xml,${encoded}`;
 }
 
 // ========== Badge Map ==========
@@ -76,23 +74,23 @@ function svgToDataUri(svg: string): string {
  * These are embedded directly in the app - no external requests needed
  */
 export const KICK_BUNDLED_BADGES: Record<string, string> = {
-    broadcaster: svgToDataUri(BROADCASTER_SVG),
-    moderator: svgToDataUri(MODERATOR_SVG),
-    vip: svgToDataUri(VIP_SVG),
-    og: svgToDataUri(OG_SVG),
-    founder: svgToDataUri(FOUNDER_SVG),
-    verified: svgToDataUri(VERIFIED_SVG),
-    subscriber: svgToDataUri(SUBSCRIBER_SVG),
-    staff: svgToDataUri(STAFF_SVG),
-    bot: svgToDataUri(BOT_SVG),
-    sidekick: svgToDataUri(SIDEKICK_SVG),
-    sub_gifter: svgToDataUri(SUB_GIFTER_SVG),
-    subgifter: svgToDataUri(SUB_GIFTER_SVG), // Alias
-    subgifter5: svgToDataUri(SUB_GIFTER_5_SVG),
-    subgifter25: svgToDataUri(SUB_GIFTER_25_SVG),
-    subgifter50: svgToDataUri(SUB_GIFTER_50_SVG),
-    subgifter100: svgToDataUri(SUB_GIFTER_100_SVG),
-    subgifter200: svgToDataUri(SUB_GIFTER_200_SVG),
+  broadcaster: svgToDataUri(BROADCASTER_SVG),
+  moderator: svgToDataUri(MODERATOR_SVG),
+  vip: svgToDataUri(VIP_SVG),
+  og: svgToDataUri(OG_SVG),
+  founder: svgToDataUri(FOUNDER_SVG),
+  verified: svgToDataUri(VERIFIED_SVG),
+  subscriber: svgToDataUri(SUBSCRIBER_SVG),
+  staff: svgToDataUri(STAFF_SVG),
+  bot: svgToDataUri(BOT_SVG),
+  sidekick: svgToDataUri(SIDEKICK_SVG),
+  sub_gifter: svgToDataUri(SUB_GIFTER_SVG),
+  subgifter: svgToDataUri(SUB_GIFTER_SVG), // Alias
+  subgifter5: svgToDataUri(SUB_GIFTER_5_SVG),
+  subgifter25: svgToDataUri(SUB_GIFTER_25_SVG),
+  subgifter50: svgToDataUri(SUB_GIFTER_50_SVG),
+  subgifter100: svgToDataUri(SUB_GIFTER_100_SVG),
+  subgifter200: svgToDataUri(SUB_GIFTER_200_SVG),
 };
 
 /**
@@ -100,15 +98,15 @@ export const KICK_BUNDLED_BADGES: Record<string, string> = {
  * Returns undefined if badge type is not found
  */
 export function getBundledBadgeUrl(badgeType: string): string | undefined {
-    // Normalize badge type to lowercase
-    const normalized = badgeType.toLowerCase().replace(/[-\s]/g, "_");
-    return KICK_BUNDLED_BADGES[normalized];
+  // Normalize badge type to lowercase
+  const normalized = badgeType.toLowerCase().replace(/[-\s]/g, "_");
+  return KICK_BUNDLED_BADGES[normalized];
 }
 
 /**
  * Check if a badge type has a bundled version
  */
 export function hasBundledBadge(badgeType: string): boolean {
-    const normalized = badgeType.toLowerCase().replace(/[-\s]/g, "_");
-    return normalized in KICK_BUNDLED_BADGES;
+  const normalized = badgeType.toLowerCase().replace(/[-\s]/g, "_");
+  return normalized in KICK_BUNDLED_BADGES;
 }

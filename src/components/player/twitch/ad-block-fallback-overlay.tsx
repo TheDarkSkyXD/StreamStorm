@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { LuShieldCheck } from "react-icons/lu";
 
 import type { AdBlockStatus } from "@/shared/adblock-types";
 

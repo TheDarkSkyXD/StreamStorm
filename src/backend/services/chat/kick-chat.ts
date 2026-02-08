@@ -5,8 +5,8 @@
  * Handles message receiving, sending, and connection lifecycle.
  */
 
-import { EventEmitter } from "../../../shared/browser-event-emitter";
 import Pusher from "pusher-js";
+import { EventEmitter } from "../../../shared/browser-event-emitter";
 
 // ... imports
 import type {

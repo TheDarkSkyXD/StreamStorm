@@ -861,7 +861,7 @@ async function consumeAdSegment(text: string, streamInfo: StreamInfo): Promise<v
         // Fetch in background to consume the ad
         fetch(lines[i + 1])
           .then((r) => r.blob())
-          .catch(() => { });
+          .catch(() => {});
         break;
       }
     }
