@@ -73,38 +73,45 @@ const config: ForgeConfig = {
       // setupIcon: './assets/icons/icon.ico', // Uncomment when icon exists
       // iconUrl: 'https://raw.githubusercontent.com/TheDarkSkyXD/StreamStorm/main/assets/icons/icon.ico',
     }),
-    // macOS ZIP
-    new MakerZIP({}, ['darwin']),
+    // macOS / Linux / Windows ZIP
+    new MakerZIP({}, ['darwin', 'linux', 'win32']),
     // macOS DMG
-    new MakerDMG({
-      // icon: './assets/icons/icon.icns', // Uncomment when icon exists
-      format: 'ULFO',
-    }),
+    ...(process.platform === 'darwin'
+      ? [
+        new MakerDMG({
+          // icon: './assets/icons/icon.icns', // Uncomment when icon exists
+          format: 'ULFO',
+        }),
+      ]
+      : []),
     // Linux DEB
-    new MakerDeb({
-      options: {
-        name: 'streamstorm',
-        productName: 'StreamStorm',
-        genericName: 'Streaming App',
-        description: 'Unified streaming app for Twitch and Kick',
-        categories: ['Video', 'AudioVideo', 'Network'],
-        // icon: './assets/icons/icon.png', // Uncomment when icon exists
-        homepage: 'https://github.com/TheDarkSkyXD/StreamStorm',
-        maintainer: 'StreamStorm',
-      },
-    }),
-    // Linux RPM
-    new MakerRpm({
-      options: {
-        name: 'streamstorm',
-        productName: 'StreamStorm',
-        genericName: 'Streaming App',
-        description: 'Unified streaming app for Twitch and Kick',
-        categories: ['Video', 'AudioVideo', 'Network'],
-        // icon: './assets/icons/icon.png', // Uncomment when icon exists
-        homepage: 'https://github.com/TheDarkSkyXD/StreamStorm',
-      },
-    }),
+    ...(process.platform === 'linux'
+      ? [
+        new MakerDeb({
+          options: {
+            name: 'streamstorm',
+            productName: 'StreamStorm',
+            genericName: 'Streaming App',
+            description: 'Unified streaming app for Twitch and Kick',
+            categories: ['Video', 'AudioVideo', 'Network'],
+            // icon: './assets/icons/icon.png', // Uncomment when icon exists
+            homepage: 'https://github.com/TheDarkSkyXD/StreamStorm',
+            maintainer: 'StreamStorm',
+          },
+        }),
+        new MakerRpm({
+          options: {
+            name: 'streamstorm',
+            productName: 'StreamStorm',
+            genericName: 'Streaming App',
+            description: 'Unified streaming app for Twitch and Kick',
+            categories: ['Video', 'AudioVideo', 'Network'],
+            // icon: './assets/icons/icon.png', // Uncomment when icon exists
+            homepage: 'https://github.com/TheDarkSkyXD/StreamStorm',
+          },
+        }),
+      ]
+      : []),
   ],
   plugins: [
     new VitePlugin({
