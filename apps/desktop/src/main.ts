@@ -11,7 +11,6 @@ import "dotenv/config";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { app, BrowserWindow, Menu, session } from "electron";
-import started from "electron-squirrel-startup";
 
 import { protocolHandler } from "./backend/auth";
 import { registerIpcHandlers } from "./backend/ipc-handlers";
@@ -23,11 +22,6 @@ import { windowManager } from "./backend/window-manager";
 
 // Sentinel file to track clean shutdown
 const CLEAN_SHUTDOWN_FILE = path.join(app.getPath("userData"), ".clean-shutdown");
-
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (started) {
-  app.quit();
-}
 
 // ============================================================================
 // CRASH-RESISTANT RUNTIME FLAGS
