@@ -92,7 +92,7 @@ const config: ForgeConfig = {
         homepage: 'https://github.com/TheDarkSkyXD/StreamStorm',
         maintainer: 'StreamStorm',
       },
-    }, ['linux']),
+    }),
     // Linux RPM
     new MakerRpm({
       options: {
@@ -104,7 +104,7 @@ const config: ForgeConfig = {
         // icon: './assets/icons/icon.png', // Uncomment when icon exists
         homepage: 'https://github.com/TheDarkSkyXD/StreamStorm',
       },
-    }, ['linux']),
+    }),
   ],
   plugins: [
     new VitePlugin({

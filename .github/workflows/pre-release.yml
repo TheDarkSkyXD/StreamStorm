@@ -60,7 +60,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y fakeroot dpkg rpm binutils
+          sudo apt-get install -y fakeroot dpkg rpm binutils build-essential libarchive-tools
 
       - name: Verify Linux build tools
         if: matrix.os == 'ubuntu-latest'
