@@ -83,7 +83,7 @@ export function StreamSlot({
           className={cn(
             "h-8 w-8",
             isChatActive &&
-              "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90"
+            "bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90"
           )}
           onClick={(e) => {
             e.stopPropagation();
@@ -131,6 +131,8 @@ export function StreamSlot({
               autoPlay={true}
               muted={isMuted}
               className="pointer-events-none"
+              channelName={channelName}
+              onRefresh={reload}
             />
           ) : (
             <TwitchLivePlayer
@@ -139,6 +141,7 @@ export function StreamSlot({
               autoPlay={true}
               muted={isMuted}
               className="pointer-events-none"
+              onRefresh={reload}
             />
           )
         ) : (

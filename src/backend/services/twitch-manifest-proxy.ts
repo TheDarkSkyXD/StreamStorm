@@ -11,6 +11,7 @@
 import { DEFAULT_DATERANGE_PATTERNS } from "@shared/adblock-types";
 import { session } from "electron";
 
+import { httpClient } from "./http-client";
 import { vaftPatternService } from "./vaft-pattern-service";
 
 /**
@@ -442,13 +443,28 @@ class TwitchManifestProxyService {
     const result: string[] = [];
     let segmentsReplaced = 0;
 
+    let hasProgramDateTime = false;
+
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+      let line = lines[i];
+
+      // Track program date time for live segment detection
+      if (line.startsWith("#EXT-X-DISCONTINUITY")) {
+        hasProgramDateTime = false;
+      }
+      if (line.startsWith("#EXT-X-PROGRAM-DATE-TIME")) {
+        hasProgramDateTime = true;
+      }
 
       // Detect ad segment
       if (line.startsWith("#EXTINF") && i + 1 < lines.length) {
         const segmentUrl = lines[i + 1];
-        const isAdSegment = !line.includes(",live") || this.isKnownAdSegment(segmentUrl);
+
+        // A segment is an ad if:
+        // 1. It's explicitly a known ad URL
+        // 2. OR it's NOT marked as live AND NOT part of a program date time block
+        const isLiveInfo = line.includes(",live") || hasProgramDateTime;
+        const isAdSegment = this.isKnownAdSegment(segmentUrl) || !isLiveInfo;
 
         if (isAdSegment) {
           // Keep EXTINF but replace segment URL with 160p
@@ -630,14 +646,30 @@ class TwitchManifestProxyService {
     };
 
     try {
-      const response = await this.fetchWithRetry("https://gql.twitch.tv/gql", {
-        method: "POST",
-        headers: {
-          "Client-ID": GQL_CLIENT_ID,
-          "Content-Type": "application/json",
+      // Use centralized httpClient for connection pooling, but skip queue
+      // for time-sensitive ad-blocking requests (we need fast response)
+      const response = await httpClient.fetch(
+        "https://gql.twitch.tv/gql",
+        {
+          method: "POST",
+          headers: {
+            "Client-ID": GQL_CLIENT_ID,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
         },
-        body: JSON.stringify(body),
-      });
+        {
+          // Do NOT skip queue - even though time-sensitive, we must respect the concurrency limit
+          // because tryGetBackupStream fires 5 requests in parallel per stream.
+          // 4 streams * 5 types = 20 concurrent requests = ECONNRESET
+          skipQueue: false,
+          // Aggressive timeout for streaming
+          timeoutMs: TwitchManifestProxyService.FETCH_TIMEOUT,
+          // Minimal retries - we have multiple player types as fallback
+          maxRetries: 1,
+          baseDelayMs: 200,
+        }
+      );
 
       if (!response.ok) {
         console.debug(

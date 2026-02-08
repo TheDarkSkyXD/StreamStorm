@@ -155,7 +155,7 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
       if (!video.paused) {
         video.pause();
         setTimeout(() => {
-          video.play().catch(() => {});
+          video.play().catch(() => { });
         }, 100);
       }
     }, []);
@@ -271,12 +271,12 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
         hlsRef.current = hls;
         if (onHlsInstance) onHlsInstance(hls);
 
-        console.debug("[TwitchHLS] Initializing for:", channelName, "adBlock:", enableAdBlock);
+        // console.debug("[TwitchHLS] Initializing for:", channelName, "adBlock:", enableAdBlock);
         hls.loadSource(src);
         hls.attachMedia(video);
 
         hls.on(Hls.Events.MANIFEST_PARSED, (_event, data) => {
-          console.debug("[TwitchHLS] Manifest parsed, levels:", data.levels.length);
+          // console.debug("[TwitchHLS] Manifest parsed, levels:", data.levels.length);
 
           if (autoPlay && isMountedRef.current) {
             safePlay();
@@ -360,9 +360,10 @@ export const TwitchHlsPlayer = forwardRef<HTMLVideoElement, TwitchHlsPlayerProps
             "bufferSeekOverHole", // Auto-handled: seeks over buffer gaps
             "bufferNudgeOnStall", // Auto-handled: nudges playhead when stalled
           ];
-          // @ts-expect-error - response exists on network errors
           const statusCode =
-            data.response?.code || data.response?.status || data.networkDetails?.status;
+            data.response?.code ||
+            (data.response as any)?.status ||
+            (data.networkDetails as any)?.status;
 
           if (data.details === "manifestLoadError" && (statusCode === 404 || statusCode === 403)) {
             console.debug(`[TwitchHLS] Stream unavailable (${statusCode})`);

@@ -781,8 +781,17 @@ function stripAdSegments(text: string, stripAllSegments: boolean, streamInfo: St
   const lines = text.replace(/\r/g, "").split("\n");
   const newAdUrl = "https://twitch.tv";
 
+  let hasProgramDateTime = false;
+
   for (let i = 0; i < lines.length; i++) {
     let line = lines[i];
+
+    if (line.startsWith("#EXT-X-DISCONTINUITY")) {
+      hasProgramDateTime = false;
+    }
+    if (line.startsWith("#EXT-X-PROGRAM-DATE-TIME")) {
+      hasProgramDateTime = true;
+    }
 
     // Remove tracking URLs
     line = line
@@ -791,10 +800,14 @@ function stripAdSegments(text: string, stripAllSegments: boolean, streamInfo: St
     lines[i] = line;
 
     // Mark ad segments
+    // Check if segment is live (has explicit tag OR falls under Program Date Time scope)
+    const isLive = line.includes(",live") || hasProgramDateTime;
+
     if (
       i < lines.length - 1 &&
       line.startsWith("#EXTINF") &&
-      (!line.includes(",live") || stripAllSegments)
+      !isLive &&
+      (true || stripAllSegments)
     ) {
       const segmentUrl = lines[i + 1];
       if (!adSegmentCache.has(segmentUrl)) {
@@ -848,7 +861,7 @@ async function consumeAdSegment(text: string, streamInfo: StreamInfo): Promise<v
         // Fetch in background to consume the ad
         fetch(lines[i + 1])
           .then((r) => r.blob())
-          .catch(() => {});
+          .catch(() => { });
         break;
       }
     }

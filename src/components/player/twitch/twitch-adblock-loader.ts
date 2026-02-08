@@ -112,11 +112,11 @@ export function createAdBlockPlaylistLoader(channelName?: string): LoaderConstru
         const originalOnSuccess = callbacks.onSuccess;
 
         // Debug logging for troubleshooting
-        const isMaster = isMasterPlaylist(url);
-        const isMedia = isMediaPlaylist(url);
-        console.debug(
-          `[AdBlockLoader] Intercepting ${isMaster ? "MASTER" : isMedia ? "MEDIA" : "UNKNOWN"} playlist`
-        );
+        // const isMaster = isMasterPlaylist(url);
+        // const isMedia = isMediaPlaylist(url);
+        // console.debug(
+        //   `[AdBlockLoader] Intercepting ${isMaster ? "MASTER" : isMedia ? "MEDIA" : "UNKNOWN"} playlist`
+        // );
 
         callbacks.onSuccess = async (
           response: LoaderResponse,
@@ -134,7 +134,7 @@ export function createAdBlockPlaylistLoader(channelName?: string): LoaderConstru
                 const channel = storedChannelName ?? extractChannelName(url);
                 if (channel) {
                   storedChannelName = channel;
-                  console.debug(`[AdBlockLoader] Processing master playlist for ${channel}`);
+                  // console.debug(`[AdBlockLoader] Processing master playlist for ${channel}`);
                   processedData = await processMasterPlaylist(url, response.data, channel);
                 }
               } else if (isMediaPlaylist(url)) {
@@ -143,7 +143,7 @@ export function createAdBlockPlaylistLoader(channelName?: string): LoaderConstru
                   response.data.includes("stitched") ||
                   response.data.includes("twitch-stitched-ad");
                 if (hasAds) {
-                  console.debug("[AdBlockLoader] Ads detected in media playlist, processing...");
+                  // console.debug("[AdBlockLoader] Ads detected in media playlist, processing...");
                 }
                 processedData = await processMediaPlaylist(url, response.data);
               }

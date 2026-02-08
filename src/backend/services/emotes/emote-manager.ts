@@ -5,7 +5,7 @@
  * and lookup of emotes from Twitch, Kick, BTTV, FFZ, and 7TV.
  */
 
-import { EventEmitter } from "node:events";
+import { EventEmitter } from "../../../shared/browser-event-emitter";
 import type { Emote, EmoteManagerConfig, EmoteProvider, EmoteProviderService } from "./emote-types";
 import { DEFAULT_EMOTE_CONFIG } from "./emote-types";
 

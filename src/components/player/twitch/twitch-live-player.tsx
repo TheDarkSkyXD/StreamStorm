@@ -18,6 +18,11 @@ import { TwitchHlsPlayer } from "./twitch-hls-player";
 import { TwitchLivePlayerControls } from "./twitch-live-player-controls";
 import { VideoStatsOverlay } from "./video-stats-overlay";
 
+// Maximum auto-retry attempts before showing error to user
+const MAX_AUTO_RETRY_ATTEMPTS = 2;
+// Delay between retry attempts (exponential backoff base)
+const RETRY_DELAY_BASE_MS = 1500;
+
 export interface TwitchLivePlayerProps {
   streamUrl: string;
   channelName: string;
@@ -33,6 +38,8 @@ export interface TwitchLivePlayerProps {
   isTheater?: boolean;
   onToggleTheater?: () => void;
   enableAdBlock?: boolean;
+  // Auto-refresh callback - called when player needs a fresh URL (token expired, etc.)
+  onRefresh?: () => void;
 }
 
 export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
@@ -51,6 +58,7 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
     isTheater,
     onToggleTheater,
     enableAdBlock = true,
+    onRefresh,
   } = props;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -92,6 +100,10 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
   const [hasError, setHasError] = useState(false);
   const [showVideoStats, setShowVideoStats] = useState(false);
 
+  // Auto-retry state for handling stale tokens/URLs
+  const autoRetryCountRef = useRef(0);
+  const isRetryingRef = useRef(false);
+
   // Refs for stats
   const hlsRef = useRef<any>(null); // Capture Hls instance
 
@@ -105,11 +117,17 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
   // The network-level blocking and HLS segment stripping should handle ads silently
   // without any interruption to the user experience
 
-  // Reset state when streamUrl changes (new stream)
+  // Reset error/ready state on mount (original effect)
   useEffect(() => {
     setHasError(false);
-    setIsReady(false); // Reset ready state so initialization runs for new stream
+    setIsReady(false);
   }, []);
+
+  // Reset auto-retry state when streamUrl changes (new stream)
+  useEffect(() => {
+    autoRetryCountRef.current = 0;
+    isRetryingRef.current = false;
+  }, [streamUrl]);
 
   // Setup event listeners
   useEffect(() => {
@@ -232,9 +250,51 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
             onAdBlockStatusChange?.(status);
           }}
           onError={(error: PlayerError) => {
-            console.error("[TwitchPlayer] Player error:", error);
+            // Determine if this error is recoverable via URL refresh
+            const isRefreshableError =
+              error.shouldRefresh === true ||
+              error.code === "NO_FRAGMENTS" ||
+              error.code === "TOKEN_EXPIRED" ||
+              error.code === "STREAM_OFFLINE"; // Sometimes stream "offline" is just stale URL
+
+            // Check if we should auto-retry
+            const canRetry =
+              isRefreshableError &&
+              onRefresh &&
+              autoRetryCountRef.current < MAX_AUTO_RETRY_ATTEMPTS &&
+              !isRetryingRef.current;
+
+            if (canRetry) {
+              // Mark as retrying to prevent concurrent retries
+              isRetryingRef.current = true;
+              autoRetryCountRef.current += 1;
+
+              const attemptNum = autoRetryCountRef.current;
+              const delay = RETRY_DELAY_BASE_MS * attemptNum; // Exponential backoff: 1.5s, 3s
+
+              console.debug(
+                `[TwitchPlayer] ${error.code} error detected, auto-retrying (attempt ${attemptNum}/${MAX_AUTO_RETRY_ATTEMPTS}) in ${delay}ms...`
+              );
+
+              // Show loading state during retry
+              setIsLoading(true);
+
+              // Wait before retrying (gives CDN time to update, prevents hammering)
+              setTimeout(() => {
+                if (isRetryingRef.current) {
+                  isRetryingRef.current = false;
+                  onRefresh(); // Request fresh playback URL from parent
+                }
+              }, delay);
+
+              return; // Don't show error to user yet
+            }
+
+            // Either not a refreshable error, or retries exhausted - show error to user
+            console.error(`[TwitchPlayer] Player error (retries: ${autoRetryCountRef.current}):`, error);
             setHasError(true);
             setIsLoading(false);
+            isRetryingRef.current = false;
             onError?.(error);
           }}
           onHlsInstance={(hls: import("hls.js").default) => {
@@ -301,7 +361,7 @@ export function TwitchLivePlayer(props: TwitchLivePlayerProps) {
           showVideoStats={showVideoStats}
           onToggleVideoStats={() => setShowVideoStats(!showVideoStats)}
           adBlockStatus={adBlockStatus}
-          onSeek={() => {}} // Dummy seek handler for visual progress bar
+          onSeek={() => { }} // Dummy seek handler for visual progress bar
         />
       )}
     </div>

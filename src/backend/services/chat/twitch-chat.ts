@@ -5,7 +5,7 @@
  * Handles message receiving, sending, and connection lifecycle.
  */
 
-import { EventEmitter } from "node:events";
+import { EventEmitter } from "../../../shared/browser-event-emitter";
 import tmi from "tmi.js";
 import type { TwitchUser } from "../../../shared/auth-types";
 import type {
@@ -562,6 +562,17 @@ export class TwitchChatService extends EventEmitter implements TypedEventEmitter
       options: {
         debug: this.debugMode,
         skipUpdatingEmotesets: true,
+      },
+      logger: {
+        info: (msg: string) => {
+          // if (this.debugMode) console.info(`[TMI] ${msg}`);
+        },
+        warn: (msg: string) => {
+          // if (this.debugMode) console.warn(`[TMI] ${msg}`);
+        },
+        error: (msg: string) => {
+          console.error(`[TMI] ${msg}`);
+        },
       },
       connection: {
         // IMPORTANT: Disable tmi.js auto-reconnect - we handle reconnection manually

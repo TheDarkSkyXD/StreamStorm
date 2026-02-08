@@ -52,9 +52,11 @@ app.commandLine.appendSwitch("enable-features", "V8MemoryCage");
 // Disable accessibility runtime (saves ~10-20MB if not needed)
 app.commandLine.appendSwitch("disable-renderer-accessibility");
 
-// Enable Chrome DevTools Protocol for Playwright MCP connectivity (development only)
-// This allows Playwright to connect to the running Electron app at ws://localhost:9222
-if (process.env.NODE_ENV !== "production") {
+// Enable Chrome DevTools Protocol for Playwright/Electron MCP connectivity (development only)
+// This allows external tools to connect to the running Electron app at ws://localhost:9222
+// In production builds (electron-forge package/make), NODE_ENV is typically "production"
+const isProduction = process.env.NODE_ENV === "production" || app.isPackaged;
+if (!isProduction) {
   app.commandLine.appendSwitch("remote-debugging-port", "9222");
   console.debug("🔌 CDP remote debugging enabled on port 9222 for Playwright MCP");
 }

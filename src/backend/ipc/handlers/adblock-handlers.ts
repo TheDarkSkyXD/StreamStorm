@@ -68,7 +68,7 @@ export function registerAdBlockHandlers(_mainWindow: BrowserWindow): void {
     IPC_CHANNELS.ADBLOCK_PROXY_CLEAR_STREAM,
     async (_event, { channelName }: { channelName: string }) => {
       twitchManifestProxy.clearStreamInfo(channelName);
-      console.debug(`[AdBlock] Cleared stream info for: ${channelName}`);
+      // console.debug(`[AdBlock] Cleared stream info for: ${channelName}`);
       return { success: true };
     }
   );

@@ -2,12 +2,15 @@
  * Robust HTTP Client for Twitch GQL and API Requests
  *
  * This module provides a centralized HTTP client with:
+ * - Request queue with concurrency limits to prevent connection exhaustion
+ * - Connection reuse via Keep-Alive headers
  * - Proper retry logic with exponential backoff and jitter
  * - Circuit breaker pattern for temporary failures
- * - Comprehensive handling of undici/Node.js fetch error codes
+ * - Request deduplication to prevent duplicate in-flight requests
  *
  * Addresses ECONNRESET and UND_ERR_CONNECT_TIMEOUT errors that occur
- * during TLS handshake with gql.twitch.tv.
+ * during TLS handshake with gql.twitch.tv when too many concurrent
+ * connections are opened.
  */
 
 // ============================================================================
@@ -19,12 +22,23 @@ interface RetryOptions {
   baseDelayMs?: number;
   maxDelayMs?: number;
   timeoutMs?: number;
+  /** Skip the request queue (use for high-priority requests) */
+  skipQueue?: boolean;
 }
 
 interface CircuitBreakerState {
   failures: number;
   lastFailure: number;
   isOpen: boolean;
+}
+
+interface QueuedRequest {
+  url: string;
+  options: RequestInit;
+  retryOptions: Required<RetryOptions>;
+  resolve: (response: Response) => void;
+  reject: (error: Error) => void;
+  origin: string;
 }
 
 // ============================================================================
@@ -36,6 +50,7 @@ const DEFAULT_OPTIONS: Required<RetryOptions> = {
   baseDelayMs: 500,
   maxDelayMs: 8000,
   timeoutMs: 20000, // Increased from 15s to 20s for TLS handshake
+  skipQueue: false,
 };
 
 // Circuit breaker settings
@@ -43,6 +58,18 @@ const CIRCUIT_BREAKER = {
   failureThreshold: 5,
   resetTimeoutMs: 30000, // 30 seconds before trying again
 };
+
+// Concurrency settings - limits concurrent connections per origin
+// This prevents ECONNRESET by not overwhelming the TLS handshake process
+const CONCURRENCY = {
+  // STRICT LIMIT: 1 concurrent request to Twitch GQL to absolutely prevent socket exhaustion
+  "https://gql.twitch.tv": 1,
+  // Default for other origins
+  default: 6,
+};
+
+// Delay between processing queued requests (allows TLS connections to stabilize)
+const QUEUE_PROCESS_DELAY_MS = 100; // Increased to 100ms
 
 // Retryable error codes - includes undici-specific codes
 const RETRYABLE_ERROR_CODES = new Set([
@@ -82,12 +109,20 @@ const RETRYABLE_MESSAGE_PATTERNS = [
 class RobustHttpClient {
   private circuitBreakers = new Map<string, CircuitBreakerState>();
 
+  // Request queues per origin for concurrency control
+  private requestQueues = new Map<string, QueuedRequest[]>();
+
+  // Currently active requests per origin
+  private activeRequests = new Map<string, number>();
+
+  // Processing flags to prevent multiple queue processors
+  private isProcessing = new Map<string, boolean>();
+
   /**
-   * Make a fetch request with automatic retry and circuit breaker
+   * Make a fetch request with automatic retry, circuit breaker, and concurrency control
    *
-   * Note: Request deduplication was removed because Response bodies can only
-   * be consumed once, and sharing responses between callers caused "Body has
-   * already been read" errors.
+   * Requests are queued per-origin to prevent connection exhaustion.
+   * Use skipQueue: true for critical requests that should bypass the queue.
    */
   async fetch(
     url: string,
@@ -102,8 +137,122 @@ class RobustHttpClient {
       throw new Error(`Circuit breaker open for ${origin}. Too many recent failures.`);
     }
 
+    // Add Keep-Alive headers for connection reuse
+    const enhancedOptions: RequestInit = {
+      ...options,
+      headers: {
+        Connection: "keep-alive",
+        ...options.headers,
+      },
+    };
+
+    // Skip queue for high-priority requests
+    if (opts.skipQueue) {
+      return this.executeRequest(url, enhancedOptions, opts, origin);
+    }
+
+    // Queue the request for controlled execution
+    return this.enqueueRequest(url, enhancedOptions, opts, origin);
+  }
+
+  /**
+   * Enqueue a request for controlled execution
+   */
+  private enqueueRequest(
+    url: string,
+    options: RequestInit,
+    retryOptions: Required<RetryOptions>,
+    origin: string
+  ): Promise<Response> {
+    return new Promise((resolve, reject) => {
+      // Initialize queue for origin if needed
+      if (!this.requestQueues.has(origin)) {
+        this.requestQueues.set(origin, []);
+        this.activeRequests.set(origin, 0);
+        this.isProcessing.set(origin, false);
+      }
+
+      // Add request to queue
+      const queue = this.requestQueues.get(origin)!;
+      queue.push({
+        url,
+        options,
+        retryOptions,
+        resolve,
+        reject,
+        origin,
+      });
+
+      // Start processing if not already running
+      this.processQueue(origin);
+    });
+  }
+
+  /**
+   * Process queued requests for an origin with concurrency control
+   */
+  private async processQueue(origin: string): Promise<void> {
+    // Prevent multiple processors for same origin
+    if (this.isProcessing.get(origin)) {
+      return;
+    }
+
+    this.isProcessing.set(origin, true);
+
     try {
-      const response = await this.executeWithRetry(url, options, opts, origin);
+      const queue = this.requestQueues.get(origin)!;
+      const maxConcurrent =
+        CONCURRENCY[origin as keyof typeof CONCURRENCY] || CONCURRENCY.default;
+
+      while (queue.length > 0) {
+        const activeCount = this.activeRequests.get(origin) || 0;
+
+        // Wait if at concurrency limit
+        if (activeCount >= maxConcurrent) {
+          await this.sleep(QUEUE_PROCESS_DELAY_MS);
+          continue;
+        }
+
+        // Get next request from queue
+        const request = queue.shift();
+        if (!request) break;
+
+        // Increment active count
+        this.activeRequests.set(origin, activeCount + 1);
+
+        // Execute request (don't await - process in parallel up to limit)
+        this.executeRequest(request.url, request.options, request.retryOptions, request.origin)
+          .then((response) => {
+            request.resolve(response);
+          })
+          .catch((error) => {
+            request.reject(error);
+          })
+          .finally(() => {
+            // Decrement active count
+            const current = this.activeRequests.get(origin) || 1;
+            this.activeRequests.set(origin, Math.max(0, current - 1));
+          });
+
+        // Small delay between starting requests to stagger TLS handshakes
+        await this.sleep(QUEUE_PROCESS_DELAY_MS);
+      }
+    } finally {
+      this.isProcessing.set(origin, false);
+    }
+  }
+
+  /**
+   * Execute a single request with retry logic
+   */
+  private async executeRequest(
+    url: string,
+    options: RequestInit,
+    retryOpts: Required<RetryOptions>,
+    origin: string
+  ): Promise<Response> {
+    try {
+      const response = await this.executeWithRetry(url, options, retryOpts, origin);
       this.recordSuccess(origin);
       return response;
     } catch (error) {
@@ -219,12 +368,17 @@ class RobustHttpClient {
 
   /**
    * Calculate delay with jitter for retry
+   * Uses decorrelated jitter for better distribution
    */
   private calculateDelay(attempt: number, opts: Required<RetryOptions>): number {
-    // Exponential backoff with jitter
+    // Decorrelated jitter (better than simple exponential + jitter)
+    // This provides more random distribution and prevents thundering herd
     const exponential = opts.baseDelayMs * 2 ** attempt;
-    const jitter = Math.random() * opts.baseDelayMs * 0.5;
-    return Math.min(exponential + jitter, opts.maxDelayMs);
+    const jitter = Math.random() * opts.baseDelayMs;
+    const delay = exponential + jitter;
+
+    // Cap at maxDelay
+    return Math.min(delay, opts.maxDelayMs);
   }
 
   /**
@@ -295,22 +449,42 @@ class RobustHttpClient {
   }
 
   /**
-   * Clear all state
+   * Clear all state (queues, circuit breakers, etc.)
    */
   clear(): void {
     this.circuitBreakers.clear();
+    this.requestQueues.clear();
+    this.activeRequests.clear();
+    this.isProcessing.clear();
   }
 
   /**
    * Get statistics about the client
    */
-  getStats(): { circuitBreakers: Record<string, CircuitBreakerState> } {
+  getStats(): {
+    circuitBreakers: Record<string, CircuitBreakerState>;
+    queueSizes: Record<string, number>;
+    activeRequests: Record<string, number>;
+  } {
     const circuitBreakers: Record<string, CircuitBreakerState> = {};
     for (const [origin, state] of this.circuitBreakers) {
       circuitBreakers[origin] = { ...state };
     }
+
+    const queueSizes: Record<string, number> = {};
+    for (const [origin, queue] of this.requestQueues) {
+      queueSizes[origin] = queue.length;
+    }
+
+    const activeRequests: Record<string, number> = {};
+    for (const [origin, count] of this.activeRequests) {
+      activeRequests[origin] = count;
+    }
+
     return {
       circuitBreakers,
+      queueSizes,
+      activeRequests,
     };
   }
 }

@@ -261,6 +261,8 @@ export function StreamPage() {
                 isTheater={isTheater}
                 onToggleTheater={() => setTheaterModeActive(!isTheater)}
                 startedAt={streamData?.startedAt}
+                channelName={channelName}
+                onRefresh={reloadPlayback}
               />
             ) : (
               <TwitchLivePlayer
@@ -272,6 +274,7 @@ export function StreamPage() {
                 onError={handlePlayerError}
                 isTheater={isTheater}
                 onToggleTheater={() => setTheaterModeActive(!isTheater)}
+                onRefresh={reloadPlayback}
               />
             )}
             {/* Show loading only when fetching data */}
