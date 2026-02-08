@@ -5,7 +5,7 @@
  * Node.js's 'node:events' module is not available in the renderer process when bundled with Vite.
  */
 
-type Listener = (...args: unknown[]) => void;
+type Listener = (...args: any[]) => void;
 
 export class BrowserEventEmitter {
   private listeners: Map<string, Set<Listener>> = new Map();
@@ -19,7 +19,7 @@ export class BrowserEventEmitter {
   }
 
   once(event: string, listener: Listener): this {
-    const onceWrapper = (...args: unknown[]) => {
+    const onceWrapper = (...args: any[]) => {
       this.off(event, onceWrapper);
       listener(...args);
     };
@@ -31,7 +31,7 @@ export class BrowserEventEmitter {
     return this;
   }
 
-  emit(event: string, ...args: unknown[]): boolean {
+  emit(event: string, ...args: any[]): boolean {
     const eventListeners = this.listeners.get(event);
     if (!eventListeners || eventListeners.size === 0) return false;
     for (const listener of eventListeners) {

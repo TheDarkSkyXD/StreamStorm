@@ -341,9 +341,10 @@ export const HlsPlayer = forwardRef<HTMLVideoElement, HlsPlayerProps>(
 
           // Check for 404/403/500 on manifest load - indicates stream is definitely gone or proxy error
           // Stop retrying immediately to prevent console noise
-          // @ts-expect-error - response exists on ErrorData for network errors
           const statusCode =
-            data.response?.code || data.response?.status || data.networkDetails?.status;
+            (data.response as any)?.code ||
+            (data.response as any)?.status ||
+            (data.networkDetails as any)?.status;
 
           // Handle critical manifest errors early - no point retrying these
           // With preflight URL validation in the resolver, 404 means the stream just went offline
