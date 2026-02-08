@@ -14,6 +14,7 @@ import type {
   MessageType,
   UserNotice,
 } from "../../../shared/chat-types";
+import { getBundledBadgeUrl } from "../../../assets/platforms/kick/badges";
 
 // ========== Kick WebSocket Event Types ==========
 
@@ -182,27 +183,9 @@ function getDefaultColor(username: string): string {
 
 // ========== Badge Mapping ==========
 
-// Using KickTalk's CDN for badges since Kick's static-assets URLs are unreliable
-const KICK_BADGE_CDN = "https://cdn.kicktalk.app/Badges";
-
-const KICK_BADGE_IMAGE_MAP: Record<string, string> = {
-  broadcaster: `${KICK_BADGE_CDN}/broadcaster.svg`,
-  moderator: `${KICK_BADGE_CDN}/moderator.svg`,
-  vip: `${KICK_BADGE_CDN}/vip.svg`,
-  verified: `${KICK_BADGE_CDN}/verified.svg`,
-  og: `${KICK_BADGE_CDN}/og.svg`,
-  founder: `${KICK_BADGE_CDN}/founder.svg`,
-  subscriber: `${KICK_BADGE_CDN}/subscriber.svg`,
-  bot: `${KICK_BADGE_CDN}/bot.svg`,
-  staff: `${KICK_BADGE_CDN}/staff.svg`,
-  sidekick: `${KICK_BADGE_CDN}/sidekick.svg`,
-  sub_gifter: `${KICK_BADGE_CDN}/subgifter1.svg`,
-  subgifter25: `${KICK_BADGE_CDN}/subgifter25.svg`,
-  subgifter50: `${KICK_BADGE_CDN}/subgifter50.svg`,
-  subgifter100: `${KICK_BADGE_CDN}/subgifter100.svg`,
-  subgifter200: `${KICK_BADGE_CDN}/subgifter200.svg`,
-  trainwreckstv: `${KICK_BADGE_CDN}/trainwreckstv.svg`,
-};
+// Badge URLs are now provided by bundled local assets instead of external CDNs
+// See: src/assets/platforms/kick/badges/index.ts
+// This eliminates dependency on unreliable third-party CDNs like cdn.kicktalk.app
 
 // ========== Subscriber Badge Type ==========
 
@@ -218,21 +201,24 @@ export interface SubscriberBadge {
 
 /**
  * Map Kick badges to our unified ChatBadge format
+ * Uses bundled local badge assets - no external CDN required
  */
 function parseKickBadges(badges: KickBadge[], subscriberBadges?: SubscriberBadge[]): ChatBadge[] {
   return badges.map((badge) => {
-    let imageUrl = KICK_BADGE_IMAGE_MAP[badge.type] || "";
+    // Use bundled badge assets (embedded as data URIs)
+    let imageUrl = getBundledBadgeUrl(badge.type) || "";
     const title = badge.text || badge.type;
 
-    // Custom Subscriber Badge Logic
+    // Custom Subscriber Badge Logic - channel-specific badges from API
     if (badge.type === "subscriber" && subscriberBadges?.length) {
       const months = badge.count || 0;
-      // logic from KickTalk: sort descending by months, find first badge where user months >= badge months
+      // Sort descending by months, find first badge where user months >= badge months
       const match = subscriberBadges
         .sort((a, b) => b.months - a.months)
         .find((b) => months >= b.months);
 
       if (match) {
+        // Use channel's custom subscriber badge (from Kick API)
         imageUrl = match.badge_image.src;
       }
     }
@@ -441,12 +427,12 @@ export function parseKickChatMessage(
   // Parse reply info if present
   const replyTo = event.metadata?.original_message
     ? {
-        parentMessageId: event.metadata.original_message.id,
-        parentUserId: event.metadata.original_sender?.id.toString() ?? "",
-        parentUsername: event.metadata.original_sender?.username ?? "",
-        parentDisplayName: event.metadata.original_sender?.username ?? "",
-        parentMessageBody: event.metadata.original_message.content,
-      }
+      parentMessageId: event.metadata.original_message.id,
+      parentUserId: event.metadata.original_sender?.id.toString() ?? "",
+      parentUsername: event.metadata.original_sender?.username ?? "",
+      parentDisplayName: event.metadata.original_sender?.username ?? "",
+      parentMessageBody: event.metadata.original_message.content,
+    }
     : undefined;
 
   return {

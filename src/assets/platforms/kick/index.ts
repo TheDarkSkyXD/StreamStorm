@@ -5,6 +5,9 @@
  * Use these for consistent Kick branding throughout the app.
  */
 
+// Export bundled badge assets
+export * from "./badges";
+
 // ========== Brand Colors ==========
 
 export const KICK_COLORS = {
