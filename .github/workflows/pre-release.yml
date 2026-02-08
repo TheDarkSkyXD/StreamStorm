@@ -60,7 +60,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           sudo apt-get update
-          sudo apt-get install -y fakeroot dpkg rpm binutils build-essential libarchive-tools
+          sudo apt-get install -y fakeroot dpkg dpkg-dev rpm binutils build-essential libarchive-tools
 
       - name: Verify Linux build tools
         if: matrix.os == 'ubuntu-latest'
@@ -69,6 +69,13 @@ jobs:
           which dpkg
           fakeroot --version
           dpkg --version
+
+      - name: Install Linux installer dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          # Force install optional dependencies for Linux makers
+          # These are optional deps in @electron-forge/maker-deb and maker-rpm
+          npm install electron-installer-debian@^3.2.0 electron-installer-redhat@^3.2.0 --save-dev
 
       - name: Run typecheck
         run: npm run typecheck

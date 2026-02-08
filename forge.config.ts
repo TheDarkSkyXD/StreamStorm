@@ -84,7 +84,7 @@ const config: ForgeConfig = {
         }),
       ]
       : []),
-    // Linux DEB
+    // Linux DEB - only included when running on Linux
     ...(process.platform === 'linux'
       ? [
         new MakerDeb({
@@ -99,6 +99,11 @@ const config: ForgeConfig = {
             maintainer: 'StreamStorm',
           },
         }),
+      ]
+      : []),
+    // Linux RPM - only included when running on Linux
+    ...(process.platform === 'linux'
+      ? [
         new MakerRpm({
           options: {
             name: 'streamstorm',
