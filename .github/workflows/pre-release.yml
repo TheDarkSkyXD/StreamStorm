@@ -60,7 +60,7 @@ jobs:
         run: npm run typecheck
 
       - name: Build and package
-        run: npm run make -- --arch=${{ matrix.arch }}
+        run: npm run dist -- --${{ matrix.arch }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -69,10 +69,12 @@ jobs:
         with:
           name: streamstorm-prerelease-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
-            out/make/**/*.exe
-            out/make/**/*.nupkg
-            out/make/**/*.dmg
-            out/make/**/*.zip
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.yml
+            apps/desktop/release/*.json
+            apps/desktop/release/latest*
 
           retention-days: 5
           if-no-files-found: warn
@@ -126,9 +128,11 @@ jobs:
           generate_release_notes: true
           files: |
             artifacts/**/*.exe
-            artifacts/**/*.nupkg
             artifacts/**/*.dmg
             artifacts/**/*.zip
+            artifacts/**/*.yml
+            artifacts/**/*.json
+            artifacts/**/latest*
 
           body: |
             ## StreamStorm v${{ steps.version.outputs.version }} - ${{ steps.prerelease_type.outputs.type }}

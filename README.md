@@ -1,3 +1,17 @@
 # StreamStorm
 
-![CodeRabbit Pull Request Reviews](https://img.shields.io/coderabbit/prs/github/TheDarkSkyXD/StreamStorm?utm_source=oss&utm_medium=github&utm_campaign=TheDarkSkyXD%2FStreamStorm&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews)
+This is the monorepo for StreamStorm.
+
+## Structure
+
+- **apps/desktop**: The main Electron desktop application.
+- **apps/mobile/expo**: Future mobile application.
+
+## Getting Started
+
+To start the desktop application:
+
+```bash
+npm install
+npm start
+```

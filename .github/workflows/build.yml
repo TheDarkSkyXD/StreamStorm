@@ -54,7 +54,7 @@ jobs:
 
 
       - name: Build
-        run: npm run make
+        run: npm run dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -62,7 +62,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: streamstorm-${{ matrix.platform }}
-          path: out/make/**/*
+          path: apps/desktop/release/**/*
           retention-days: 7
 
   release:

@@ -91,9 +91,5 @@ typings/
 # Electron-Forge
 out/
 
-# Electron-Builder
-release/
-dist/
-
 # External Reference
 KickTalk-main/
