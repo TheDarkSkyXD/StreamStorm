@@ -23,9 +23,7 @@ jobs:
           - os: windows-latest
             platform: win32
             arch: x64
-          - os: ubuntu-latest
-            platform: linux
-            arch: x64
+
           - os: macos-latest
             platform: darwin
             arch: x64
@@ -46,18 +44,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Linux build dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y fakeroot dpkg dpkg-dev rpm
 
-      - name: Install Linux installer dependencies
-        if: matrix.os == 'ubuntu-latest'
-        run: |
-          # Force install with --no-save
-          npm install electron-installer-debian electron-installer-redhat --no-save --include=optional
-          ls -la node_modules/electron-installer-debian || echo "Not found!"
 
       - name: Run typecheck
         run: npm run typecheck
@@ -76,8 +63,7 @@ jobs:
             out/make/**/*.nupkg
             out/make/**/*.dmg
             out/make/**/*.zip
-            out/make/**/*.deb
-            out/make/**/*.rpm
+
           retention-days: 5
           if-no-files-found: warn
 
@@ -119,8 +105,7 @@ jobs:
             artifacts/**/*.nupkg
             artifacts/**/*.dmg
             artifacts/**/*.zip
-            artifacts/**/*.deb
-            artifacts/**/*.rpm
+
           body: |
             ## StreamStorm v${{ steps.version.outputs.version }}
             
@@ -131,8 +116,7 @@ jobs:
             | Windows | `StreamStorm-${{ steps.version.outputs.version }}-Setup.exe` |
             | macOS (Intel) | `StreamStorm-${{ steps.version.outputs.version }}-x64.dmg` |
             | macOS (Apple Silicon) | `StreamStorm-${{ steps.version.outputs.version }}-arm64.dmg` |
-            | Linux (Debian/Ubuntu) | `streamstorm_${{ steps.version.outputs.version }}_amd64.deb` |
-            | Linux (Fedora/RHEL) | `streamstorm-${{ steps.version.outputs.version }}.x86_64.rpm` |
+
             
             ### Auto-Update
             

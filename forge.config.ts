@@ -74,7 +74,7 @@ const config: ForgeConfig = {
       // iconUrl: 'https://raw.githubusercontent.com/TheDarkSkyXD/StreamStorm/main/assets/icons/icon.ico',
     }),
     // macOS / Linux / Windows ZIP
-    new MakerZIP({}, ['darwin', 'linux', 'win32']),
+    new MakerZIP({}, ['darwin', 'win32']),
     // macOS DMG
     ...(process.platform === 'darwin'
       ? [
