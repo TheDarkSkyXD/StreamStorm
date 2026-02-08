@@ -4,10 +4,9 @@
   "version": "1.0.0-beta.1",
   "description": "A unified desktop app for viewing Twitch and Kick streams",
   "author": "StreamStorm",
-  "type": "module",
   "main": ".vite/build/main.js",
   "scripts": {
-    "start": "electron-forge start -- --remote-debugging-port=9222",
+    "start": "npx rimraf .vite && electron-forge start -- --remote-debugging-port=9222",
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
