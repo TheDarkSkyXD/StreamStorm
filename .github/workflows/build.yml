@@ -62,8 +62,9 @@ jobs:
       - name: Install Linux installer dependencies
         if: matrix.os == 'ubuntu-latest'
         run: |
-          # Force install optional dependencies for Linux makers
-          npm install electron-installer-debian@^3.2.0 electron-installer-redhat@^3.2.0 --save-dev
+          # Force install with --no-save
+          npm install electron-installer-debian electron-installer-redhat --no-save --include=optional
+          ls -la node_modules/electron-installer-debian || echo "Not found!"
       - name: Build
         run: npm run make
         env:
