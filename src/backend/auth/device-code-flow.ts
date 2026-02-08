@@ -59,7 +59,6 @@ const TOKEN_ENDPOINT = "https://id.twitch.tv/oauth2/token";
 
 class DeviceCodeFlowService {
   private pollingInterval: NodeJS.Timeout | null = null;
-  private currentDeviceCode: string | null = null;
 
   /**
    * Step 1: Request a device code and user code from Twitch
@@ -70,7 +69,7 @@ class DeviceCodeFlowService {
     if (!config.clientId) {
       throw new Error(
         "TWITCH_CLIENT_ID not set. Please configure your .env file. " +
-        "See .env.example for instructions."
+          "See .env.example for instructions."
       );
     }
 
@@ -95,8 +94,6 @@ class DeviceCodeFlowService {
     }
 
     const data = (await response.json()) as DeviceCodeResponse;
-
-    this.currentDeviceCode = data.device_code;
 
     console.debug(`✅ Device code received. User code: ${data.user_code}`);
     console.debug(`🔗 Verification URL: ${data.verification_uri}`);
@@ -226,7 +223,6 @@ class DeviceCodeFlowService {
       clearInterval(this.pollingInterval);
       this.pollingInterval = null;
     }
-    this.currentDeviceCode = null;
   }
 
   /**

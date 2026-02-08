@@ -16,8 +16,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useSearchAll } from "@/hooks/queries/useSearch";
 import { cn, formatDuration } from "@/lib/utils";
 
-
-
 /* CATEGORIES SECTION */
 type SearchTab = "all" | "channels" | "streams" | "videos" | "clips" | "categories";
 
