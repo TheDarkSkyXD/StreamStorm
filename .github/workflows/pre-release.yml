@@ -101,6 +101,12 @@ jobs:
       - name: List artifacts
         run: find artifacts -type f -name "*" | head -50
 
+      - name: Install dependencies for merge script
+        run: npm install js-yaml
+
+      - name: Prepare release artifacts
+        run: node .github/scripts/merge_artifacts.js
+
       - name: Get version from tag
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
@@ -126,13 +132,7 @@ jobs:
           draft: false
           prerelease: true
           generate_release_notes: true
-          files: |
-            artifacts/**/*.exe
-            artifacts/**/*.dmg
-            artifacts/**/*.zip
-            artifacts/**/*.yml
-            artifacts/**/*.json
-            artifacts/**/latest*
+          files: release-assets/*
 
           body: |
             ## StreamStorm v${{ steps.version.outputs.version }} - ${{ steps.prerelease_type.outputs.type }}
@@ -154,7 +154,6 @@ jobs:
             | Windows | `StreamStorm-${{ steps.version.outputs.version }}-Setup.exe` |
             | macOS (Intel) | `StreamStorm-${{ steps.version.outputs.version }}-x64.dmg` |
             | macOS (Apple Silicon) | `StreamStorm-${{ steps.version.outputs.version }}-arm64.dmg` |
-
             
             ---
             
