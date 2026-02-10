@@ -4,6 +4,10 @@
   "version": "1.0.0-beta.1",
   "description": "A unified desktop app for viewing Twitch and Kick streams",
   "author": "StreamStorm",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/TheDarkSkyXD/StreamStorm.git"
+  },
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "npx rimraf .vite && vite --config vite.main.config.ts build && vite --config vite.preload.config.ts build && vite --config vite.renderer.config.ts && electron . --remote-debugging-port=9222",
