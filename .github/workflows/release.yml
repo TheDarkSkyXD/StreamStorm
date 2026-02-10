@@ -50,9 +50,9 @@ jobs:
         run: npm run typecheck
 
       - name: Build and package
-        run: npm run dist -- --${{ matrix.arch }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run build --workspace=streamstorm
+          cd apps/desktop && npx electron-builder --publish never --${{ matrix.arch }}
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
