@@ -1,5 +1,12 @@
 import path from 'path';
+import { builtinModules } from 'module';
 import { defineConfig } from 'vite';
+
+// All Node.js built-in modules (both bare and node:-prefixed)
+const nodeBuiltins = [
+    ...builtinModules,
+    ...builtinModules.map((m) => `node:${m}`),
+];
 
 // https://vitejs.dev/config
 // Main process config - runs in Node.js environment
@@ -21,7 +28,7 @@ export default defineConfig({
 
         rollupOptions: {
             // External native modules - not bundled
-            external: ['better-sqlite3', 'electron'],
+            external: ['better-sqlite3', 'electron', ...nodeBuiltins],
         },
     },
     // Electron-specific optimizations for main process
@@ -32,3 +39,4 @@ export default defineConfig({
         pure: process.env.NODE_ENV === 'production' ? ['console.debug'] : [],
     },
 });
+

@@ -1,8 +1,15 @@
 
 import { build } from 'vite';
 import { resolve } from 'path';
+import { builtinModules } from 'module';
 
 const root = resolve(__dirname, '..');
+
+// All Node.js built-in modules (both bare and node:-prefixed)
+const nodeBuiltins = [
+    ...builtinModules,
+    ...builtinModules.map((m) => `node:${m}`),
+];
 
 // Build Main Process
 async function buildMain() {
@@ -19,7 +26,11 @@ async function buildMain() {
                 formats: ['cjs'],
             },
             rollupOptions: {
-                external: ['electron', 'better-sqlite3', 'path', 'fs', 'os', 'child_process'],
+                external: [
+                    'electron',
+                    'better-sqlite3',
+                    ...nodeBuiltins,
+                ],
             },
         },
     });
